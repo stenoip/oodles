@@ -52,7 +52,14 @@
       border: 2px groove #808080;
       padding: 10px;
       font-size: 14px;
-      white-space: pre-wrap;
+    }
+    .result-block {
+      margin-bottom: 20px;
+    }
+    img {
+      max-width: 200px;
+      margin: 5px;
+      border: 1px solid #000080;
     }
     footer {
       text-align: center;
@@ -98,23 +105,51 @@
       performSearch();
     }
 
+    function scoreEntry(entry, query) {
+      let score = 0;
+      const q = query.toLowerCase();
+      if (entry.text.toLowerCase().includes(q)) score += 5;
+      score += entry.text.split(q).length - 1;
+      score += entry.images.length * 2;
+      score += entry.links.length;
+      score += entry.text.length > 500 ? 2 : 0;
+      return score;
+    }
+
     function performSearch() {
       const query = document.getElementById("searchInput").value.toLowerCase();
-      let results = "";
-
-      entries.forEach(entry => {
+      let filtered = entries.filter(entry => {
         const matchText = entry.text.toLowerCase().includes(query);
         const matchImages = entry.images.some(img => img.toLowerCase().includes(query));
-        const matchLinks = entry.links.some(link => link.toLowerCase().includes(query));
-
-        if (currentTab === 'all' && (matchText || matchImages || matchLinks)) {
-          results += `📄 ${entry.url}\n${entry.text}\n🔗 Links:\n${entry.links.join('\n')}\nImages:\n${entry.images.join('\n')}\n\n`;
-        } else if (currentTab === 'images' && matchImages) {
-          results += ` ${entry.url}\n${entry.images.join('\n')}\n\n`;
-        }
+        const matchLinks = entry.links.some(link => link.url.toLowerCase().includes(query));
+        if (currentTab === 'all') return matchText || matchImages || matchLinks;
+        if (currentTab === 'images') return matchImages;
+        return false;
       });
 
-      document.getElementById("resultsBox").textContent = results || "No results found.";
+      filtered.sort((a, b) => scoreEntry(b, query) - scoreEntry(a, query));
+
+      let results = "";
+      filtered.forEach(entry => {
+        results += `<div class="result-block"><strong>📄 <a href="${entry.url}" target="_blank">${entry.url}</a></strong><br>`;
+        if (entry.text) results += `<p>${entry.text}</p>`;
+        if (entry.links.length) {
+          results += `<strong>🔗 Links:</strong><ul>`;
+          entry.links.forEach(link => {
+            results += `<li><a href="${link.url}" target="_blank">${link.title}</a></li>`;
+          });
+          results += `</ul>`;
+        }
+        if (entry.images.length && currentTab !== 'images') {
+          results += `<strong>Images:</strong><br>`;
+          entry.images.forEach(img => {
+            results += `<img src="${img}" alt="Image"><br>`;
+          });
+        }
+        results += `</div><hr>`;
+      });
+
+      document.getElementById("resultsBox").innerHTML = results || "No results found.";
     }
   </script>
 </body>
