@@ -4,22 +4,37 @@
   <meta charset="UTF-8">
   <title>Oodles Search Engine</title>
   <style>
-  
     body {
       background-color: #c0c0c0;
       font-family: "Courier New", Courier, monospace;
       color: #000080;
       margin: 0;
-      padding: 0;
     }
     header {
       background-color: #000080;
-      color: #ffffff;
+      color: white;
       padding: 10px;
       text-align: center;
       font-size: 24px;
-      font-weight: bold;
-      border-bottom: 3px double #ffffff;
+      border-bottom: 3px double #fff;
+    }
+    nav {
+      background-color: #e0e0e0;
+      padding: 10px;
+      text-align: center;
+    }
+    nav button {
+      margin: 0 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+      background-color: #000080;
+      color: white;
+      border: 2px outset #fff;
+      cursor: pointer;
+    }
+    nav button:hover {
+      background-color: #ffcc00;
+      color: #000;
     }
     .container {
       padding: 20px;
@@ -29,23 +44,11 @@
       padding: 8px;
       font-size: 16px;
       border: 2px inset #808080;
-      background-color: #ffffff;
-    }
-    button {
-      padding: 8px 16px;
-      font-size: 16px;
-      background-color: #000080;
-      color: white;
-      border: 2px outset #ffffff;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #ffcc00;
-      color: #000;
+      background-color: #fff;
     }
     .results {
       margin-top: 20px;
-      background-color: #ffffff;
+      background-color: #fff;
       border: 2px groove #808080;
       padding: 10px;
       font-size: 14px;
@@ -60,41 +63,56 @@
   </style>
 </head>
 <body>
-  <header>Oodles Search Engine</header>
+  <header> Oodles Search Engine</header>
+  <nav>
+    <button onclick="setTab('all')">All</button>
+    <button onclick="setTab('images')">Images</button>
+    <button onclick="window.location.href='https://stenoip.github.io/video_plus.html'">Videos</button>
+    <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
+    <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
+  </nav>
   <div class="container">
     <input type="text" id="searchInput" placeholder="Type your search here...">
     <button onclick="performSearch()">Search</button>
     <div class="results" id="resultsBox">Results will appear here.</div>
   </div>
-  <footer>© Copyright 2025 Stenoip Company</footer>
+  <footer>© Copyright Stenoip Company</footer>
 
   <script>
-    var websiteData = "";
+    let entries = [];
+    let currentTab = 'all';
 
-    // Fetch index.json on load
     window.onload = function() {
       fetch('index.json')
         .then(response => response.json())
         .then(data => {
-          websiteData = data.website_info || "";
+          entries = data.entries || [];
         })
         .catch(error => {
           document.getElementById("resultsBox").textContent = "Failed to load index.json.";
-          console.error("Error loading index.json:", error);
         });
     };
 
+    function setTab(tab) {
+      currentTab = tab;
+      performSearch();
+    }
+
     function performSearch() {
       const query = document.getElementById("searchInput").value.toLowerCase();
-      if (!query || !websiteData) {
-        document.getElementById("resultsBox").textContent = "Please enter a search term or wait for data to load.";
-        return;
-      }
+      let results = "";
 
-      const results = websiteData
-        .split('\n')
-        .filter(line => line.toLowerCase().includes(query))
-        .join('\n');
+      entries.forEach(entry => {
+        const matchText = entry.text.toLowerCase().includes(query);
+        const matchImages = entry.images.some(img => img.toLowerCase().includes(query));
+        const matchLinks = entry.links.some(link => link.toLowerCase().includes(query));
+
+        if (currentTab === 'all' && (matchText || matchImages || matchLinks)) {
+          results += `📄 ${entry.url}\n${entry.text}\n🔗 Links:\n${entry.links.join('\n')}\nImages:\n${entry.images.join('\n')}\n\n`;
+        } else if (currentTab === 'images' && matchImages) {
+          results += ` ${entry.url}\n${entry.images.join('\n')}\n\n`;
+        }
+      });
 
       document.getElementById("resultsBox").textContent = results || "No results found.";
     }
