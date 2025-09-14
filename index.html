@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Oodles Search Engine</title>
+  <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
   <style>
     body {
       background-color: #c0c0c0;
@@ -17,6 +18,11 @@
       text-align: center;
       font-size: 24px;
       border-bottom: 3px double #fff;
+    }
+    header img {
+      max-height: 40px;
+      vertical-align: middle;
+      margin-right: 10px;
     }
     nav {
       background-color: #e0e0e0;
@@ -56,7 +62,7 @@
     .result-block {
       margin-bottom: 20px;
     }
-    img {
+    img.result-img {
       max-width: 200px;
       margin: 5px;
       border: 1px solid #000080;
@@ -70,7 +76,10 @@
   </style>
 </head>
 <body>
-  <header> Oodles Search Engine</header>
+  <header>
+    <img src="2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+    Oodles Search Engine
+  </header>
   <nav>
     <button onclick="setTab('all')">All</button>
     <button onclick="setTab('images')">Images</button>
@@ -118,6 +127,11 @@
 
     function performSearch() {
       const query = document.getElementById("searchInput").value.toLowerCase();
+      if (!query) {
+        document.getElementById("resultsBox").textContent = "Please enter a search term.";
+        return;
+      }
+
       let filtered = entries.filter(entry => {
         const matchText = entry.text.toLowerCase().includes(query);
         const matchImages = entry.images.some(img => img.toLowerCase().includes(query));
@@ -131,7 +145,7 @@
 
       let results = "";
       filtered.forEach(entry => {
-        results += `<div class="result-block"><strong>📄 <a href="${entry.url}" target="_blank">${entry.url}</a></strong><br>`;
+        results += `<div class="result-block"><strong><a href="${entry.url}" target="_blank">${entry.url}</a></strong><br>`;
         if (entry.text) results += `<p>${entry.text}</p>`;
         if (entry.links.length) {
           results += `<strong>🔗 Links:</strong><ul>`;
@@ -141,9 +155,9 @@
           results += `</ul>`;
         }
         if (entry.images.length && currentTab !== 'images') {
-          results += `<strong>Images:</strong><br>`;
+          results += `<strong> Images:</strong><br>`;
           entry.images.forEach(img => {
-            results += `<img src="${img}" alt="Image"><br>`;
+            results += `<img src="${img}" alt="Image" class="result-img"><br>`;
           });
         }
         results += `</div><hr>`;
