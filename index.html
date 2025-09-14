@@ -13,16 +13,12 @@
     }
     header {
       background-color: #000080;
-      color: white;
-      padding: 10px;
       text-align: center;
-      font-size: 24px;
+      padding: 20px;
       border-bottom: 3px double #fff;
     }
     header img {
-      max-height: 40px;
-      vertical-align: middle;
-      margin-right: 10px;
+      max-height: 120px; /* BIG logo */
     }
     nav {
       background-color: #e0e0e0;
@@ -78,7 +74,6 @@
 <body>
   <header>
     <img src="2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
-    Oodles Search Engine
   </header>
   <nav>
     <button onclick="setTab('all')">All</button>
@@ -102,7 +97,7 @@
       fetch('index.json')
         .then(response => response.json())
         .then(data => {
-          entries = data.entries || [];
+          entries = Array.isArray(data.entries) ? data.entries : [];
         })
         .catch(error => {
           document.getElementById("resultsBox").textContent = "Failed to load index.json.";
@@ -117,11 +112,15 @@
     function scoreEntry(entry, query) {
       let score = 0;
       const q = query.toLowerCase();
-      if (entry.text.toLowerCase().includes(q)) score += 5;
-      score += entry.text.split(q).length - 1;
-      score += entry.images.length * 2;
-      score += entry.links.length;
-      score += entry.text.length > 500 ? 2 : 0;
+      const text = (entry.text || "").toLowerCase();
+      const images = Array.isArray(entry.images) ? entry.images : [];
+      const links = Array.isArray(entry.links) ? entry.links : [];
+
+      if (text.includes(q)) score += 5;
+      score += text.split(q).length - 1;
+      score += images.length * 2;
+      score += links.length;
+      score += text.length > 500 ? 2 : 0;
       return score;
     }
 
@@ -133,9 +132,14 @@
       }
 
       let filtered = entries.filter(entry => {
-        const matchText = entry.text.toLowerCase().includes(query);
-        const matchImages = entry.images.some(img => img.toLowerCase().includes(query));
-        const matchLinks = entry.links.some(link => link.url.toLowerCase().includes(query));
+        const text = (entry.text || "").toLowerCase();
+        const images = Array.isArray(entry.images) ? entry.images : [];
+        const links = Array.isArray(entry.links) ? entry.links : [];
+
+        const matchText = text.includes(query);
+        const matchImages = images.some(img => img.toLowerCase().includes(query));
+        const matchLinks = links.some(link => (link.url || "").toLowerCase().includes(query));
+
         if (currentTab === 'all') return matchText || matchImages || matchLinks;
         if (currentTab === 'images') return matchImages;
         return false;
@@ -145,22 +149,34 @@
 
       let results = "";
       filtered.forEach(entry => {
-        results += `<div class="result-block"><strong><a href="${entry.url}" target="_blank">${entry.url}</a></strong><br>`;
-        if (entry.text) results += `<p>${entry.text}</p>`;
-        if (entry.links.length) {
-          results += `<strong>🔗 Links:</strong><ul>`;
-          entry.links.forEach(link => {
-            results += `<li><a href="${link.url}" target="_blank">${link.title}</a></li>`;
+        const images = Array.isArray(entry.images) ? entry.images : [];
+        const links = Array.isArray(entry.links) ? entry.links : [];
+        const text = entry.text || "";
+
+        if (currentTab === 'images') {
+          // Show only images, clickable to the page
+          images.forEach(img => {
+            results += `<a href="${entry.url}" target="_blank"><img src="${img}" alt="Image" class="result-img"></a> `;
           });
-          results += `</ul>`;
+        } else {
+          // All tab: show text, links, and images inline
+          results += `<div class="result-block"><strong><a href="${entry.url}" target="_blank">${entry.url}</a></strong><br>`;
+          if (text) results += `<p>${text}</p>`;
+          if (links.length) {
+            results += `<strong>🔗 Links:</strong><ul>`;
+            links.forEach(link => {
+              results += `<li><a href="${link.url}" target="_blank">${link.title || link.url}</a></li>`;
+            });
+            results += `</ul>`;
+          }
+          if (images.length) {
+            results += `<strong> Images:</strong><br>`;
+            images.forEach(img => {
+              results += `<img src="${img}" alt="Image" class="result-img"><br>`;
+            });
+          }
+          results += `</div><hr>`;
         }
-        if (entry.images.length && currentTab !== 'images') {
-          results += `<strong> Images:</strong><br>`;
-          entry.images.forEach(img => {
-            results += `<img src="${img}" alt="Image" class="result-img"><br>`;
-          });
-        }
-        results += `</div><hr>`;
       });
 
       document.getElementById("resultsBox").innerHTML = results || "No results found.";
