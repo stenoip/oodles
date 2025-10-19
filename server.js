@@ -5,7 +5,13 @@ var cors = require('cors');
 var app = express();
 var port = process.env.PORT || 3000;
 
-app.use(cors());
+// Allow only your GitHub Pages domain
+var corsOptions = {
+  origin: 'https://stenoip.github.io',
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 app.get('/search', function(req, res) {
   var query = req.query.q;
