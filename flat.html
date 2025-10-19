@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oodles Search | Flat Design</title>
+    <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Flat Design Styling --- */
+        :root {
+            /* Flat Design Palette (Focus on solid, contrasting colors) */
+            --color-primary: #3498db; /* Blue */
+            --color-secondary: #e74c3c; /* Red Accent */
+            --color-background: #ecf0f1; /* Light Gray/Off-White */
+            --color-panel: #ffffff; /* White Panels */
+            --color-text: #2c3e50; /* Dark Blue/Black Text */
+            --color-light-text: #7f8c8d; /* Muted Text */
+            --color-border: #bdc3c7; /* Subtle Border */
+        }
+
+        body {
+            /* Solid, simple background */
+            background-color: var(--color-background);
+            font-family: 'Roboto', sans-serif;
+            color: var(--color-text);
+            margin: 0;
+            padding-bottom: 50px;
+            line-height: 1.5;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* --- Header/Navigation Styling --- */
+        header {
+            /* Solid color header, no gradient or shadow */
+            background-color: var(--color-primary);
+            text-align: center;
+            padding: 15px 20px;
+        }
+        
+        /* The logo image is likely not flat, so we'll keep it simple for now */
+        header img {
+            max-height: 70px; /* Simplified logo size */
+            filter: none; /* No glow or shadow */
+        }
+        
+        nav {
+            /* Solid color nav bar, sharp edges */
+            background-color: var(--color-panel);
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        nav button, .actions button {
+            /* Solid, rectangular buttons, no gloss or rounded corners */
+            margin: 0 5px;
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--color-panel);
+            border: none;
+            border-radius: 0; /* Sharp corners */
+            cursor: pointer;
+            /* Solid primary color background */
+            background-color: var(--color-primary);
+            box-shadow: none;
+            transition: background-color 0.2s ease-in-out;
+            text-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        nav button:hover, .actions button:hover {
+            /* Simple color change for hover (a darker primary) */
+            background-color: #2980b9;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Secondary button style (e.g., Download) */
+        .actions button:last-child {
+            background-color: var(--color-secondary);
+        }
+
+        .actions button:last-child:hover {
+            background-color: #c0392b;
+        }
+
+        /* --- Panel/Window Styling (Flat) --- */
+        .panel {
+            /* Solid color panel, no blur, shadow, or heavy border radius */
+            background-color: var(--color-panel);
+            border: 1px solid var(--color-border);
+            border-radius: 0; /* Sharp corners */
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: none;
+        }
+        
+        .panel h3, h4 {
+            margin-top: 0;
+            color: var(--color-text);
+            font-weight: 700;
+            text-shadow: none;
+            border-bottom: 2px solid var(--color-primary); /* Underline style */
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+
+        /* --- Input Styling (Flat) --- */
+        input[type="text"], textarea, #perPage {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid var(--color-border); /* Simple border */
+            border-radius: 0;
+            background-color: var(--color-panel);
+            box-shadow: none; /* No recessed look */
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--color-primary); /* Primary color focus */
+            outline: none;
+            box-shadow: none;
+        }
+        
+        textarea { min-height: 100px; }
+        
+        #perPage {
+            width: 40px !important;
+        }
+
+        /* --- Results/Links Styling --- */
+        .results {
+            margin-top: 20px;
+            font-size: 16px;
+            padding: 10px 0;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .result-block { margin-bottom: 15px; }
+        
+        .result-block a {
+            color: var(--color-primary); /* Primary link color */
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s;
+            text-shadow: none;
+        }
+
+        .result-block a:hover {
+            color: var(--color-secondary); /* Simple color hover change */
+            text-decoration: underline;
+        }
+
+        .score {
+            color: var(--color-light-text);
+            font-size: 14px;
+            margin-top: 2px;
+            text-shadow: none;
+        }
+
+        .small {
+            font-size: 14px;
+            color: var(--color-light-text);
+        }
+
+        /* --- Utility/Footer --- */
+        hr {
+            border: none;
+            border-top: 1px solid var(--color-border);
+            margin: 20px 0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: var(--color-light-text);
+            text-shadow: none;
+            padding: 10px;
+            background-color: var(--color-panel);
+            border-top: 1px solid var(--color-border);
+        }
+
+        footer + p {
+            text-align: center;
+            font-size: 12px;
+            color: var(--color-light-text);
+            margin-top: 5px;
+            text-shadow: none;
+        }
+
+        /* --- Layout & Pagination --- */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .actions { margin-top: 20px; }
+
+        .pagination {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 0;
+            background-color: var(--color-background); /* Use the page background */
+            box-shadow: none;
+            border: 1px solid var(--color-border);
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            font-size: 14px;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+    </header>
+    <nav>
+        <button onclick="switchTab('generate')">Generate</button>
+        <button onclick="switchTab('upload')">Upload</button>
+        <button onclick="switchTab('search')">Search</button>
+        <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
+        <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
+    </nav>
+
+    <div class="container">
+        <div id="panel-generate" class="panel">
+            <h3>Generate index.json from URLs</h3>
+            <p class="small">Enter one URL per line. We’ll crawl titles, descriptions, headings, body text and follow links (depth-limited).</p>
+            <textarea id="generateUrls" placeholder="example.com&#10;https://another.com"></textarea>
+            <div class="two-col">
+                <div>
+                    <div class="small" style="margin-bottom: 8px;">
+                        Depth (0–2): <input type="text" id="generateDepth" value="1" style="width: 50px;">
+                    </div>
+                    <div class="small" style="margin-bottom: 8px;">
+                        Links per page (1–20): <input type="text" id="generateLinks" value="10" style="width: 50px;">
+                    </div>
+                    <label class="small"><input type="checkbox" id="sameDomainOnly"> Restrict to seed domains</label>
+                </div>
+                <div class="actions">
+                    <button onclick="generateIndex()">Generate</button>
+                    <button onclick="downloadCurrentIndex()">Download current index.json</button>
+                </div>
+            </div>
+            <div id="generateResults" class="results"></div>
+        </div>
+
+        <div id="panel-upload" class="panel" style="display:none;">
+            <h3>Upload an existing index.json</h3>
+            <input type="file" id="uploadInput" accept="application/json" style="padding: 10px 0;">
+            <div class="actions">
+                <button onclick="loadUploadedIndex()">Load</button>
+                <button onclick="downloadCurrentIndex()">Download current index.json</button>
+            </div>
+            <div id="uploadStatus" class="results"></div>
+        </div>
+
+        <div id="panel-search" class="panel" style="display:none;">
+            <h3>Search active index.json</h3>
+            <div>
+                <input type="text" id="searchQuery" placeholder="Type your search...">
+                <div class="actions">
+                    <button onclick="performSearch(1)">Search</button>
+                </div>
+                <div id="searchResults" class="results"></div>
+                <div id="pagination" class="pagination" style="display:none;">
+                    <button onclick="prevPage()">Prev</button>
+                    <span id="pageInfo"></span>
+                    <button onclick="nextPage()">Next</button>
+                    <label class="small">Per page:
+                        <input type="text" id="perPage" value="10" style="width:40px;">
+                    </label>
+                </div>
+            </div>
+            <hr>
+            <h4>Ad-hoc single URL search</h4>
+            <input type="text" id="adhocUrl" placeholder="example.com">
+            <div class="actions">
+                <button onclick="performAdhocSearch()">Search this URL</button>
+            </div>
+            <div id="adhocResults" class="results"></div>
+        </div>
+    </div>
+
+    <footer>© Stenoip Company</footer>
+    <p>Offically lanuched on Sunday 19th October 2025.</p>
+
+    <script>
+        var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+        var activeIndex = [];
+        var currentQuery = '';
+        var currentPage = 1;
+        var totalResults = 0;
+        var currentLimit = 10;
+
+        function switchTab(tab) {
+            document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
+            document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
+            document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
+        }
+
+        function normalizeUrl(input) {
+            var trimmed = (input || '').trim();
+            if (!trimmed) return '';
+            if (!/^https?:\/\//i.test(trimmed)) {
+                return 'https://' + trimmed;
+            }
+            return trimmed;
+        }
+
+        function renderIndexPreview(elId, index, showScore) {
+            var el = document.getElementById(elId);
+            if (!index || index.length === 0) {
+                el.innerHTML = 'No items.';
+                return;
+            }
+            var html = '';
+            index.forEach(function(item) {
+                var title = item.title || item.url || 'Untitled';
+                var url = item.url || '#';
+                var desc = item.description || '';
+                var score = item._score;
+                html += '<div class="result-block">';
+                html += '<a href="' + url + '" target="_blank" onclick="trackClick(\'' + encodeURIComponent(url) + '\')">' + title + '</a><br>';
+                html += '<span>' + desc + '</span>';
+                if (showScore && typeof score === 'number') {
+                    html += '<div class="score">Score: ' + score.toFixed(4) + '</div>';
+                }
+                html += '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function downloadCurrentIndex() {
+            if (!activeIndex || activeIndex.length === 0) {
+                alert('No active index to download.');
+                return;
+            }
+            var blob = new Blob([JSON.stringify(activeIndex, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 0);
+        }
+
+        function generateIndex() {
+            document.getElementById('generateResults').innerText = 'Generating... Please wait.';
+            var raw = document.getElementById('generateUrls').value;
+            var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+            if (lines.length === 0) {
+                document.getElementById('generateResults').innerText = 'Please enter at least one URL.';
+                return;
+            }
+            var normalized = lines.map(normalizeUrl);
+            var depth = parseInt(document.getElementById('generateDepth').value || '1', 10);
+            var links = parseInt(document.getElementById('generateLinks').value || '10', 10);
+            var sameDomainOnly = document.getElementById('sameDomainOnly').checked;
+
+            fetch(BACKEND_BASE + '/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls: normalized, depth: depth, links: links, sameDomainOnly: sameDomainOnly })
+            })
+            .then(function(res) {
+                 if (!res.ok) throw new Error('Network response was not ok: ' + res.status);
+                return res.json();
+             })
+            .then(function(data) {
+                if (!data || !Array.isArray(data.results)) {
+                    document.getElementById('generateResults').innerText = 'Unexpected response or empty results.';
+                    return;
+                }
+                activeIndex = data.results;
+                renderIndexPreview('generateResults', activeIndex, false);
+            })
+            .catch(function(err) {
+                document.getElementById('generateResults').innerText = 'Error generating: ' + err.message;
+            });
+        }
+
+        function loadUploadedIndex() {
+            var input = document.getElementById('uploadInput');
+            if (!input.files || input.files.length === 0) {
+                document.getElementById('uploadStatus').innerText = 'Please select a JSON file.';
+                return;
+            }
+            var file = input.files[0];
+            var reader = new FileReader();
+            document.getElementById('uploadStatus').innerText = 'Loading file...';
+            reader.onload = function() {
+                try {
+                    var json = JSON.parse(reader.result);
+                    if (!Array.isArray(json)) {
+                        document.getElementById('uploadStatus').innerText = 'File must be an array of items.';
+                        return;
+                    }
+                    activeIndex = json;
+                    document.getElementById('uploadStatus').innerText = 'Index loaded: ' + activeIndex.length + ' items.';
+                } catch (e) {
+                    document.getElementById('uploadStatus').innerText = 'Invalid JSON: ' + e.message;
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function performSearch(page) {
+            if (!activeIndex || activeIndex.length === 0) {
+                document.getElementById('searchResults').innerText = 'No active index. Generate or upload first.';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            currentQuery = document.getElementById('searchQuery').value.trim();
+            if (!currentQuery) {
+                document.getElementById('searchResults').innerText = 'Please enter a search term.';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            currentPage = page || 1;
+            currentLimit = parseInt(document.getElementById('perPage').value || '10', 10);
+            document.getElementById('searchResults').innerText = 'Searching...';
+
+            fetch(BACKEND_BASE + '/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ q: currentQuery, index: activeIndex, page: currentPage, limit: currentLimit })
+            })
+            .then(function(res) {
+                 if (!res.ok) throw new Error('Network response was not ok: ' + res.status);
+                return res.json();
+             })
+            .then(function(data) {
+                if (!data || !Array.isArray(data.results)) {
+                    document.getElementById('searchResults').innerText = 'Unexpected response or empty results.';
+                    totalResults = 0;
+                    updatePagination();
+                    return;
+                }
+                totalResults = data.total || 0;
+                renderIndexPreview('searchResults', data.results, true);
+                updatePagination();
+            })
+            .catch(function(err) {
+                document.getElementById('searchResults').innerText = 'Error searching: ' + err.message;
+                totalResults = 0;
+                updatePagination();
+            });
+        }
+
+        function updatePagination() {
+            var pagEl = document.getElementById('pagination');
+            var pageInfo = document.getElementById('pageInfo');
+            var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+
+            if (totalResults > currentLimit) {
+                pagEl.style.display = 'flex';
+                pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + totalResults + ' results)';
+            } else {
+                pagEl.style.display = 'none';
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                performSearch(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+            if (currentPage < totalPages) {
+                performSearch(currentPage + 1);
+            }
+        }
+
+        function performAdhocSearch() {
+            document.getElementById('adhocResults').innerText = 'Searching ad-hoc URL...';
+            var rawUrl = document.getElementById('adhocUrl').value.trim();
+            var url = normalizeUrl(rawUrl);
+            var q = document.getElementById('searchQuery').value.trim();
+            if (!url) {
+                document.getElementById('adhocResults').innerText = 'Please enter a URL.';
+                return;
+            }
+            if (!q) {
+                document.getElementById('adhocResults').innerText = 'Please enter a search term (above).';
+                return;
+            }
+            var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
+            fetch(endpoint)
+                .then(function(res) {
+                     if (!res.ok) throw new Error('Network response was not ok: ' + res.status);
+                    return res.json();
+                 })
+                .then(function(data) {
+                    if (!data || !Array.isArray(data.results)) {
+                        document.getElementById('adhocResults').innerText = 'Unexpected response or empty results.';
+                        return;
+                    }
+                    renderIndexPreview('adhocResults', data.results, true);
+                })
+                .catch(function(err) {
+                    document.getElementById('adhocResults').innerText = 'Error ad-hoc searching: ' + err.message;
+                });
+        }
+
+        function trackClick(encodedUrl) {
+            try {
+                var actualUrl = decodeURIComponent(encodedUrl);
+                fetch(BACKEND_BASE + '/analytics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: actualUrl, query: currentQuery })
+                });
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // Optional health check
+        (function pingHealth() {
+            fetch(BACKEND_BASE + '/health')
+                .then(function(res) { return res.json(); })
+                .then(function(data) { console.log('Backend health:', data); })
+                .catch(function() { console.warn('Backend health check failed'); });
+        })();
+
+        // Initial tab load
+        switchTab('generate');
+    </script>
+</body>
+</html>
