@@ -14,40 +14,7 @@ Oodles is a retro-styled, self-serve search engine platform. It lets anyone gene
 * Search with ranking (title, headings, description, body)
 * Pagination controls
 * Ad-hoc single-URL search
-* Auto-prefixes `example.com` → `https://example.com`
-* Click tracking (analytics)
-
-### Backend (Vercel)
-
-* `/generate` — crawl sites and build index.json
-* `/search` — ranked search with synonyms & stemming
-* `/analytics` — log clicks for future ranking improvements
-* `/health` — simple health check
-* Multi-page crawling with depth/breadth limits
-* CORS enabled for GitHub Pages frontend
-
----
-
-I've merged the provided text into a cohesive README.md format, removing excessive emojis and bolding as requested, while maintaining the structure and content of the original.
-
-```markdown
-# Oodles Search Engine
-
-Oodles is a retro-styled, self-serve search engine platform. It lets anyone generate their own `index.json` datasets by crawling websites, then search through them with ranking, synonyms, pagination, and analytics. Think of it as a buffet of web information you can curate yourself.
-
----
-
-## Features
-
-### Frontend (GitHub Pages)
-
-* Classic 90s-inspired UI
-* Generate an index from one or more URLs
-* Upload your own `index.json`
-* Search with ranking (title, headings, description, body)
-* Pagination controls
-* Ad-hoc single-URL search
-* Auto-prefixes `example.com` → `https://example.com`
+* Auto-prefixes `stenoip.github.io/` → `https://stenoip.github.io/`
 * Click tracking (analytics)
 
 ### Backend (Vercel)
