@@ -4,56 +4,48 @@ function normalize(str) {
   return (str || '').toLowerCase();
 }
 
+function scoreItem(item, query) {
+  var q = normalize(query);
+  var score = 0;
+
+  // Title match = strong
+  if (normalize(item.title).includes(q)) score += 5;
+
+  // Headings match = medium
+  if (item.headings && item.headings.some(h => normalize(h).includes(q))) score += 3;
+
+  // Description match = medium
+  if (normalize(item.description).includes(q)) score += 2;
+
+  // Body content match = weak
+  if (normalize(item.content).includes(q)) score += 1;
+
+  // Helpfulness: reward longer content
+  if (item.content && item.content.length > 500) score += 2;
+  if (item.description && item.description.length > 100) score += 1;
+
+  return score;
+}
+
 module.exports = async function(req, res) {
   cors.setCors(res);
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    var query = (req.method === 'GET' ? (req.query && req.query.q) : (req.body && req.body.q)) || '';
-    var index = (req.method === 'GET' ? null : (req.body && req.body.index)) || null;
+    var query = req.query.q || (req.body && req.body.q);
+    var index = req.body && req.body.index;
 
-    if (!query) {
-      res.status(400).json({ error: 'Missing query parameter q' });
-      return;
+    if (!query || !index) {
+      return res.status(400).json({ error: 'Missing query or index' });
     }
 
-    // If index is provided in POST body, search that; otherwise require GET with q & url to generate on the fly.
-    if (!index) {
-      // For convenience: allow GET /search?q=...&url=... to search a single generated page
-      var url = req.query && req.query.url;
-      if (!url) {
-        res.status(400).json({ error: 'Provide index in POST body or include ?url= for ad-hoc search' });
-        return;
-      }
-      // Ad-hoc single page "search" by crawling then matching
-      var axios = require('axios');
-      var cheerio = require('cheerio');
-      try {
-        var response = await axios.get(url, { timeout: 15000 });
-        var $ = cheerio.load(response.data);
-        var title = $('title').first().text() || url;
-        var description = $('meta[name="description"]').attr('content') || 'No description available';
-        index = [{ title: title, url: url, description: description }];
-      } catch (e) {
-        res.status(500).json({ error: 'Failed ad-hoc crawl', details: e.message });
-        return;
-      }
-    }
+    var results = index
+      .map(item => ({ ...item, _score: scoreItem(item, query) }))
+      .filter(r => r._score > 0)
+      .sort((a, b) => b._score - a._score);
 
-    if (!Array.isArray(index)) {
-      res.status(400).json({ error: 'index must be an array of {title,url,description}' });
-      return;
-    }
-
-    var q = normalize(query);
-    var results = index.filter(function(item) {
-      return normalize(item.title).indexOf(q) !== -1 ||
-             normalize(item.description).indexOf(q) !== -1 ||
-             normalize(item.url).indexOf(q) !== -1;
-    });
+    // Don’t expose raw HTML in previews
+    results.forEach(r => { delete r.html; });
 
     res.status(200).json({ results: results });
   } catch (err) {
