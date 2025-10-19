@@ -3,6 +3,8 @@
   "routes": [
     { "src": "/generate", "dest": "/api/generate.js" },
     { "src": "/search", "dest": "/api/search.js" },
-    { "src": "/health", "dest": "/api/health.js" }
+    { "src": "/analytics", "dest": "/api/analytics.js" },
+    { "src": "/health", "dest": "/api/health.js" },
+    { "src": "/(.*)", "dest": "/api/not-found.js" }
   ]
 }
