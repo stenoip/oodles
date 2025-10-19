@@ -52,7 +52,7 @@ oodles/
 ---
 
 ## Getting Started
-Visit: https://stenoip.github.io
+Visit: https://stenoip.github.io/oodles
 
 ### Generate an index
 
