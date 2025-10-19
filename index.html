@@ -2,91 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Oodles Search Engine</title>
+  <title>Oodles Search</title>
   <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      background-color: #c0c0c0;
-      font-family: "Courier New", Courier, monospace;
-      color: #000080;
-      margin: 0;
+    body { 
+    background-color: #c0c0c0; 
+    font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; 
     }
-    header {
-      background-color: #000080;
-      text-align: center;
-      padding: 20px;
-      border-bottom: 3px double #fff;
+    header { 
+    background-color: #000080; 
+    text-align: center; 
+    padding: 20px; 
+    border-bottom: 3px double #fff; 
     }
-    header img {
-      max-height: 120px;
+    header img { 
+    max-height: 120px; 
     }
-    nav {
-      background-color: #e0e0e0;
-      padding: 10px;
-      text-align: center;
+    nav { 
+    background-color: #e0e0e0; p
+    adding: 10px; 
+    text-align: center; 
     }
-    nav button {
-      margin: 0 5px;
-      padding: 5px 10px;
-      font-size: 14px;
-      background-color: #000080;
-      color: white;
-      border: 2px outset #fff;
-      cursor: pointer;
+    nav button { 
+    margin: 0 5px; 
+    padding: 5px 10px; 
+    font-size: 14px; 
+    background-color: #000080; 
+    color: white; 
+    border: 2px outset #fff; 
+    cursor: pointer; 
     }
-    nav button:hover {
-      background-color: #ffcc00;
-      color: #000;
-    }
-    .container {
-      padding: 20px;
-      text-align: center;
-    }
-    input[type="text"] {
-      width: 60%;
-      padding: 8px;
-      font-size: 16px;
-      border: 2px inset #808080;
-      background-color: #fff;
-    }
-    button.search-btn {
-      padding: 8px 16px;
-      font-size: 16px;
-      margin-left: 10px;
-      background-color: #000080;
-      color: white;
-      border: 2px outset #fff;
-      cursor: pointer;
-    }
-    button.search-btn:hover {
-      background-color: #ffcc00;
-      color: #000;
-    }
-    .results {
-      margin-top: 20px;
-      background-color: #fff;
-      border: 2px groove #808080;
-      padding: 10px;
-      font-size: 14px;
-      text-align: left;
-    }
-    .result-block {
-      margin-bottom: 20px;
-    }
-    .result-block a {
-      color: #000080;
-      font-weight: bold;
-      text-decoration: none;
-    }
-    .result-block a:hover {
-      text-decoration: underline;
-    }
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      font-size: 12px;
-      color: #333;
-    }
+    nav button:hover { background-color: #ffcc00; color: #000; }
+    .container { padding: 20px; max-width: 900px; margin: 0 auto; }
+    .panel { background-color: #fff; border: 2px groove #808080; padding: 15px; margin-bottom: 20px; }
+    .panel h3 { margin-top: 0; }
+    input[type="text"], textarea { width: 100%; padding: 8px; font-size: 16px; border: 2px inset #808080; background-color: #fff; }
+    textarea { min-height: 100px; }
+    .actions { margin-top: 10px; }
+    .actions button { padding: 8px 16px; font-size: 14px; background-color: #000080; color: white; border: 2px outset #fff; cursor: pointer; }
+    .actions button:hover { background-color: #ffcc00; color: #000; }
+    .results { margin-top: 10px; font-size: 14px; }
+    .result-block { margin-bottom: 12px; }
+    .result-block a { color: #000080; font-weight: bold; text-decoration: none; }
+    .result-block a:hover { text-decoration: underline; }
+    footer { text-align: center; margin-top: 40px; font-size: 12px; color: #333; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    .small { font-size: 12px; color: #333; }
   </style>
 </head>
 <body>
@@ -94,59 +57,225 @@
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
   <nav>
-    <button onclick="setTab('all')">All</button>
-    <button onclick="setTab('images')">Images</button>
-    <button onclick="window.location.href='https://stenoip.github.io/video_plus.html'">Videos</button>
+    <button onclick="switchTab('generate')">Generate</button>
+    <button onclick="switchTab('upload')">Upload</button>
+    <button onclick="switchTab('search')">Search</button>
     <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
     <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
   </nav>
+
   <div class="container">
-    <input type="text" id="searchInput" placeholder="Type your search here...">
-    <button class="search-btn" onclick="performSearch()">Search</button>
-    <div class="results" id="resultsBox">Results will appear here.</div>
+    <div id="panel-generate" class="panel">
+      <h3>Generate index.json from URLs</h3>
+      <p class="small">Enter one URL per line. The generator will crawl title, description, and collect basic info.</p>
+      <textarea id="generateUrls" placeholder="https://example.com&#10;https://another.com"></textarea>
+      <div class="actions">
+        <button onclick="generateIndex()">Generate</button>
+        <button onclick="downloadCurrentIndex()">Download current index.json</button>
+      </div>
+      <div id="generateResults" class="results"></div>
+    </div>
+
+    <div id="panel-upload" class="panel" style="display:none;">
+      <h3>Upload an existing index.json</h3>
+      <input type="file" id="uploadInput" accept="application/json">
+      <div class="actions">
+        <button onclick="loadUploadedIndex()">Load</button>
+        <button onclick="downloadCurrentIndex()">Download current index.json</button>
+      </div>
+      <div id="uploadStatus" class="results"></div>
+    </div>
+
+    <div id="panel-search" class="panel" style="display:none;">
+      <h3>Search active index.json</h3>
+      <div class="two-col">
+        <div>
+          <input type="text" id="searchQuery" placeholder="Type your search...">
+          <div class="actions">
+            <button onclick="performSearch()">Search</button>
+          </div>
+          <div id="searchResults" class="results"></div>
+        </div>
+        <div>
+          <h4>Ad-hoc single URL search</h4>
+          <input type="text" id="adhocUrl" placeholder="https://example.com">
+          <div class="actions">
+            <button onclick="performAdhocSearch()">Search this URL</button>
+          </div>
+          <div id="adhocResults" class="results"></div>
+        </div>
+      </div>
+    </div>
   </div>
+
   <footer>© Copyright Stenoip Company</footer>
 
   <script>
-    var backendURL = "https://oodles-backend.vercel.app/search";
+    // Configure your backend base
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 
-    function setTab(tabName) {
-      document.getElementById('resultsBox').innerText = "Switched to " + tabName + " tab.";
+    // In-memory active index.json
+    var activeIndex = [];
+
+    function switchTab(tab) {
+      document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
+      document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
+      document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
     }
 
-    function performSearch() {
-      var query = document.getElementById('searchInput').value;
-      if (!query) {
-        document.getElementById('resultsBox').innerText = "Please enter a search term.";
+    function renderIndexPreview(elId, index) {
+      var el = document.getElementById(elId);
+      if (!index || index.length === 0) {
+        el.innerHTML = 'No items.';
+        return;
+      }
+      var html = '';
+      index.forEach(function(item) {
+        html += '<div class="result-block">';
+        html += '<a href="' + (item.url || '#') + '" target="_blank">' + (item.title || item.url || 'Untitled') + '</a><br>';
+        html += '<span>' + (item.description || '') + '</span>';
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function generateIndex() {
+      var textarea = document.getElementById('generateUrls');
+      var lines = textarea.value.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+      if (lines.length === 0) {
+        document.getElementById('generateResults').innerText = 'Please enter at least one URL.';
         return;
       }
 
-      var url = backendURL + "?q=" + encodeURIComponent(query);
-      fetch(url)
-        .then(function(res) {
-          return res.json();
-        })
-        .then(function(data) {
-          var resultsBox = document.getElementById('resultsBox');
-          if (data.results.length === 0) {
-            resultsBox.innerText = "No results found.";
+      fetch(BACKEND_BASE + '/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: lines })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data || !Array.isArray(data.results)) {
+          document.getElementById('generateResults').innerText = 'Unexpected response.';
+          return;
+        }
+        activeIndex = data.results;
+        renderIndexPreview('generateResults', activeIndex);
+      })
+      .catch(function(err) {
+        document.getElementById('generateResults').innerText = 'Error generating: ' + err;
+      });
+    }
+
+    function loadUploadedIndex() {
+      var input = document.getElementById('uploadInput');
+      if (!input.files || input.files.length === 0) {
+        document.getElementById('uploadStatus').innerText = 'Please select a JSON file.';
+        return;
+      }
+
+      var file = input.files[0];
+      var reader = new FileReader();
+      reader.onload = function() {
+        try {
+          var json = JSON.parse(reader.result);
+          if (!Array.isArray(json)) {
+            document.getElementById('uploadStatus').innerText = 'File must be an array of items.';
             return;
           }
+          activeIndex = json;
+          document.getElementById('uploadStatus').innerText = 'Index loaded: ' + activeIndex.length + ' items.';
+        } catch (e) {
+          document.getElementById('uploadStatus').innerText = 'Invalid JSON: ' + e.message;
+        }
+      };
+      reader.readAsText(file);
+    }
 
-          var html = "";
-          data.results.forEach(function(item) {
-            html += '<div class="result-block">';
-            html += '<a href="' + item.url + '" target="_blank">' + item.title + '</a><br>';
-            html += '<span>' + item.description + '</span>';
-            html += '</div>';
-          });
-          resultsBox.innerHTML = html;
+    function performSearch() {
+      var q = document.getElementById('searchQuery').value.trim();
+      if (!q) {
+        document.getElementById('searchResults').innerText = 'Please enter a search term.';
+        return;
+      }
+      if (!activeIndex || activeIndex.length === 0) {
+        document.getElementById('searchResults').innerText = 'No active index. Generate or upload first.';
+        return;
+      }
+
+      fetch(BACKEND_BASE + '/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: q, index: activeIndex })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data || !Array.isArray(data.results)) {
+          document.getElementById('searchResults').innerText = 'Unexpected response.';
+          return;
+        }
+        renderIndexPreview('searchResults', data.results);
+      })
+      .catch(function(err) {
+        document.getElementById('searchResults').innerText = 'Error searching: ' + err;
+      });
+    }
+
+    function performAdhocSearch() {
+      var url = document.getElementById('adhocUrl').value.trim();
+      var q = document.getElementById('searchQuery').value.trim();
+      if (!url) {
+        document.getElementById('adhocResults').innerText = 'Please enter a URL.';
+        return;
+      }
+      if (!q) {
+        document.getElementById('adhocResults').innerText = 'Please enter a search term (left panel).';
+        return;
+      }
+
+      var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
+      fetch(endpoint)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (!data || !Array.isArray(data.results)) {
+            document.getElementById('adhocResults').innerText = 'Unexpected response.';
+            return;
+          }
+          renderIndexPreview('adhocResults', data.results);
         })
         .catch(function(err) {
-          document.getElementById('resultsBox').innerText = "Error fetching results.";
-          console.error(err);
+          document.getElementById('adhocResults').innerText = 'Error ad-hoc searching: ' + err;
         });
     }
+
+    function downloadCurrentIndex() {
+      if (!activeIndex || activeIndex.length === 0) {
+        alert('No active index to download.');
+        return;
+      }
+      var blob = new Blob([JSON.stringify(activeIndex, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    }
+
+    // Optional: quick health check to verify backend connectivity
+    (function pingHealth() {
+      fetch(BACKEND_BASE + '/health')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          console.log('Backend health:', data);
+        })
+        .catch(function() {
+          console.warn('Backend health check failed');
+        });
+    })();
   </script>
 </body>
 </html>
