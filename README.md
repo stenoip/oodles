@@ -1,6 +1,6 @@
 # Oodles Search Engine
 
-Oodles is a retro-styled, self-serve search engine platform. It lets anyone generate their own `index.json` datasets by crawling websites, then search through them with ranking, synonyms, pagination, and analytics. Think of it as a buffet of web information you can curate yourself.
+Oodles is a self-serve search engine platform. It lets anyone generate their own `index.json` datasets by crawling websites, then search through them with ranking, synonyms, pagination and analytics. Think of it as a buffet of web information you can curate yourself.
 
 ---
 
