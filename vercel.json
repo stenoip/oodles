@@ -1,6 +1,8 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/search", "dest": "/api/search.js" }
+    { "src": "/generate", "dest": "/api/generate.js" },
+    { "src": "/search", "dest": "/api/search.js" },
+    { "src": "/health", "dest": "/api/health.js" }
   ]
 }
