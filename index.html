@@ -41,8 +41,12 @@
     <button onclick="switchTab('generate')">Generate</button>
     <button onclick="switchTab('upload')">Upload</button>
     <button onclick="switchTab('search')">Search</button>
+    
+    <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">Stenoip Wonder Computer(Web-Portal)</button>
     <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
     <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
+    <hr>    
+    <button onclick="switchTab('about')">About</button>
   </nav>
 
   <div class="container">
@@ -74,6 +78,18 @@
       <div id="uploadStatus" class="results"></div>
     </div>
 
+    <div id="panel-about" class="panel" style="display:none;">
+      <h3>About Us</h3>
+  <p>Oodles Search Engine is a fun and easy way to explore websites you care about. 
+    It lets you create your own mini search engine—just pick a website and Oodles will scan it 
+    and build a searchable list of pages. You can then search through that list using simple keywords, 
+    like looking things up in a digital library you made yourself. No coding is needed and no setup is required. 
+    Whether you're researching a topic, organizing resources, or just curious, 
+    Oodles makes it easy to find what matters to you.</p>
+      <p>For more infomation, visit out Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
+
+    </div>
+    
     <div id="panel-search" class="panel" style="display:none;">
       <h3>Search active index.json</h3>
       <div>
@@ -114,12 +130,13 @@
     var totalResults = 0;
     var currentLimit = 10;
 
-    function switchTab(tab) {
-      document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
-      document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
-      document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
-    }
-
+   function switchTab(tab) {
+  document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
+  document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
+  document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
+  
+  document.getElementById('panel-about').style.display = (tab === 'about' ? 'block' : 'none'); 
+}
     function normalizeUrl(input) {
       var trimmed = (input || '').trim();
       if (!trimmed) return '';
