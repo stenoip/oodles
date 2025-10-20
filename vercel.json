@@ -5,6 +5,7 @@
     { "src": "/search", "dest": "/api/search.js" },
     { "src": "/analytics", "dest": "/api/analytics.js" },
     { "src": "/health", "dest": "/api/health.js" },
+    { "src": "/metasearch", "dest": "/api/metasearch.js" },
     { "src": "/(.*)", "dest": "/api/not-found.js" }
   ]
 }
