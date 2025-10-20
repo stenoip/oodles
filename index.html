@@ -41,11 +41,11 @@
     <button onclick="switchTab('generate')">Generate</button>
     <button onclick="switchTab('upload')">Upload</button>
     <button onclick="switchTab('search')">Search</button>
-    
+    <button onclick="switchTab('metasearch')">MetaSearch</button>
     <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">Stenoip Wonder Computer(Web-Portal)</button>
     <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
     <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
-    <hr>    
+    <hr>
     <button onclick="switchTab('about')">About</button>
   </nav>
 
@@ -78,38 +78,20 @@
       <div id="uploadStatus" class="results"></div>
     </div>
 
-    <div id="panel-about" class="panel" style="display:none;">
-      <h3>About Us</h3>
-  <p>Oodles Search Engine is a fun and easy way to explore websites you care about. 
-    It lets you create your own mini search engine—just pick a website and Oodles will scan it 
-    and build a searchable list of pages. You can then search through that list using simple keywords, 
-    like looking things up in a digital library you made yourself. No coding is needed and no setup is required. 
-    Whether you're researching a topic, organizing resources, or just curious, 
-    Oodles makes it easy to find what matters to you.</p>
-      <p>For more infomation, visit out Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
-
-    </div>
-    
     <div id="panel-search" class="panel" style="display:none;">
       <h3>Search active index.json</h3>
-      <div>
-        <input type="text" id="searchQuery" placeholder="Type your search...">
-        <div class="actions">
-          <button onclick="performSearch(1)">Search</button>
-        </div>
-        <div id="searchResults" class="results"></div>
-        <div id="pagination" class="pagination" style="display:none;">
-          <button onclick="prevPage()">Prev</button>
-          <span id="pageInfo"></span>
-          <button onclick="nextPage()">Next</button>
-          <label class="small">Per page:
-            <input type="text" id="perPage" value="10" style="width:40px;">
-          </label>
-        </div>
+      <input type="text" id="searchQuery" placeholder="Type your search...">
+      <div class="actions">
+        <button onclick="performSearch(1)">Search</button>
       </div>
-
+      <div id="searchResults" class="results"></div>
+      <div id="pagination" class="pagination" style="display:none;">
+        <button onclick="prevPage()">Prev</button>
+        <span id="pageInfo"></span>
+        <button onclick="nextPage()">Next</button>
+        <label class="small">Per page: <input type="text" id="perPage" value="10" style="width:40px;"></label>
+      </div>
       <hr>
-
       <h4>Ad-hoc single URL search</h4>
       <input type="text" id="adhocUrl" placeholder="example.com">
       <div class="actions">
@@ -117,236 +99,289 @@
       </div>
       <div id="adhocResults" class="results"></div>
     </div>
+
+    <div id="panel-metasearch" class="panel" style="display:none;">
+      <h3>MetaSearch: DuckDuckGo + Bing</h3>
+      <input type="text" id="metaQuery" placeholder="Type your search...">
+      <div class="actions">
+        <button onclick="performMetaSearch()">Search</button>
+      </div>
+      <div id="metaResults" class="results"></div>
+    </div>
+
+    <div id="panel-about" class="panel" style="display:none;">
+      <h3>About Us</h3>
+      <p>Oodles Search Engine is a fun and easy way to explore websites you care about. It lets you create your own mini search engine—just pick a website and Oodles will scan it and build a searchable list of pages. You can then search through that list using simple keywords, like looking things up in a digital library you made yourself. No coding is needed and no setup is required. Whether you're researching a topic, organizing resources, or just curious, Oodles makes it easy to find what matters to you.</p>
+      <p>For more information, visit our Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
+    </div>
   </div>
 
-  <footer>©  Stenoip Company</footer>
-  <p>Offically lanuched on Sunday 19th October 2025.</p>
+  <footer>© Stenoip Company</footer>
+  <p>Officially launched on Sunday 19th October 2025.</p>
 
-  <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-    var activeIndex = [];
-    var currentQuery = '';
-    var currentPage = 1;
-    var totalResults = 0;
-    var currentLimit = 10;
+ <script>
+  var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+  var activeIndex = [];
+  var currentQuery = '';
+  var currentPage = 1;
+  var totalResults = 0;
+  var currentLimit = 10;
 
-   function switchTab(tab) {
-  document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
-  document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
-  document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
-  
-  document.getElementById('panel-about').style.display = (tab === 'about' ? 'block' : 'none'); 
-}
-    function normalizeUrl(input) {
-      var trimmed = (input || '').trim();
-      if (!trimmed) return '';
-      if (!/^https?:\/\//i.test(trimmed)) {
-        return 'https://' + trimmed;
-      }
-      return trimmed;
+  function switchTab(tab) {
+    document.getElementById('panel-generate').style.display = (tab === 'generate' ? 'block' : 'none');
+    document.getElementById('panel-upload').style.display = (tab === 'upload' ? 'block' : 'none');
+    document.getElementById('panel-search').style.display = (tab === 'search' ? 'block' : 'none');
+    document.getElementById('panel-metasearch').style.display = (tab === 'metasearch' ? 'block' : 'none');
+    document.getElementById('panel-about').style.display = (tab === 'about' ? 'block' : 'none');
+  }
+
+  function normalizeUrl(input) {
+    var trimmed = (input || '').trim();
+    if (!trimmed) return '';
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return 'https://' + trimmed;
     }
+    return trimmed;
+  }
 
-    function renderIndexPreview(elId, index, showScore) {
-      var el = document.getElementById(elId);
-      if (!index || index.length === 0) {
-        el.innerHTML = 'No items.';
+  function renderIndexPreview(elId, index, showScore) {
+    var el = document.getElementById(elId);
+    if (!index || index.length === 0) {
+      el.innerHTML = 'No items.';
+      return;
+    }
+    var html = '';
+    index.forEach(function(item) {
+      var title = item.title || item.url || 'Untitled';
+      var url = item.url || '#';
+      var desc = item.description || '';
+      var score = item._score;
+      html += '<div class="result-block">';
+      html += '<a href="' + url + '" target="_blank" onclick="trackClick(\'' + encodeURIComponent(url) + '\')">' + title + '</a><br>';
+      html += '<span>' + desc + '</span>';
+      if (showScore && typeof score === 'number') {
+        html += '<div class="score">Score: ' + score + '</div>';
+      }
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function downloadCurrentIndex() {
+    if (!activeIndex || activeIndex.length === 0) {
+      alert('No active index to download.');
+      return;
+    }
+    var blob = new Blob([JSON.stringify(activeIndex, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  }
+
+  function generateIndex() {
+    var raw = document.getElementById('generateUrls').value;
+    var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+    if (lines.length === 0) {
+      document.getElementById('generateResults').innerText = 'Please enter at least one URL.';
+      return;
+    }
+    var normalized = lines.map(normalizeUrl);
+    var depth = parseInt(document.getElementById('generateDepth').value || '1', 10);
+    var links = parseInt(document.getElementById('generateLinks').value || '10', 10);
+    var sameDomainOnly = document.getElementById('sameDomainOnly').checked;
+
+    fetch(BACKEND_BASE + '/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls: normalized, depth: depth, links: links, sameDomainOnly: sameDomainOnly })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.results)) {
+        document.getElementById('generateResults').innerText = 'Unexpected response.';
         return;
       }
-      var html = '';
-      index.forEach(function(item) {
-        var title = item.title || item.url || 'Untitled';
-        var url = item.url || '#';
-        var desc = item.description || '';
-        var score = item._score;
-        html += '<div class="result-block">';
-        html += '<a href="' + url + '" target="_blank" onclick="trackClick(\'' + encodeURIComponent(url) + '\')">' + title + '</a><br>';
-        html += '<span>' + desc + '</span>';
-        if (showScore && typeof score === 'number') {
-          html += '<div class="score">Score: ' + score + '</div>';
-        }
-        html += '</div>';
-      });
-      el.innerHTML = html;
+      activeIndex = data.results;
+      renderIndexPreview('generateResults', activeIndex, false);
+    })
+    .catch(function(err) {
+      document.getElementById('generateResults').innerText = 'Error generating: ' + err;
+    });
+  }
+
+  function loadUploadedIndex() {
+    var input = document.getElementById('uploadInput');
+    if (!input.files || input.files.length === 0) {
+      document.getElementById('uploadStatus').innerText = 'Please select a JSON file.';
+      return;
     }
-
-    function downloadCurrentIndex() {
-      if (!activeIndex || activeIndex.length === 0) {
-        alert('No active index to download.');
-        return;
-      }
-      var blob = new Blob([JSON.stringify(activeIndex, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'index.json';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function() {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 0);
-    }
-
-    function generateIndex() {
-      var raw = document.getElementById('generateUrls').value;
-      var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
-      if (lines.length === 0) {
-        document.getElementById('generateResults').innerText = 'Please enter at least one URL.';
-        return;
-      }
-      var normalized = lines.map(normalizeUrl);
-      var depth = parseInt(document.getElementById('generateDepth').value || '1', 10);
-      var links = parseInt(document.getElementById('generateLinks').value || '10', 10);
-      var sameDomainOnly = document.getElementById('sameDomainOnly').checked;
-
-      fetch(BACKEND_BASE + '/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: normalized, depth: depth, links: links, sameDomainOnly: sameDomainOnly })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (!data || !Array.isArray(data.results)) {
-          document.getElementById('generateResults').innerText = 'Unexpected response.';
-          return;
-        }
-        activeIndex = data.results;
-        renderIndexPreview('generateResults', activeIndex, false);
-      })
-      .catch(function(err) {
-        document.getElementById('generateResults').innerText = 'Error generating: ' + err;
-      });
-    }
-
-    function loadUploadedIndex() {
-      var input = document.getElementById('uploadInput');
-      if (!input.files || input.files.length === 0) {
-        document.getElementById('uploadStatus').innerText = 'Please select a JSON file.';
-        return;
-      }
-      var file = input.files[0];
-      var reader = new FileReader();
-      reader.onload = function() {
-        try {
-          var json = JSON.parse(reader.result);
-          if (!Array.isArray(json)) {
-            document.getElementById('uploadStatus').innerText = 'File must be an array of items.';
-            return;
-          }
-          activeIndex = json;
-          document.getElementById('uploadStatus').innerText = 'Index loaded: ' + activeIndex.length + ' items.';
-        } catch (e) {
-          document.getElementById('uploadStatus').innerText = 'Invalid JSON: ' + e.message;
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function performSearch(page) {
-      if (!activeIndex || activeIndex.length === 0) {
-        document.getElementById('searchResults').innerText = 'No active index. Generate or upload first.';
-        return;
-      }
-      currentQuery = document.getElementById('searchQuery').value.trim();
-      if (!currentQuery) {
-        document.getElementById('searchResults').innerText = 'Please enter a search term.';
-        return;
-      }
-      currentPage = page || 1;
-      currentLimit = parseInt(document.getElementById('perPage').value || '10', 10);
-
-      fetch(BACKEND_BASE + '/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: currentQuery, index: activeIndex, page: currentPage, limit: currentLimit })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (!data || !Array.isArray(data.results)) {
-          document.getElementById('searchResults').innerText = 'Unexpected response.';
-          return;
-        }
-        totalResults = data.total || 0;
-        renderIndexPreview('searchResults', data.results, true);
-        updatePagination();
-      })
-      .catch(function(err) {
-        document.getElementById('searchResults').innerText = 'Error searching: ' + err;
-      });
-    }
-
-    function updatePagination() {
-      var pagEl = document.getElementById('pagination');
-      var pageInfo = document.getElementById('pageInfo');
-      if (totalResults <= currentLimit) {
-        pagEl.style.display = 'none';
-        return;
-      }
-      var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
-      pagEl.style.display = 'flex';
-      pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + totalResults + ' results)';
-    }
-
-    function prevPage() {
-      if (currentPage > 1) {
-        performSearch(currentPage - 1);
-      }
-    }
-
-    function nextPage() {
-      var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
-      if (currentPage < totalPages) {
-        performSearch(currentPage + 1);
-      }
-    }
-
-    function performAdhocSearch() {
-      var rawUrl = document.getElementById('adhocUrl').value.trim();
-      var url = normalizeUrl(rawUrl);
-      var q = document.getElementById('searchQuery').value.trim();
-      if (!url) {
-        document.getElementById('adhocResults').innerText = 'Please enter a URL.';
-        return;
-      }
-      if (!q) {
-        document.getElementById('adhocResults').innerText = 'Please enter a search term (above).';
-        return;
-      }
-      var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
-      fetch(endpoint)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (!data || !Array.isArray(data.results)) {
-            document.getElementById('adhocResults').innerText = 'Unexpected response.';
-            return;
-          }
-          renderIndexPreview('adhocResults', data.results, true);
-        })
-        .catch(function(err) {
-          document.getElementById('adhocResults').innerText = 'Error ad-hoc searching: ' + err;
-        });
-    }
-
-    function trackClick(encodedUrl) {
+    var file = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function() {
       try {
-        var actualUrl = decodeURIComponent(encodedUrl);
-        fetch(BACKEND_BASE + '/analytics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: actualUrl, query: currentQuery })
-        });
+        var json = JSON.parse(reader.result);
+        if (!Array.isArray(json)) {
+          document.getElementById('uploadStatus').innerText = 'File must be an array of items.';
+          return;
+        }
+        activeIndex = json;
+        document.getElementById('uploadStatus').innerText = 'Index loaded: ' + activeIndex.length + ' items.';
       } catch (e) {
-        // ignore
+        document.getElementById('uploadStatus').innerText = 'Invalid JSON: ' + e.message;
       }
+    };
+    reader.readAsText(file);
+  }
+
+  function performSearch(page) {
+    if (!activeIndex || activeIndex.length === 0) {
+      document.getElementById('searchResults').innerText = 'No active index. Generate or upload first.';
+      return;
+    }
+    currentQuery = document.getElementById('searchQuery').value.trim();
+    if (!currentQuery) {
+      document.getElementById('searchResults').innerText = 'Please enter a search term.';
+      return;
+    }
+    currentPage = page || 1;
+    currentLimit = parseInt(document.getElementById('perPage').value || '10', 10);
+
+    fetch(BACKEND_BASE + '/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: currentQuery, index: activeIndex, page: currentPage, limit: currentLimit })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.results)) {
+        document.getElementById('searchResults').innerText = 'Unexpected response.';
+        return;
+      }
+      totalResults = data.total || 0;
+      renderIndexPreview('searchResults', data.results, true);
+      updatePagination();
+    })
+    .catch(function(err) {
+      document.getElementById('searchResults').innerText = 'Error searching: ' + err;
+    });
+  }
+
+  function updatePagination() {
+    var pagEl = document.getElementById('pagination');
+    var pageInfo = document.getElementById('pageInfo');
+    if (totalResults <= currentLimit) {
+      pagEl.style.display = 'none';
+      return;
+    }
+    var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+    pagEl.style.display = 'flex';
+    pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + totalResults + ' results)';
+  }
+
+  function prevPage() {
+    if (currentPage > 1) {
+      performSearch(currentPage - 1);
+    }
+  }
+
+  function nextPage() {
+    var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+    if (currentPage < totalPages) {
+      performSearch(currentPage + 1);
+    }
+  }
+
+  function performAdhocSearch() {
+    var rawUrl = document.getElementById('adhocUrl').value.trim();
+    var url = normalizeUrl(rawUrl);
+    var q = document.getElementById('searchQuery').value.trim();
+    if (!url) {
+      document.getElementById('adhocResults').innerText = 'Please enter a URL.';
+      return;
+    }
+    if (!q) {
+      document.getElementById('adhocResults').innerText = 'Please enter a search term (above).';
+      return;
+    }
+    var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
+    fetch(endpoint)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data || !Array.isArray(data.results)) {
+          document.getElementById('adhocResults').innerText = 'Unexpected response.';
+          return;
+        }
+        renderIndexPreview('adhocResults', data.results, true);
+      })
+      .catch(function(err) {
+        document.getElementById('adhocResults').innerText = 'Error ad-hoc searching: ' + err;
+      });
+  }
+
+  function performMetaSearch() {
+    var q = document.getElementById('metaQuery').value.trim();
+    if (!q) {
+      document.getElementById('metaResults').innerText = 'Please enter a search term.';
+      return;
     }
 
-    // Optional health check
-    (function pingHealth() {
-      fetch(BACKEND_BASE + '/health')
-        .then(function(res) { return res.json(); })
-        .then(function(data) { console.log('Backend health:', data); })
-        .catch(function() { console.warn('Backend health check failed'); });
-    })();
-  </script>
+        fetch(BACKEND_BASE + '/metasearch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: q })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data || !Array.isArray(data.results)) {
+        document.getElementById('metaResults').innerText = 'Unexpected response.';
+        return;
+      }
+      var html = data.results.map(function(r) {
+        return '<div class="result-block">' +
+                 '<a href="' + r.url + '" target="_blank">' + r.title + '</a><br>' +
+                 '<span>' + (r.description || '') + '</span><br>' +
+                 '<span class="small">Source: ' + r.source + '</span>' +
+               '</div>';
+      }).join('');
+      document.getElementById('metaResults').innerHTML = html;
+    })
+    .catch(function(err) {
+      document.getElementById('metaResults').innerText = 'Error: ' + err.message;
+    });
+  }
+
+  function trackClick(encodedUrl) {
+    try {
+      var actualUrl = decodeURIComponent(encodedUrl);
+      fetch(BACKEND_BASE + '/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: actualUrl, query: currentQuery })
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Optional health check
+  (function pingHealth() {
+    fetch(BACKEND_BASE + '/health')
+      .then(function(res) { return res.json(); })
+      .then(function(data) { console.log('Backend health:', data); })
+      .catch(function() { console.warn('Backend health check failed'); });
+  })();
+
+  // Initial tab load
+  switchTab('generate'); 
+</script>
+
 </body>
 </html>
+
