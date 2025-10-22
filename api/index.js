@@ -8,12 +8,12 @@ app.use(cors());
 
 function buildSearchUrls(query) {
   return {
-    google: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
     bing: `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
     yahoo: `https://search.yahoo.com/search?p=${encodeURIComponent(query)}`,
-    duckduckgo: `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`
+    brave: `https://search.brave.com/search?q=${encodeURIComponent(query)}`
   };
 }
+
 
 async function crawlEngine(url, engine) {
   try {
@@ -23,14 +23,7 @@ async function crawlEngine(url, engine) {
     var $ = cheerio.load(res.data);
     var results = [];
 
-    if (engine === 'google') {
-      $('div.g').each(function () {
-        var title = $(this).find('h3').text();
-        var link = $(this).find('a').attr('href');
-        var snippet = $(this).find('.VwiC3b').text();
-        if (title && link) results.push({ title, link, snippet, source: 'Google' });
-      });
-    }
+  
 
     if (engine === 'bing') {
       $('li.b_algo').each(function () {
@@ -50,16 +43,23 @@ async function crawlEngine(url, engine) {
       });
     }
 
-    if (engine === 'duckduckgo') {
+ if (engine === 'brave') {
   $('div.result').each(function () {
-    var title = $(this).find('a.result__a').text();
-    var link = $(this).find('a.result__a').attr('href');
-    var snippet = $(this).find('.result__snippet').text();
+    var title = $(this).find('a').text();
+    var link = $(this).find('a').attr('href');
+    var snippet = $(this).find('div.snippet').text();
 
-    // Fallback if snippet is missing
-    if (!snippet) {
-      snippet = $(this).find('.result__content').text().trim();
+    if (title && link) {
+      results.push({
+        title: title,
+        link: link,
+        snippet: snippet,
+        source: 'Brave'
+      });
     }
+  });
+}
+
 
     if (title && link) {
       results.push({
