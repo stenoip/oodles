@@ -1,8 +1,10 @@
 {
   "name": "oodlebot-backend",
   "version": "1.0.0",
+  "private": true,
   "main": "api/index.js",
   "scripts": {
+    "dev": "vercel dev",
     "start": "node api/index.js"
   },
   "dependencies": {
