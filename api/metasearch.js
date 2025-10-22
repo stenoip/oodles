@@ -34,6 +34,7 @@ module.exports = async function (req, res) {
         bingResults.push({ title, url, description: desc, source: 'Bing' });
       }
     });
+    console.log('Bing results found:', bingResults.length);
 
     // --- Yahoo scraping ---
     var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q));
@@ -47,19 +48,34 @@ module.exports = async function (req, res) {
         yahooResults.push({ title, url, description: desc, source: 'Yahoo' });
       }
     });
+    console.log('Yahoo results found:', yahooResults.length);
 
     // --- DuckDuckGo scraping ---
     var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q));
     var $ddg = cheerio.load(ddgHtml.data);
     var ddgResults = [];
-    $ddg('div.result').each(function () {
-      var title = $ddg(this).find('a.result__a').text();
-      var url = $ddg(this).find('a.result__a').attr('href');
-      var desc = $ddg(this).find('.result__snippet').text();
+
+    $ddg('div.result.results_links.results_links_deep.web-result').each(function () {
+      var title = $ddg(this).find('h2.result__title a.result__a').text().trim();
+      var url = $ddg(this).find('h2.result__title a.result__a').attr('href');
+      var desc = $ddg(this).find('a.result__snippet').text().trim();
+
+      // Decode DuckDuckGo redirect links
+      if (url && url.startsWith('//duckduckgo.com/l/?uddg=')) {
+        try {
+          const parsed = new URL(url, 'https://duckduckgo.com');
+          const target = parsed.searchParams.get('uddg');
+          if (target) url = decodeURIComponent(target);
+        } catch (e) {
+          // ignore decode errors
+        }
+      }
+
       if (title && url) {
         ddgResults.push({ title, url, description: desc, source: 'DuckDuckGo' });
       }
     });
+    console.log('DuckDuckGo results found:', ddgResults.length);
 
     // --- Combine and crawl ---
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
@@ -67,8 +83,9 @@ module.exports = async function (req, res) {
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
+      console.log('Crawling', result.source, result.url);
       try {
-        var crawled = await crawlOne(result.url); // <-- this fetches the actual site HTML
+        var crawled = await crawlOne(result.url);
         crawledResults.push({
           title: crawled.title,
           url: crawled.url,
