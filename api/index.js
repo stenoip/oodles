@@ -1,19 +1,34 @@
-// api/index.js
+/* 
+########  ########  ########  ##        ######    ########         
+##    ##  ##    ##  ##    ##  ##        ##        ##               
+##    ##  ##    ##  ##    ##  ##        ######    ########          
+##    ##  ##    ##  ##    ##  ##        ##              ##           
+########  ########  ########  ########  ######    ########    Search     
+
+
+Copyright Stenoip Company. All rights reserved.
+
+Oodleant is a trademark of Stenoip Company
+
+
+
+
+*/
 'use strict';
 
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
-const { setCors } = require('./_cors');
+var fetch = require('node-fetch');
+var cheerio = require('cheerio');
+var { setCors } = require('./_cors');
 
-// --- Config ---
-const UA = 'Mozilla/5.0 (compatible; Oodlebot/1.0; +https://stenoip.github.io/oodles)';
-const TIMEOUT_MS = 7000;
-const DEFAULT_PAGE_SIZE = 10;
+// Config 
+var UA = 'Mozilla/5.0 (compatible; Oodlebot/1.0; +https://stenoip.github.io/oodles)';
+var TIMEOUT_MS = 7000;
+var DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 20;
 
 // --- Utility functions ---
 function withTimeout(promise, ms, label) {
-  let t;
+  var t;
   const timeout = new Promise((_, reject) => {
     t = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
   });
@@ -31,12 +46,12 @@ function normalize({ title, url, snippet, source }) {
 }
 
 function dedupe(items) {
-  const seen = new Set();
-  const out = [];
+  var seen = new Set();
+  var out = [];
   for (const it of items) {
     try {
-      const u = new URL(it.url);
-      const key = `${u.origin}${u.pathname}`.toLowerCase();
+      var u = new URL(it.url);
+      var key = `${u.origin}${u.pathname}`.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
         out.push(it);
@@ -49,51 +64,53 @@ function dedupe(items) {
 }
 
 function scoreItem(item, query, weight = 0.6) {
-  const q = query.toLowerCase();
-  const titleHit = item.title.toLowerCase().includes(q) ? 1 : 0;
-  const snippetHit = item.snippet.toLowerCase().includes(q) ? 0.6 : 0;
-  let httpsBonus = 0;
+  var q = query.toLowerCase();
+  var titleHit = item.title.toLowerCase().includes(q) ? 1 : 0;
+var snippetHit = item.snippet.toLowerCase().includes(q) ? 0.6 : 0;
+  var httpsBonus = 0;
   try {
-    const u = new URL(item.url);
+    var u = new URL(item.url);
     httpsBonus = u.protocol === 'https:' ? 0.2 : 0;
   } catch {}
   return weight + titleHit + snippetHit + httpsBonus;
 }
 
 function paginate(items, page, pageSize) {
-  const start = (page - 1) * pageSize;
+  var start = (page - 1) * pageSize;
   return items.slice(start, start + pageSize);
 }
 
 async function getHTML(url) {
-  const resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
+  var resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
   if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
   return resp.text();
 }
 
-// --- Crawlers ---
+/*OODLEANTS!
+Each ant is assigned a search engine
+*/
 async function crawlYahoo(query) {
-  const url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
-  const html = await getHTML(url);
-  const $ = cheerio.load(html);
-  const out = [];
+  var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
+  var html = await getHTML(url);
+  var $ = cheerio.load(html);
+  var out = [];
 
   $('h3.title a').each((_, el) => {
-    const a = $(el);
-    const title = a.text();
-    const href = a.attr('href');
-    const snippet = $(el).closest('div').next('div').text();
-    const item = normalize({ title, url: href, snippet, source: 'yahoo' });
+    var a = $(el);
+    var title = a.text();
+    var href = a.attr('href');
+    var snippet = $(el).closest('div').next('div').text();
+    var item = normalize({ title, url: href, snippet, source: 'yahoo' });
     if (item) out.push(item);
   });
 
   if (out.length === 0) {
     $('li div h3 a').each((_, el) => {
-      const a = $(el);
-      const title = a.text();
-      const href = a.attr('href');
-      const snippet = $(el).parent().next('p').text();
-      const item = normalize({ title, url: href, snippet, source: 'yahoo' });
+      var a = $(el);
+      var title = a.text();
+      var href = a.attr('href');
+      var snippet = $(el).parent().next('p').text();
+      var item = normalize({ title, url: href, snippet, source: 'yahoo' });
       if (item) out.push(item);
     });
   }
@@ -101,10 +118,10 @@ async function crawlYahoo(query) {
 }
 
 async function crawlEcosia(query) {
-  const url = `https://www.ecosia.org/search?q=${encodeURIComponent(query)}`;
-  const html = await getHTML(url);
-  const $ = cheerio.load(html);
-  const out = [];
+  var url = `https://www.ecosia.org/search?q=${encodeURIComponent(query)}`;
+  var html = await getHTML(url);
+  var $ = cheerio.load(html);
+  var out = [];
 
   $('article.result').each((_, el) => {
     const a = $(el).find('a.result-title');
