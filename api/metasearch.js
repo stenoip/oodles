@@ -31,7 +31,7 @@ module.exports = async function (req, res) {
       var url = $bing(this).find('a').attr('href');
       var desc = $bing(this).find('p').text();
       if (title && url) {
-        bingResults.push({ title: title, url: url, description: desc, source: 'Bing' });
+        bingResults.push({ title, url, description: desc, source: 'Bing' });
       }
     });
 
@@ -39,23 +39,36 @@ module.exports = async function (req, res) {
     var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q));
     var $yahoo = cheerio.load(yahooHtml.data);
     var yahooResults = [];
-    $yahoo('div.dd.algo').each(function () {
-      var title = $yahoo(this).find('h3.title').text();
+    $yahoo('div.algo-sr').each(function () {
+      var title = $yahoo(this).find('h3.title a').text();
       var url = $yahoo(this).find('h3.title a').attr('href');
-      var desc = $yahoo(this).find('p').text();
+      var desc = $yahoo(this).find('.compText').text();
       if (title && url) {
-        yahooResults.push({ title: title, url: url, description: desc, source: 'Yahoo' });
+        yahooResults.push({ title, url, description: desc, source: 'Yahoo' });
+      }
+    });
+
+    // --- DuckDuckGo scraping ---
+    var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q));
+    var $ddg = cheerio.load(ddgHtml.data);
+    var ddgResults = [];
+    $ddg('div.result').each(function () {
+      var title = $ddg(this).find('a.result__a').text();
+      var url = $ddg(this).find('a.result__a').attr('href');
+      var desc = $ddg(this).find('.result__snippet').text();
+      if (title && url) {
+        ddgResults.push({ title, url, description: desc, source: 'DuckDuckGo' });
       }
     });
 
     // --- Combine and crawl ---
-    var combined = bingResults.concat(yahooResults);
+    var combined = bingResults.concat(yahooResults).concat(ddgResults);
     var crawledResults = [];
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
       try {
-        var crawled = await crawlOne(result.url);
+        var crawled = await crawlOne(result.url); // <-- this fetches the actual site HTML
         crawledResults.push({
           title: crawled.title,
           url: crawled.url,
