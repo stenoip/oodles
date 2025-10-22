@@ -64,7 +64,7 @@ async function crawlEngine(url, engine) {
     if (title && link) {
       results.push({
         title: title,
-        link: link.startsWith('/') ? 'https://duckduckgo.com' + link : link,
+        link: link.startsWith('/') ? 'https://duckduckgo.com/html/' + link : link,
         snippet: snippet,
         source: 'DuckDuckGo'
       });
