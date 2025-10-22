@@ -6,6 +6,7 @@ var cors = require('cors');
 var app = express();
 app.use(cors());
 
+// Build search URLs for each engine
 function buildSearchUrls(query) {
   return {
     bing: `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
@@ -14,7 +15,7 @@ function buildSearchUrls(query) {
   };
 }
 
-
+// Crawl and parse results from each engine
 async function crawlEngine(url, engine) {
   try {
     var res = await axios.get(url, {
@@ -22,8 +23,6 @@ async function crawlEngine(url, engine) {
     });
     var $ = cheerio.load(res.data);
     var results = [];
-
-  
 
     if (engine === 'bing') {
       $('li.b_algo').each(function () {
@@ -43,35 +42,14 @@ async function crawlEngine(url, engine) {
       });
     }
 
- if (engine === 'brave') {
-  $('div.result').each(function () {
-    var title = $(this).find('a').text();
-    var link = $(this).find('a').attr('href');
-    var snippet = $(this).find('div.snippet').text();
-
-    if (title && link) {
-      results.push({
-        title: title,
-        link: link,
-        snippet: snippet,
-        source: 'Brave'
+    if (engine === 'brave') {
+      $('div.result').each(function () {
+        var title = $(this).find('a').text();
+        var link = $(this).find('a').attr('href');
+        var snippet = $(this).find('div.snippet').text() || $(this).find('p').text();
+        if (title && link) results.push({ title, link, snippet, source: 'Brave' });
       });
     }
-  });
-}
-
-
-    if (title && link) {
-      results.push({
-        title: title,
-        link: link.startsWith('/') ? 'https://duckduckgo.com/html/' + link : link,
-        snippet: snippet,
-        source: 'DuckDuckGo'
-      });
-    }
-  });
-}
-
 
     return results;
   } catch (err) {
@@ -80,6 +58,7 @@ async function crawlEngine(url, engine) {
   }
 }
 
+// Main metasearch route
 app.get('/metasearch', async function (req, res) {
   var query = req.query.q;
   if (!query) return res.status(400).json({ error: 'Missing query' });
@@ -98,6 +77,7 @@ app.get('/metasearch', async function (req, res) {
   res.json({ results: allResults });
 });
 
+// Start server
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function () {
   console.log('Oodlebot backend running on port ' + PORT);
