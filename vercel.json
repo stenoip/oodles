@@ -1,11 +1,15 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
-    { "src": "/generate", "dest": "/api/generate.js" },
-    { "src": "/search", "dest": "/api/search.js" },
-    { "src": "/analytics", "dest": "/api/analytics.js" },
-    { "src": "/health", "dest": "/api/health.js" },
-    { "src": "/metasearch", "dest": "/api/metasearch.js" },
-    { "src": "/(.*)", "dest": "/api/not-found.js" }
+    {
+      "src": "/metasearch",
+      "dest": "api/index.js"
+    }
   ]
 }
