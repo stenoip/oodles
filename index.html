@@ -325,37 +325,41 @@
       });
   }
 
-  function performMetaSearch() {
-    var q = document.getElementById('metaQuery').value.trim();
-    if (!q) {
-      document.getElementById('metaResults').innerText = 'Please enter a search term.';
+ function performMetaSearch() {
+  var q = document.getElementById('metaQuery').value.trim();
+  if (!q) {
+    document.getElementById('metaResults').innerText = 'Please enter a search term.';
+    return;
+  }
+
+  fetch(BACKEND_BASE + '/metasearch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: q })
+  })
+  .then(function (res) { return res.json(); })
+  .then(function (data) {
+    if (!data || !Array.isArray(data.results)) {
+      document.getElementById('metaResults').innerText = 'Unexpected response.';
       return;
     }
 
-        fetch(BACKEND_BASE + '/metasearch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: q })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (!data || !Array.isArray(data.results)) {
-        document.getElementById('metaResults').innerText = 'Unexpected response.';
-        return;
-      }
-      var html = data.results.map(function(r) {
-        return '<div class="result-block">' +
-                 '<a href="' + r.url + '" target="_blank">' + r.title + '</a><br>' +
-                 '<span>' + (r.description || '') + '</span><br>' +
-                 '<span class="small">Source: ' + r.source + '</span>' +
-               '</div>';
-      }).join('');
-      document.getElementById('metaResults').innerHTML = html;
-    })
-    .catch(function(err) {
-      document.getElementById('metaResults').innerText = 'Error: ' + err.message;
-    });
-  }
+    activeIndex = data.results; // Store crawled results for searching
+
+    var html = data.results.map(function (r) {
+      return '<div class="result-block">' +
+               '<a href="' + r.url + '" target="_blank">' + r.title + '</a><br>' +
+               '<span>' + (r.description || '') + '</span><br>' +
+               '<span class="small">Source: ' + r.source + '</span>' +
+             '</div>';
+    }).join('');
+    document.getElementById('metaResults').innerHTML = html;
+  })
+  .catch(function (err) {
+    document.getElementById('metaResults').innerText = 'Error: ' + err.message;
+  });
+}
+
 
   function trackClick(encodedUrl) {
     try {
