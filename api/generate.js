@@ -21,20 +21,16 @@ async function crawlOne(url) {
   var title = $('title').first().text() || url;
   var description = $('meta[name="description"]').attr('content') || 'No description available';
   var headings = [];
-  $('h1,h2,h3').each(function() { headings.push($(this).text()); });
+  $('h1,h2,h3').each(function () { headings.push($(this).text()); });
 
   var bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-  // Collect and resolve links
   var links = [];
-  $('a[href]').each(function() {
+  $('a[href]').each(function () {
     var href = ($(this).attr('href') || '').trim();
-    if (!href) return;
-    if (/^(javascript:|mailto:|tel:|#)/i.test(href)) return;
+    if (!href || /^(javascript:|mailto:|tel:|#)/i.test(href)) return;
     var abs = resolveUrl(url, href);
-    if (abs && /^https?:\/\//i.test(abs)) {
-      links.push(abs);
-    }
+    if (abs && /^https?:\/\//i.test(abs)) links.push(abs);
   });
 
   return {
@@ -43,12 +39,12 @@ async function crawlOne(url) {
     description: description,
     headings: headings,
     content: bodyText,
-    html: html,     // stored in index.json; not shown in previews
+    html: html,
     links: links
   };
 }
 
-module.exports = async function(req, res) {
+async function handler(req, res) {
   cors.setCors(res);
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -56,11 +52,10 @@ module.exports = async function(req, res) {
   }
 
   try {
-    // Inputs
     var urls = [];
-    var maxDepth = 1;  // default: follow one level deep
-    var maxPerPageLinks = 10; // breadth limit per page
-    var sameDomainOnly = false; // set true to restrict crawl to seed domains
+    var maxDepth = 1;
+    var maxPerPageLinks = 10;
+    var sameDomainOnly = false;
 
     if (req.method === 'GET') {
       var singleUrl = req.query && req.query.url;
@@ -69,8 +64,8 @@ module.exports = async function(req, res) {
         return;
       }
       urls = [singleUrl];
-      if (req.query.depth) maxDepth = Math.max(0, parseInt(req.query.depth || '1', 10) || 1);
-      if (req.query.links) maxPerPageLinks = Math.max(1, parseInt(req.query.links || '10', 10) || 10);
+      if (req.query.depth) maxDepth = Math.max(0, parseInt(req.query.depth || '1', 10));
+      if (req.query.links) maxPerPageLinks = Math.max(1, parseInt(req.query.links || '10', 10));
       if (req.query.sameDomain) sameDomainOnly = String(req.query.sameDomain).toLowerCase() === 'true';
     } else if (req.method === 'POST') {
       var body = req.body || {};
@@ -88,14 +83,12 @@ module.exports = async function(req, res) {
       return;
     }
 
-    // Seed domains (for sameDomainOnly option)
-    var seedDomains = urls.map(function(u) {
+    var seedDomains = urls.map(function (u) {
       try { return new urlLib.URL(u).hostname; } catch (e) { return null; }
     }).filter(Boolean);
 
-    // BFS crawl
     var visited = {};
-    var queue = urls.map(function(u) { return { url: u, depth: 0 }; });
+    var queue = urls.map(function (u) { return { url: u, depth: 0 }; });
     var index = [];
 
     while (queue.length > 0) {
@@ -112,7 +105,7 @@ module.exports = async function(req, res) {
 
         if (depth < maxDepth) {
           var toAdd = item.links
-            .filter(function(l) {
+            .filter(function (l) {
               if (!/^https?:\/\//i.test(l)) return false;
               if (!sameDomainOnly) return true;
               try {
@@ -122,7 +115,7 @@ module.exports = async function(req, res) {
             })
             .slice(0, maxPerPageLinks);
 
-          toAdd.forEach(function(nextUrl) {
+          toAdd.forEach(function (nextUrl) {
             if (!visited[nextUrl]) queue.push({ url: nextUrl, depth: depth + 1 });
           });
         }
@@ -143,4 +136,9 @@ module.exports = async function(req, res) {
   } catch (err) {
     res.status(500).json({ error: 'Generate failed', details: err.message });
   }
+}
+
+module.exports = {
+  handler: handler,
+  crawlOne: crawlOne
 };
