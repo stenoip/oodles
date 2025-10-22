@@ -138,7 +138,7 @@ async function handler(req, res) {
   }
 }
 
-module.exports = {
-  handler: handler,
-  crawlOne: crawlOne
-};
+// Default export for Vercel
+module.exports = handler;
+// Named export for reuse
+module.exports.crawlOne = crawlOne;
