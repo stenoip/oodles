@@ -22,23 +22,38 @@ module.exports = async function (req, res) {
   }
 
   try {
-    // Bing scraping
+    // --- Bing scraping ---
     var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q));
-    var $ = cheerio.load(bingHtml.data);
+    var $bing = cheerio.load(bingHtml.data);
     var bingResults = [];
-    $('li.b_algo').each(function () {
-      var title = $(this).find('h2').text();
-      var url = $(this).find('a').attr('href');
-      var desc = $(this).find('p').text();
+    $bing('li.b_algo').each(function () {
+      var title = $bing(this).find('h2').text();
+      var url = $bing(this).find('a').attr('href');
+      var desc = $bing(this).find('p').text();
       if (title && url) {
         bingResults.push({ title: title, url: url, description: desc, source: 'Bing' });
       }
     });
 
-    // Crawl each result
+    // --- Yahoo scraping ---
+    var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q));
+    var $yahoo = cheerio.load(yahooHtml.data);
+    var yahooResults = [];
+    $yahoo('div.dd.algo').each(function () {
+      var title = $yahoo(this).find('h3.title').text();
+      var url = $yahoo(this).find('h3.title a').attr('href');
+      var desc = $yahoo(this).find('p').text();
+      if (title && url) {
+        yahooResults.push({ title: title, url: url, description: desc, source: 'Yahoo' });
+      }
+    });
+
+    // --- Combine and crawl ---
+    var combined = bingResults.concat(yahooResults);
     var crawledResults = [];
-    for (var i = 0; i < bingResults.length; i++) {
-      var result = bingResults[i];
+
+    for (var i = 0; i < combined.length; i++) {
+      var result = combined[i];
       try {
         var crawled = await crawlOne(result.url);
         crawledResults.push({
