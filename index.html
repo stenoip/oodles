@@ -53,56 +53,119 @@
   <p>Officially launched on Sunday 19th October 2025.</p>
 
   <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+  var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+  var state = { q: '', page: 1, pageSize: 10, total: 0 };
 
-    function switchTab(tab) {
-      var container = document.querySelector('.container');
-      container.innerHTML = '';
+  function setActiveTab(tab) {
+    document.getElementById('tab-metasearch')?.classList.remove('active-tab');
+    document.getElementById('tab-about')?.classList.remove('active-tab');
+    if (tab === 'metasearch') document.getElementById('tab-metasearch')?.classList.add('active-tab');
+    if (tab === 'about') document.getElementById('tab-about')?.classList.add('active-tab');
+  }
 
-      if (tab === 'metasearch') {
-        container.innerHTML = `
-          <div class="panel">
-            <h3>Oodlebot MetaSearch</h3>
-            <input type="text" id="query" placeholder="Search the web..." />
-            <div class="actions">
-              <button onclick="runMetaSearch()">Search</button>
-            </div>
-            <div class="results" id="results"></div>
+  function switchTab(tab) {
+    setActiveTab(tab);
+    var container = document.querySelector('.container');
+    container.innerHTML = '';
+
+    if (tab === 'metasearch') {
+      container.innerHTML = `
+        <div class="panel">
+          <h3>Oodlebot MetaSearch</h3>
+          <input type="text" id="query" placeholder="Search the web..." />
+          <div class="actions">
+            <button onclick="runMetaSearch(1)">Search</button>
           </div>
-        `;
-      }
+          <div class="results" id="results"></div>
+          <div class="pagination" id="pager" style="display:none;">
+            <button onclick="prevPage()">Prev</button>
+            <span id="pageInfo"></span>
+            <button onclick="nextPage()">Next</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('query').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') runMetaSearch(1);
+      });
     }
 
-    function runMetaSearch() {
-      var query = document.getElementById('query').value;
-      var resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = 'Oodlebot is crawling...';
-
-      fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}`)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (!data.results.length) {
-            resultsDiv.innerHTML = '<div class="small">No results found.</div>';
-            return;
-          }
-
-          var html = '';
-          for (var i = 0; i < data.results.length; i++) {
-            var r = data.results[i];
-            html += `
-              <div class="result-block">
-                <a href="${r.link}" target="_blank">${r.title}</a>
-                <div class="small">${r.snippet}</div>
-                <div class="score">Source: ${r.source}</div>
-              </div>
-            `;
-          }
-          resultsDiv.innerHTML = html;
-        })
-        .catch(function(err) {
-          resultsDiv.innerHTML = 'Error: ' + err.message;
-        });
+    if (tab === 'about') {
+      container.innerHTML = `
+        <div class="panel">
+          <h3>About Oodles Search</h3>
+          <p>Oodles is a metasearch engine blending results from Brave, Bing, Yahoo, and Ecosia with smart deduping and scoring.</p>
+        </div>
+      `;
     }
-  </script>
+  }
+
+  async function runMetaSearch(toPage) {
+    var q = document.getElementById('query')?.value.trim();
+    if (!q) {
+      document.getElementById('results').innerHTML = '<div class="small">Please enter a search query.</div>';
+      document.getElementById('pager').style.display = 'none';
+      return;
+    }
+    state.q = q;
+    state.page = toPage || 1;
+
+    var resultsEl = document.getElementById('results');
+    resultsEl.innerHTML = '<div class="small">Searching…</div>';
+
+    try {
+      const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(state.q)}&page=${state.page}&pageSize=${state.pageSize}`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Search failed');
+      const data = await resp.json();
+      state.total = data.total;
+      renderResults(data.items, data.page, data.pageSize, data.total);
+    } catch (e) {
+      resultsEl.innerHTML = '<div class="small">Something went wrong. Please try again.</div>';
+      document.getElementById('pager').style.display = 'none';
+    }
+  }
+
+  function renderResults(items, page, pageSize, total) {
+    var resultsEl = document.getElementById('results');
+    if (!items || items.length === 0) {
+      resultsEl.innerHTML = '<div class="small">No results found.</div>';
+      document.getElementById('pager').style.display = 'none';
+      return;
+    }
+
+    resultsEl.innerHTML = items.map(r => `
+      <div class="result-block">
+        <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+        <div class="small">${escapeHtml(r.url)}</div>
+        <div>${escapeHtml(r.snippet || '')}</div>
+        <div class="score">Source: ${r.source} • Score: ${r.score.toFixed(2)}</div>
+      </div>
+    `).join('');
+
+    var totalPages = Math.max(1, Math.ceil(total / pageSize));
+    var pager = document.getElementById('pager');
+    pager.style.display = 'flex';
+    document.getElementById('pageInfo').textContent = `Page ${page} of ${totalPages}`;
+  }
+
+  function prevPage() {
+    if (state.page > 1) runMetaSearch(state.page - 1);
+  }
+  function nextPage() {
+    var totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+    if (state.page < totalPages) runMetaSearch(state.page + 1);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // Initialize default tab
+  switchTab('metasearch');
+</script>
+
 </body>
 </html>
