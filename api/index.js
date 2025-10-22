@@ -51,13 +51,27 @@ async function crawlEngine(url, engine) {
     }
 
     if (engine === 'duckduckgo') {
-      $('div.result').each(function () {
-        var title = $(this).find('a.result__a').text();
-        var link = $(this).find('a.result__a').attr('href');
-        var snippet = $(this).find('.result__snippet').text();
-        if (title && link) results.push({ title, link, snippet, source: 'DuckDuckGo' });
+  $('div.result').each(function () {
+    var title = $(this).find('a.result__a').text();
+    var link = $(this).find('a.result__a').attr('href');
+    var snippet = $(this).find('.result__snippet').text();
+
+    // Fallback if snippet is missing
+    if (!snippet) {
+      snippet = $(this).find('.result__content').text().trim();
+    }
+
+    if (title && link) {
+      results.push({
+        title: title,
+        link: link.startsWith('/') ? 'https://duckduckgo.com' + link : link,
+        snippet: snippet,
+        source: 'DuckDuckGo'
       });
     }
+  });
+}
+
 
     return results;
   } catch (err) {
