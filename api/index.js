@@ -5,37 +5,31 @@ const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const { setCors } = require('./_cors');
 
-// Config
+// --- Config ---
 const UA = 'Mozilla/5.0 (compatible; Oodlebot/1.0; +https://stenoip.github.io/oodles)';
 const TIMEOUT_MS = 7000;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 20;
 
-// Utility: timeout wrapper
+// --- Utility functions ---
 function withTimeout(promise, ms, label) {
   let t;
   const timeout = new Promise((_, reject) => {
     t = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
   });
-  return Promise.race([
-    promise.finally(() => clearTimeout(t)),
-    timeout
-  ]);
+  return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
 }
 
-// Utility: safe normalize
 function normalize({ title, url, snippet, source }) {
   if (!url) return null;
-  const item = {
+  return {
     title: (title || url).trim(),
     url: url.trim(),
     snippet: (snippet || '').trim(),
     source
   };
-  return item;
 }
 
-// Utility: dedupe by canonical URL
 function dedupe(items) {
   const seen = new Set();
   const out = [];
@@ -48,13 +42,12 @@ function dedupe(items) {
         out.push(it);
       }
     } catch {
-      // Skip invalid URLs
+      // skip invalid URLs
     }
   }
   return out;
 }
 
-// Utility: scoring heuristic
 function scoreItem(item, query, weight = 0.6) {
   const q = query.toLowerCase();
   const titleHit = item.title.toLowerCase().includes(q) ? 1 : 0;
@@ -67,47 +60,39 @@ function scoreItem(item, query, weight = 0.6) {
   return weight + titleHit + snippetHit + httpsBonus;
 }
 
-// Pagination
 function paginate(items, page, pageSize) {
   const start = (page - 1) * pageSize;
   return items.slice(start, start + pageSize);
 }
 
-// Fetch helper
 async function getHTML(url) {
-  const resp = await fetch(url, {
-    headers: { 'User-Agent': UA, 'Accept': 'text/html' }
-  });
+  const resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
   if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
   return resp.text();
 }
 
-/* Crawlers (HTML scrapers, resilient selectors). Note: engines update DOM;
-   selectors include fallbacks. */
-
+// --- Crawlers ---
 async function crawlYahoo(query) {
   const url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
   const html = await getHTML(url);
   const $ = cheerio.load(html);
   const out = [];
 
-  // Primary selector pattern
-  $('.Sr').each((_, el) => {
-    const a = $(el).find('h3 > a');
+  $('h3.title a').each((_, el) => {
+    const a = $(el);
     const title = a.text();
     const href = a.attr('href');
-    const snippet = $(el).find('div > p').text();
+    const snippet = $(el).closest('div').next('div').text();
     const item = normalize({ title, url: href, snippet, source: 'yahoo' });
     if (item) out.push(item);
   });
 
-  // Fallbacks
   if (out.length === 0) {
-    $('h3.title a, li div h3 a').each((_, el) => {
+    $('li div h3 a').each((_, el) => {
       const a = $(el);
       const title = a.text();
       const href = a.attr('href');
-      const snippet = $(el).closest('li, div').find('p').first().text();
+      const snippet = $(el).parent().next('p').text();
       const item = normalize({ title, url: href, snippet, source: 'yahoo' });
       if (item) out.push(item);
     });
@@ -121,7 +106,6 @@ async function crawlEcosia(query) {
   const $ = cheerio.load(html);
   const out = [];
 
-  // Primary layout
   $('article.result').each((_, el) => {
     const a = $(el).find('a.result-title');
     const title = a.text();
@@ -131,7 +115,6 @@ async function crawlEcosia(query) {
     if (item) out.push(item);
   });
 
-  // Fallbacks
   if (out.length === 0) {
     $('a.result-title').each((_, el) => {
       const a = $(el);
@@ -151,7 +134,6 @@ async function crawlBing(query) {
   const $ = cheerio.load(html);
   const out = [];
 
-  // Standard Bing cards
   $('li.b_algo').each((_, el) => {
     const a = $(el).find('h2 a');
     const title = a.text();
@@ -161,7 +143,6 @@ async function crawlBing(query) {
     if (item) out.push(item);
   });
 
-  // Fallback
   if (out.length === 0) {
     $('h2 a').each((_, el) => {
       const a = $(el);
@@ -181,7 +162,6 @@ async function crawlBrave(query) {
   const $ = cheerio.load(html);
   const out = [];
 
-  // Brave result blocks (server-rendered)
   $('div#results > div').each((_, el) => {
     const a = $(el).find('a[href]').first();
     const title = a.text();
@@ -191,13 +171,11 @@ async function crawlBrave(query) {
     if (item) out.push(item);
   });
 
-  // Fallback generic anchors inside results
   if (out.length === 0) {
     $('a.result-title, a[href^="http"]').each((_, el) => {
       const a = $(el);
       const title = a.text();
       const href = a.attr('href');
-      // Limit to main results section if present
       if (!href || !/^https?:\/\//.test(href)) return;
       const snippet = $(el).closest('div').find('p, div').eq(1).text();
       const item = normalize({ title, url: href, snippet, source: 'brave' });
@@ -207,7 +185,7 @@ async function crawlBrave(query) {
   return out.slice(0, 20);
 }
 
-// Main handler (Serverless)
+// --- Main handler ---
 module.exports = async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') {
@@ -238,17 +216,18 @@ module.exports = async (req, res) => {
     let [brave, bing, yahoo, ecosia] = await Promise.all(tasks);
     let all = dedupe([...brave, ...bing, ...yahoo, ...ecosia]);
 
-    // Score
     const engineWeights = { brave: 0.8, bing: 0.7, yahoo: 0.5, ecosia: 0.5 };
-    all = all.map(it => ({ ...it, score: scoreItem(it, q, engineWeights[it.source] || 0.6) }))
-             .sort((a, b) => b.score - a.score);
+    all = all.map(it => ({
+      ...it,
+      score: scoreItem(it, q, engineWeights[it.source] || 0.6)
+    })).sort((a, b) => b.score - a.score);
 
     const total = all.length;
     const items = paginate(all, page, pageSize);
 
-    res.status(200).json({ query: q, total, page, pageSize, items });
+       res.status(200).json({ query: q, total, page, pageSize, items });
   } catch (err) {
-    console.error(err);
+    console.error('Metasearch error:', err);
     res.status(500).json({ error: 'Oodlebot metasearch failed' });
   }
 };
