@@ -1,7 +1,7 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
 var urlLib = require('url');
-var cors = require('./_cors'); // <-- FIXED: Requiring the whole module
+var cors = require('./_cors'); // Use the full require pattern from working files
 
 // Normalize and resolve absolute URLs
 function resolveUrl(base, href) {
@@ -45,21 +45,25 @@ async function crawlOne(url) {
 }
 
 async function handler(req, res) {
-  // --------------------- START: CORS FIX ---------------------
-  cors.setCors(res); // <-- FIXED: Using the full module object reference
+  // --------------------- CORS Fix (Retained) ---------------------
+  cors.setCors(res); 
   
   // Handle preflight (OPTIONS) request immediately
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  // --------------------- END: CORS FIX ---------------------
+  // --------------------- END CORS ---------------------
 
   try {
     var urls = [];
     var maxDepth = 1;
     var maxPerPageLinks = 10;
     var sameDomainOnly = false;
+    
+    // REVERTED FIX: Rely on Vercel to populate req.body (like analytics.js does)
+    var body = req.body || {}; 
+
 
     if (req.method === 'GET') {
       var singleUrl = req.query && req.query.url;
@@ -72,7 +76,6 @@ async function handler(req, res) {
       if (req.query.links) maxPerPageLinks = Math.max(1, parseInt(req.query.links || '10', 10));
       if (req.query.sameDomain) sameDomainOnly = String(req.query.sameDomain).toLowerCase() === 'true';
     } else if (req.method === 'POST') {
-      var body = req.body || {};
       if (Array.isArray(body.urls)) urls = body.urls;
       else if (typeof body.url === 'string') urls = [body.url];
       else {
