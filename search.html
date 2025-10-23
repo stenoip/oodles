@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MetaSearch Results</title>
+    <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* Re-include the necessary styles if 'style.css' is not a separate file */
+        body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
+        header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
+        .container { padding: 20px; max-width: 980px; margin: 0 auto; }
+        .result-block { margin-bottom: 12px; border-bottom: 1px dotted #808080; padding-bottom: 8px; }
+        .result-block a { color: #000080; font-weight: bold; text-decoration: none; }
+        .result-block a:hover { text-decoration: underline; }
+        .small { font-size: 12px; color: #333; }
+        .score { color: #555; font-size: 12px; }
+        /* Add search bar styling for a cohesive look */
+        #searchBox { padding: 10px; margin-bottom: 20px; background-color: #e0e0e0; border: 2px groove #808080; }
+        #searchBox input[type="text"] { width: 80%; padding: 8px; font-size: 16px; border: 2px inset #808080; background-color: #fff; }
+        #searchBox button { padding: 8px 16px; font-size: 14px; background-color: #000080; color: white; border: 2px outset #fff; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+    </header>
+
+    <div class="container">
+        <div id="searchBox">
+            <input type="text" id="currentQuery" placeholder="Search the web again...">
+            <button onclick="reRunSearch()">Search</button>
+        </div>
+        
+        <h2>MetaSearch Results for: <span id="queryDisplay"></span></h2>
+        <div id="searchResults">
+            </div>
+    </div>
+
+    <script>
+        const BACKEND_BASE = 'https://oodles-backend.vercel.app'; // Re-use the backend base URL
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        // Function to run a new search from the results page
+        function reRunSearch() {
+            const newQuery = document.getElementById('currentQuery').value.trim();
+            if (newQuery) {
+                // Redirect back to the main page to run the new metasearch
+                window.location.href = 'index.html#metasearch?q=' + encodeURIComponent(newQuery);
+            }
+        }
+
+        function displayResults() {
+            var resultsDataString = sessionStorage.getItem('metaSearchResults');
+            const query = sessionStorage.getItem('metaSearchQuery') || 'Your Query';
+            const resultsEl = document.getElementById('searchResults');
+            
+            document.getElementById('queryDisplay').textContent = query;
+            document.getElementById('currentQuery').value = query;
+
+            if (!resultsDataString) {
+                resultsEl.innerHTML = '<h3>No results found or session expired.</h3><p>Please return to the main page to search again.</p>';
+                return;
+            }
+
+            try {
+                var data = JSON.parse(resultsDataString);
+                var items = data.items || [];
+                var total = data.total || 0;
+
+                resultsEl.innerHTML = `
+                    <p class="small">Found ${total} results.</p>
+                    ${items.map(r => `
+                        <div class="result-block">
+                            <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+                            <div class="small">${escapeHtml(r.url)}</div>
+                            <div>${escapeHtml(r.snippet || '')}</div>
+                            <div class="score">Source: ${r.source} • Score: ${r.score.toFixed(2)}</div>
+                        </div>
+                    `).join('')}
+                `;
+                
+                // Clear the session data after display to avoid stale results on refresh
+                sessionStorage.removeItem('metaSearchResults');
+                sessionStorage.removeItem('metaSearchQuery');
+
+            } catch (e) {
+                resultsEl.innerHTML = '<h3>Error loading results.</h3><p>Data corrupted. Please try again.</p>';
+            }
+        }
+
+        // Run the display function when the page loads
+        document.addEventListener('DOMContentLoaded', displayResults);
+    </script>
+</body>
+</html>
