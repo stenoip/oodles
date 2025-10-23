@@ -1,7 +1,7 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
 var urlLib = require('url');
-var cors = require('./_cors'); // Use the full require pattern from working files
+var cors = require('./_cors'); // Consistent module require pattern
 
 // Normalize and resolve absolute URLs
 function resolveUrl(base, href) {
@@ -44,16 +44,15 @@ async function crawlOne(url) {
   };
 }
 
-async function handler(req, res) {
-  // --------------------- CORS Fix (Retained) ---------------------
-  cors.setCors(res); 
+// --- Main Handler ---
+module.exports = async function(req, res) { // Standard Vercel async function format
   
-  // Handle preflight (OPTIONS) request immediately
+  // 1. CORS Preflight Handler (Fixing the Vercel crash)
+  cors.setCors(res); 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  // --------------------- END CORS ---------------------
 
   try {
     var urls = [];
@@ -61,9 +60,8 @@ async function handler(req, res) {
     var maxPerPageLinks = 10;
     var sameDomainOnly = false;
     
-    // REVERTED FIX: Rely on Vercel to populate req.body (like analytics.js does)
-    var body = req.body || {}; 
-
+    // Safely access the body, relying on Vercel's built-in parser (like in analytics.js)
+    var body = req.body || {}; 
 
     if (req.method === 'GET') {
       var singleUrl = req.query && req.query.url;
@@ -143,9 +141,7 @@ async function handler(req, res) {
   } catch (err) {
     res.status(500).json({ error: 'Generate failed', details: err.message });
   }
-}
+};
 
-// Default export for Vercel
-module.exports = handler;
-// Named export for reuse
+// Named export for reuse (optional, but good practice)
 module.exports.crawlOne = crawlOne;
