@@ -6,7 +6,7 @@
   <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    /* Styling from both versions, prioritizing the retro look */
+  
     body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
     header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
     header img { max-height: 120px; }
@@ -38,7 +38,6 @@
   <header>
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
-
   <nav>
     <button onclick="switchTab('generate')">Generate</button>
     <button onclick="switchTab('upload')">Upload</button>
@@ -50,7 +49,6 @@
     <hr>
     <button onclick="switchTab('about')">About</button>
   </nav>
-
   <div class="container">
     <div id="panel-generate" class="panel" style="display:none;">
       <h3>Generate index.json from URLs</h3>
@@ -69,7 +67,6 @@
       </div>
       <div id="generateResults" class="results"></div>
     </div>
-
     <div id="panel-upload" class="panel" style="display:none;">
       <h3>Upload an existing index.json</h3>
       <input type="file" id="uploadInput" accept="application/json">
@@ -79,8 +76,7 @@
       </div>
       <div id="uploadStatus" class="results"></div>
     </div>
-    
-    <div id="panel-search" class="panel" style="display:none;">
+        <div id="panel-search" class="panel" style="display:none;">
       <h3>Search active index.json</h3>
       <div>
         <input type="text" id="searchQuery" placeholder="Type your search...">
@@ -97,9 +93,7 @@
           </label>
         </div>
       </div>
-
       <hr>
-
       <h4>Ad-hoc single URL search</h4>
       <input type="text" id="adhocUrl" placeholder="example.com">
       <div class="actions">
@@ -107,21 +101,20 @@
       </div>
       <div id="adhocResults" class="results"></div>
     </div>
-
     <div id="panel-metasearch" class="panel" style="display:none;">
         <h3>Oodlebot MetaSearch</h3>
+        <p class="small">Results will open in a new tab for dedicated viewing.</p>
         <input type="text" id="metaQuery" placeholder="Search the web..." />
         <div class="actions">
-            <button onclick="runMetaSearch(1)">Search</button>
+            <button onclick="runMetaSearch()">Search</button>
         </div>
         <div class="results" id="metaResults"></div>
         <div class="pagination" id="metaPager" style="display:none;">
-            <button onclick="metaPrevPage()">Prev</button>
-            <span id="metaPageInfo"></span>
-            <button onclick="metaNextPage()">Next</button>
+            <button onclick="alert('Pagination handled in new tab.')">Prev</button>
+            <span id="metaPageInfo">Page 1 of ?</span>
+            <button onclick="alert('Pagination handled in new tab.')">Next</button>
         </div>
     </div>
-
     <div id="panel-about" class="panel" style="display:none;">
       <h3>About Us</h3>
       <p>Oodles Search Engine is a fun and easy way to explore websites you care about.
@@ -131,12 +124,9 @@
       <p>The Oodlebot MetaSearch feature blends results from Brave, Bing, Yahoo and Ecosia with smart deduping and scoring.</p>
       <p>For more infomation, visit out Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
     </div>
-    
-  </div>
-
+      </div>
   <footer>© Stenoip Company</footer>
   <p>Officially launched on Sunday 19th October 2025.</p>
-
  <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
     var activeIndex = [];
@@ -144,8 +134,8 @@
     var currentPage = 1;
     var totalResults = 0;
     var currentLimit = 10;
-    var metaState = { q: '', page: 1, pageSize: 10, total: 0 };
-
+    // metaState is largely obsolete now but kept for minor reference
+    var metaState = { q: '', page: 1, pageSize: 10, total: 0 }; 
 
     // Consolidated switchTab function to handle all panels
     function switchTab(tab) {
@@ -155,7 +145,7 @@
       document.getElementById('panel-search').style.display = 'none';
       document.getElementById('panel-about').style.display = 'none';
       document.getElementById('panel-metasearch').style.display = 'none';
-      
+
       // Show the selected panel
       var panelId = 'panel-' + tab;
       var selectedPanel = document.getElementById(panelId);
@@ -163,9 +153,8 @@
         selectedPanel.style.display = 'block';
       }
     }
-    
-    // --- Utility Functions ---
 
+    // --- Utility Functions ---
     function normalizeUrl(input) {
       var trimmed = (input || '').trim();
       if (!trimmed) return '';
@@ -174,14 +163,13 @@
       }
       return trimmed;
     }
-
     function escapeHtml(s) {
         return String(s)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
     }
-    
+
     // Renders the index preview for local search results
     function renderIndexPreview(elId, index, showScore) {
       var el = document.getElementById(elId);
@@ -208,7 +196,6 @@
       });
       el.innerHTML = html;
     }
-
     function downloadCurrentIndex() {
       if (!activeIndex || activeIndex.length === 0) {
         alert('No active index to download.');
@@ -313,7 +300,7 @@
       }
       currentPage = page || 1;
       currentLimit = parseInt(document.getElementById('perPage').value || '10', 10);
-      
+
       document.getElementById('searchResults').innerText = 'Searching active index...';
 
       fetch(BACKEND_BASE + '/search', {
@@ -359,11 +346,11 @@
         document.getElementById('adhocResults').innerText = 'Please enter a search term (above).';
         return;
       }
-      
+
       document.getElementById('adhocResults').innerText = 'Ad-hoc searching single URL...';
       // Ad-hoc search uses GET /search?q=...&url=...
       var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
-      
+
       fetch(endpoint)
         .then(function(res) {
             if (!res.ok) {
@@ -422,80 +409,65 @@
         // ignore
       }
     }
-    
-    // --- MetaSearch Logic (Kept for completeness) ---
-    async function runMetaSearch(toPage) {
+
+    // --- MetaSearch Logic (MODIFIED for new tab redirection) ---
+    async function runMetaSearch() {
         var q = document.getElementById('metaQuery')?.value.trim();
         if (!q) {
             document.getElementById('metaResults').innerHTML = '<div class="small">Please enter a search query.</div>';
-            document.getElementById('metaPager').style.display = 'none';
             return;
         }
-        metaState.q = q;
-        metaState.page = toPage || 1;
-
+        
+        // Show immediate feedback
         var resultsEl = document.getElementById('metaResults');
-        resultsEl.innerHTML = '<div class="small">Searching…</div>';
+        resultsEl.innerHTML = '<div class="small">Searching and preparing results for **search.html**... Please wait.</div>';
 
         try {
-            const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(metaState.q)}&page=${metaState.page}&pageSize=${metaState.pageSize}`;
+            // Get results from backend (requesting a larger page size for the initial load)
+            const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(q)}&page=1&pageSize=50`; 
             const resp = await fetch(url);
-            if (!resp.ok) throw new Error('Search failed');
+            if (!resp.ok) throw new Error('Search failed with status: ' + resp.status);
             const data = await resp.json();
-            metaState.total = data.total;
-            renderMetaResults(data.items, data.page, data.pageSize, data.total);
+            
+            // Use sessionStorage to pass the results and metadata to the new tab
+            sessionStorage.setItem('metaSearchResults', JSON.stringify(data));
+            sessionStorage.setItem('metaSearchQuery', q);
+
+            // Open the search results in a new tab/window
+            window.open('search.html', '_blank');
+
+            resultsEl.innerHTML = '<div class="small">Results opened in a new tab (**search.html**).</div>';
+
         } catch (e) {
-            resultsEl.innerHTML = '<div class="small">Something went wrong. Please try again.</div>';
-            document.getElementById('metaPager').style.display = 'none';
+            resultsEl.innerHTML = `<div class="small">Something went wrong. Error: ${e.message}. Please try again.</div>`;
         }
     }
 
-    function renderMetaResults(items, page, pageSize, total) {
-        var resultsEl = document.getElementById('metaResults');
-        if (!items || items.length === 0) {
-            resultsEl.innerHTML = '<div class="small">No results found.</div>';
-            document.getElementById('metaPager').style.display = 'none';
-            return;
-        }
+    // These functions related to rendering/paging meta-results on this page are now obsolete:
+    /*
+    function renderMetaResults(items, page, pageSize, total) { ... }
+    function metaPrevPage() { ... }
+    function metaNextPage() { ... }
+    */
 
-        resultsEl.innerHTML = items.map(r => `
-            <div class="result-block">
-                <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-                <div class="small">${escapeHtml(r.url)}</div>
-                <div>${escapeHtml(r.snippet || '')}</div>
-                <div class="score">Source: ${r.source} • Score: ${r.score.toFixed(2)}</div>
-            </div>
-        `).join('');
-
-        var totalPages = Math.max(1, Math.ceil(total / pageSize));
-        var pager = document.getElementById('metaPager');
-        pager.style.display = 'flex';
-        document.getElementById('metaPageInfo').textContent = `Page ${page} of ${totalPages}`;
-    }
-
-    function metaPrevPage() {
-        if (metaState.page > 1) runMetaSearch(metaState.page - 1);
-    }
-    function metaNextPage() {
-        var totalPages = Math.max(1, Math.ceil(metaState.total / metaState.pageSize));
-        if (metaState.page < totalPages) runMetaSearch(metaState.page + 1);
-    }
     // --- End MetaSearch Logic ---
-
 
     // Initialize the default tab to 'generate'
     switchTab('generate');
 
     // Add event listener for Enter key on MetaSearch
     document.getElementById('panel-metasearch')?.addEventListener('keydown', function(e) {
+        // Check if the Enter key was pressed and the active element is the metaQuery input
         if (e.key === 'Enter' && document.getElementById('metaQuery') === document.activeElement) {
-            runMetaSearch(1);
+            e.preventDefault(); // Prevent default form submission if any
+            runMetaSearch();
         }
     });
 
     // Add event listener for Enter key on Local Search
     document.getElementById('panel-search')?.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && document.getElementById('searchQuery') === document.activeElement) {
+            e.preventDefault();
             performSearch(1);
         }
     });
