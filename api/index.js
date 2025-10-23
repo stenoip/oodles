@@ -1,8 +1,9 @@
-/*########  ########  ########  ##      ######    ########       
-##    ##  ##    ##  ##    ##  ##        ##        ##             
-##    ##  ##    ##  ##    ##  ##        ######    ########       
-##    ##  ##    ##  ##    ##  ##              ##        ##       
-########  ########  ########  ########  ######    ########    Search   
+/*
+########  ########  ########  ##        ######    ########
+##    ##  ##    ##  ##    ##  ##        ##        ##
+##    ##  ##    ##  ##    ##  ##        ######    ########
+##    ##  ##    ##  ##    ##  ##              ##        ##
+########  ########  ########  ########  ######    ########    Search
 
 Copyright Stenoip Company. All rights reserved.
 
@@ -15,7 +16,7 @@ var fetch = require('node-fetch');
 var cheerio = require('cheerio');
 var { setCors } = require('./_cors');
 
-// Config 
+// Config
 var UA = 'Mozilla/5.0 (compatible; Oodlebot/1.0; +https://stenoip.github.io/oodles)';
 var TIMEOUT_MS = 7000;
 var DEFAULT_PAGE_SIZE = 10;
@@ -209,7 +210,7 @@ async function crawlBrave(query) {
     return out.slice(0, 20);
 }
 
-// --- NEW IMAGE CRAWLING FUNCTION ---
+// --- IMAGE CRAWLING FUNCTION ---
 async function crawlBingImages(query) {
     const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
     const html = await getHTML(url);
@@ -243,7 +244,28 @@ async function crawlBingImages(query) {
     return out.slice(0, 30);
 }
 
-// --- Main handler for /api/metasearch ---
+// --- Dedicated Image Search Handler ---
+async function handleImageSearch(req, res) {
+    // 'q' is guaranteed to be present and trimmed by the main handler
+    const q = (req.query.q || '').trim(); 
+    
+    try {
+        // Only crawling Bing for images for simplicity
+        const imageResults = await withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images');
+
+        res.status(200).json({
+            query: q,
+            total: imageResults.length,
+            items: imageResults
+        });
+    } catch (err) {
+        console.error('Image search error:', err);
+        res.status(500).json({ error: 'Oodlebot image search failed' });
+    }
+}
+
+
+// --- Main handler for /api/index.js (or just /) ---
 module.exports = async (req, res) => {
     setCors(res);
     if (req.method === 'OPTIONS') {
@@ -251,22 +273,26 @@ module.exports = async (req, res) => {
         return;
     }
 
-    // Check if the request is for the dedicated image search endpoint
-    if (req.url.startsWith('/api/image-search')) {
-        return handleImageSearch(req, res);
-    }
-    
     const q = (req.query.q || '').trim();
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.min(
-        MAX_PAGE_SIZE,
-        Math.max(5, parseInt(req.query.pageSize || String(DEFAULT_PAGE_SIZE), 10))
-    );
+    // NEW: Check for 'type' parameter to route the request
+    const type = (req.query.type || 'web').trim();
 
     if (!q) {
         res.status(400).json({ error: 'Missing query parameter q' });
         return;
     }
+    
+    // ROUTING: If type=image, run the dedicated image handler
+    if (type === 'image') {
+        return handleImageSearch(req, res);
+    }
+
+    // --- Standard Web Metasearch Logic (type is 'web' or missing) ---
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const pageSize = Math.min(
+        MAX_PAGE_SIZE,
+        Math.max(5, parseInt(req.query.pageSize || String(DEFAULT_PAGE_SIZE), 10))
+    );
 
     try {
         const tasks = [
@@ -294,28 +320,3 @@ module.exports = async (req, res) => {
         res.status(500).json({ error: 'Oodlebot metasearch failed' });
     }
 };
-
-// --- Dedicated Image Search Handler ---
-async function handleImageSearch(req, res) {
-    setCors(res);
-    const q = (req.query.q || '').trim();
-
-    if (!q) {
-        res.status(400).json({ error: 'Missing query parameter q' });
-        return;
-    }
-
-    try {
-        // Only crawling Bing for images for simplicity
-        const imageResults = await withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images');
-
-        res.status(200).json({
-            query: q,
-            total: imageResults.length,
-            items: imageResults
-        });
-    } catch (err) {
-        console.error('Image search error:', err);
-        res.status(500).json({ error: 'Oodlebot image search failed' });
-    }
-}
