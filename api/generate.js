@@ -1,7 +1,7 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
 var urlLib = require('url');
-var { setCors } = require('./_cors'); // <-- ADDED
+var cors = require('./_cors'); // <-- FIXED: Requiring the whole module
 
 // Normalize and resolve absolute URLs
 function resolveUrl(base, href) {
@@ -46,8 +46,8 @@ async function crawlOne(url) {
 
 async function handler(req, res) {
   // --------------------- START: CORS FIX ---------------------
-  setCors(res); // <-- FIXED: Using the shared CORS helper
-
+  cors.setCors(res); // <-- FIXED: Using the full module object reference
+  
   // Handle preflight (OPTIONS) request immediately
   if (req.method === 'OPTIONS') {
     res.status(200).end();
