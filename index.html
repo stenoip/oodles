@@ -6,7 +6,7 @@
   <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-  
+    /* Styling from both versions, prioritizing the retro look */
     body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
     header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
     header img { max-height: 120px; }
@@ -443,17 +443,10 @@
         }
     }
 
-    // These functions related to rendering/paging meta-results on this page are now obsolete:
-    /*
-    function renderMetaResults(items, page, pageSize, total) { ... }
-    function metaPrevPage() { ... }
-    function metaNextPage() { ... }
-    */
-
     // --- End MetaSearch Logic ---
 
-    // Initialize the default tab to 'generate'
-    switchTab('generate');
+    // Initialize the default tab to 'metasearch'
+    switchTab('metasearch');
 
     // Add event listener for Enter key on MetaSearch
     document.getElementById('panel-metasearch')?.addEventListener('keydown', function(e) {
