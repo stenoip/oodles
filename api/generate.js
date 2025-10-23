@@ -1,6 +1,7 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
 var urlLib = require('url');
+var { setCors } = require('./_cors'); // <-- ADDED
 
 // Normalize and resolve absolute URLs
 function resolveUrl(base, href) {
@@ -45,11 +46,7 @@ async function crawlOne(url) {
 
 async function handler(req, res) {
   // --------------------- START: CORS FIX ---------------------
-  // Explicitly set the CORS headers for the specific GitHub Pages origin.
-  // This allows all pages hosted on this domain (e.g., /oodles or /maps) to make requests.
-  res.setHeader('Access-Control-Allow-Origin', 'https://stenoip.github.io'); 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); 
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); 
+  setCors(res); // <-- FIXED: Using the shared CORS helper
 
   // Handle preflight (OPTIONS) request immediately
   if (req.method === 'OPTIONS') {
