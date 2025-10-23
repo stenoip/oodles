@@ -167,12 +167,18 @@
     </nav>
     <div class="container">
         
-        <div id="panel-metasearch" class="panel" style="display:none;">
+        <div id="panel-metasearch" class="panel" style="display:block;">
             <h3>Oodles MetaSearch</h3>
             <p class="small">Results come from multiple Search Engines. <a href="https://en.wikipedia.org/wiki/Metasearch_engine">See meaning of a metasearch.</a></p>
             <input type="text" id="metaQuery" placeholder="Search the web..." />
             <div class="actions">
+                <select id="searchTypeSelector" style="padding: 8px; font-size: 14px; border: 2px inset #808080;">
+                    <option value="web">Web Links</option>
+                    <option value="image">Images</option>
+                </select>
                 <button onclick="runMetaSearch()">Search</button>
+            </div>
+            <div class="results" id="metaResults"></div>
             </div>
             <div class="results" id="metaResults"></div>
             <div class="pagination" id="metaPager" style="display:none;">
