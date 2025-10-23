@@ -5,9 +5,8 @@
     <title>MetaSearch Results</title>
     <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <style>
-
+        
         body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
         header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
         header img { max-height: 120px; }
@@ -73,6 +72,7 @@
     </div>
 
     <script>
+        // NOTE: The base endpoint is assumed to point to the api/index.js file
         const BACKEND_BASE = 'https://oodles-backend.vercel.app'; 
         
         function escapeHtml(s) {
@@ -164,7 +164,8 @@
             // --- 1. Fetch Web Links (ONLY if searchType is 'web') ---
             if (!isImageSearch) {
                 try {
-                    const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=20`; 
+                    // Uses base URL for metasearch
+                    const url = `${BACKEND_BASE}/?q=${encodeURIComponent(query)}&page=1&pageSize=20`; 
                     const resp = await fetch(url);
                     const data = await resp.json();
                     renderLinkResults(data.items, data.total);
@@ -176,7 +177,8 @@
             // --- 2. Fetch Images (ONLY if searchType is 'image') ---
             if (isImageSearch) {
                 try {
-                    const url = `${BACKEND_BASE}/image-search?q=${encodeURIComponent(query)}`; 
+                    // Uses base URL AND the NEW 'type=image' parameter
+                    const url = `${BACKEND_BASE}/?q=${encodeURIComponent(query)}&type=image`; 
                     const resp = await fetch(url);
                     const data = await resp.json();
                     renderImageResults(data.items);
