@@ -1,15 +1,3 @@
-/*
-########  ########  ########    ##        ######    ########
-##    ##  ##    ##  ##      ##  ##        ##        ##
-##    ##  ##    ##  ##      ##  ##        ######    ########
-##    ##  ##    ##  ##      ##  ##        ##              ##
-########  ########  ########    ########  ######    ########    Search
-
-Copyright Stenoip Company. All rights reserved.
-
-Oodleant is a trademark of Stenoip Company
-
-*/
 'use strict';
 
 var fetch = require('node-fetch');
@@ -20,57 +8,57 @@ var { setCors } = require('./_cors');
 var UA = 'Mozilla/5.0 (compatible; Oodlebot/1.0; +https://stenoip.github.io/oodles)';
 var TIMEOUT_MS = 7000;
 var DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 20;
+var MAX_PAGE_SIZE = 20;
 
 // --- Utility functions ---
 function withTimeout(promise, ms, label) {
     var t;
-    const timeout = new Promise((_, reject) => {
-        t = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    var timeout = new Promise(function(_, reject) {
+        t = setTimeout(function() {
+            reject(new Error(label + ' timed out'));
+        }, ms);
     });
-    return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
+    return Promise.race([promise.finally(function() { clearTimeout(t); }), timeout]);
 }
 
-function normalize({ title, url, snippet, source }) {
-    if (!url) return null;
+function normalize(obj) {
+    if (!obj.url) return null;
     return {
-        title: (title || url).trim(),
-        url: url.trim(),
-        snippet: (snippet || '').trim(),
-        source
+        title: (obj.title || obj.url).trim(),
+        url: obj.url.trim(),
+        snippet: (obj.snippet || '').trim(),
+        source: obj.source
     };
 }
 
-// New normalization function for image results
-function normalizeImage({ thumbnail, originalUrl, pageUrl, source }) {
-    if (!thumbnail || !originalUrl || !pageUrl) return null;
+function normalizeImage(obj) {
+    if (!obj.thumbnail || !obj.originalUrl || !obj.pageUrl) return null;
     return {
-        thumbnail,
-        originalUrl,
-        pageUrl,
-        source
+        thumbnail: obj.thumbnail,
+        originalUrl: obj.originalUrl,
+        pageUrl: obj.pageUrl,
+        source: obj.source
     };
 }
 
 function dedupe(items) {
     var seen = new Set();
     var out = [];
-    for (const it of items) {
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
         try {
             var u = new URL(it.url);
-            var key = `${u.origin}${u.pathname}`.toLowerCase();
+            var key = (u.origin + u.pathname).toLowerCase();
             if (!seen.has(key)) {
                 seen.add(key);
                 out.push(it);
             }
-        } catch {
-            // skip invalid URLs
-        }
+        } catch (e) {}
     }
     return out;
 }
 
-function scoreItem(item, query, weight = 0.6) {
+function scoreItem(item, query, weight) {
     var q = query.toLowerCase();
     var titleHit = item.title.toLowerCase().includes(q) ? 1 : 0;
     var snippetHit = item.snippet.toLowerCase().includes(q) ? 0.6 : 0;
@@ -78,7 +66,7 @@ function scoreItem(item, query, weight = 0.6) {
     try {
         var u = new URL(item.url);
         httpsBonus = u.protocol === 'https:' ? 0.2 : 0;
-    } catch {}
+    } catch (e) {}
     return weight + titleHit + snippetHit + httpsBonus;
 }
 
@@ -89,35 +77,33 @@ function paginate(items, page, pageSize) {
 
 async function getHTML(url) {
     var resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
-    if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
+    if (!resp.ok) throw new Error('Fetch ' + resp.status + ' for ' + url);
     return resp.text();
 }
 
-/*OODLEANTS!
-Each ant is assigned a search engine
-*/
+// --- Crawlers ---
 async function crawlYahoo(query) {
-    var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
+    var url = 'https://search.yahoo.com/search?p=' + encodeURIComponent(query) + '&n=20';
     var html = await getHTML(url);
     var $ = cheerio.load(html);
     var out = [];
 
-    $('h3.title a').each((_, el) => {
+    $('h3.title a').each(function(_, el) {
         var a = $(el);
         var title = a.text();
         var href = a.attr('href');
         var snippet = $(el).closest('div').next('div').text();
-        var item = normalize({ title, url: href, snippet, source: 'yahoo' });
+        var item = normalize({ title: title, url: href, snippet: snippet, source: 'yahoo' });
         if (item) out.push(item);
     });
 
     if (out.length === 0) {
-        $('li div h3 a').each((_, el) => {
+        $('li div h3 a').each(function(_, el) {
             var a = $(el);
             var title = a.text();
             var href = a.attr('href');
             var snippet = $(el).parent().next('p').text();
-            var item = normalize({ title, url: href, snippet, source: 'yahoo' });
+            var item = normalize({ title: title, url: href, snippet: snippet, source: 'yahoo' });
             if (item) out.push(item);
         });
     }
@@ -125,27 +111,27 @@ async function crawlYahoo(query) {
 }
 
 async function crawlEcosia(query) {
-    var url = `https://www.ecosia.org/search?q=${encodeURIComponent(query)}`;
+    var url = 'https://www.ecosia.org/search?q=' + encodeURIComponent(query);
     var html = await getHTML(url);
     var $ = cheerio.load(html);
     var out = [];
 
-    $('article.result').each((_, el) => {
-        const a = $(el).find('a.result-title');
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('.result-snippet').text();
-        const item = normalize({ title, url: href, snippet, source: 'ecosia' });
+    $('article.result').each(function(_, el) {
+        var a = $(el).find('a.result-title');
+        var title = a.text();
+        var href = a.attr('href');
+        var snippet = $(el).find('.result-snippet').text();
+        var item = normalize({ title: title, url: href, snippet: snippet, source: 'ecosia' });
         if (item) out.push(item);
     });
 
     if (out.length === 0) {
-        $('a.result-title').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
-            const snippet = $(el).closest('article').find('.result-snippet').text();
-            const item = normalize({ title, url: href, snippet, source: 'ecosia' });
+        $('a.result-title').each(function(_, el) {
+            var a = $(el);
+            var title = a.text();
+            var href = a.attr('href');
+            var snippet = $(el).closest('article').find('.result-snippet').text();
+            var item = normalize({ title: title, url: href, snippet: snippet, source: 'ecosia' });
             if (item) out.push(item);
         });
     }
@@ -153,28 +139,28 @@ async function crawlEcosia(query) {
 }
 
 async function crawlBing(query) {
-    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=20`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
+    var url = 'https://www.bing.com/search?q=' + encodeURIComponent(query) + '&count=20';
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
 
-    $('li.b_algo').each((_, el) => {
-        const a = $(el).find('h2 a');
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('.b_caption p').text();
-        const item = normalize({ title, url: href, snippet, source: 'bing' });
+    $('li.b_algo').each(function(_, el) {
+        var a = $(el).find('h2 a');
+        var title = a.text();
+        var href = a.attr('href');
+        var snippet = $(el).find('.b_caption p').text();
+        var item = normalize({ title: title, url: href, snippet: snippet, source: 'bing' });
         if (item) out.push(item);
     });
 
     if (out.length === 0) {
-        $('h2 a').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
+        $('h2 a').each(function(_, el) {
+            var a = $(el);
+            var title = a.text();
+            var href = a.attr('href');
             if (!href || !/^https?:\/\//.test(href)) return;
-            const snippet = $(el).closest('li, div').find('p').first().text();
-            const item = normalize({ title, url: href, snippet, source: 'bing' });
+            var snippet = $(el).closest('li, div').find('p').first().text();
+            var item = normalize({ title: title, url: href, snippet: snippet, source: 'bing' });
             if (item) out.push(item);
         });
     }
@@ -182,81 +168,86 @@ async function crawlBing(query) {
 }
 
 async function crawlBrave(query) {
-    const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}&count=20`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
+    var url = 'https://search.brave.com/search?q=' + encodeURIComponent(query) + '&count=20';
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
 
-    $('div#results > div').each((_, el) => {
-        const a = $(el).find('a[href]').first();
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('div').last().text();
-        const item = normalize({ title, url: href, snippet, source: 'brave' });
+    $('div#results > div').each(function(_, el) {
+        var a = $(el).find('a[href]').first();
+        var title = a.text();
+        var href = a.attr('href');
+        var snippet = $(el).find('div').last().text();
+        var item = normalize({ title: title, url: href, snippet: snippet, source: 'brave' });
         if (item) out.push(item);
     });
 
     if (out.length === 0) {
-        $('a.result-title, a[href^="http"]').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
+        $('a.result-title, a[href^="http"]').each(function(_, el) {
+            var a = $(el);
+            var title = a.text();
+            var href = a.attr('href');
             if (!href || !/^https?:\/\//.test(href)) return;
-            const snippet = $(el).closest('div').find('p, div').eq(1).text();
-            const item = normalize({ title, url: href, snippet, source: 'brave' });
+            var snippet = $(el).closest('div').find('p, div').eq(1).text();
+            var item = normalize({ title: title, url: href, snippet: snippet, source: 'brave' });
             if (item) out.push(item);
         });
     }
     return out.slice(0, 20);
 }
 
-// --- IMAGE CRAWLING FUNCTION ---
-async function crawlBingImages(query) {
-    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
+// --- Image Crawlers ---
+async function crawlYahooImages(query) {
+    var url = 'https://images.search.yahoo.com/search/images?p=' + encodeURIComponent(query);
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
 
-    $('.imgpt .img_cont.hoff').each((_, el) => {
-        const data = $(el).find('a').attr('m');
-        if (data) {
-            try {
-                // Bing embeds image metadata in a JSON string in the 'm' attribute
-                const metadata = JSON.parse(data);
-                const thumbnail = metadata.turl;
-                const originalUrl = metadata.murl;
-                const pageUrl = metadata.purl; // URL of the page hosting the image
-
-                const item = normalizeImage({
-                    thumbnail,
-                    originalUrl,
-                    pageUrl,
-                    source: 'bing-images'
-                });
-                if (item) out.push(item);
-            } catch (e) {
-                // Ignore parsing errors
-                console.warn('Error parsing Bing image data:', e.message);
-            }
-        }
+    $('li.img').each(function(_, el) {
+        var thumbnail = $(el).find('img').attr('data-src') || $(el).find('img').attr('src');
+        var pageUrl = $(el).find('a').attr('href');
+        var originalUrl = $(el).find('img').attr('data-src');
+        var item = normalizeImage({ thumbnail: thumbnail, originalUrl: originalUrl, pageUrl: pageUrl, source: 'yahoo-images' });
+        if (item) out.push(item);
     });
-    // Return a maximum of 30 image results
+
+    return out.slice(0, 30);
+}
+
+async function crawlBraveImages(query) {
+    var url = 'https://search.brave.com/images?q=' + encodeURIComponent(query);
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
+
+    $('div.image-tile').each(function(_, el) {
+        var thumbnail = $(el).find('img').attr('src');
+        var pageUrl = $(el).find('a').attr('href');
+        var originalUrl = $(el).find('img').attr('data-src') || thumbnail;
+        var item = normalizeImage({ thumbnail: thumbnail, originalUrl: originalUrl: originalUrl, pageUrl: pageUrl, source: 'brave-images' });
+        if (item) out.push(item);
+    });
+
     return out.slice(0, 30);
 }
 
 // --- Dedicated Image Search Handler ---
 async function handleImageSearch(req, res) {
-    // 'q' is guaranteed to be present and trimmed by the main handler
-    const q = (req.query.q || '').trim(); 
-    
+    var q = (req.query.q || '').trim();
+
     try {
-        // Only crawling Bing for images for simplicity
-        const imageResults = await withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images');
+        var tasks = [
+            withTimeout(crawlYahooImages(q), TIMEOUT_MS, 'Yahoo Images').catch(function() { return []; }),
+            withTimeout(crawlBraveImages(q), TIMEOUT_MS, 'Brave Images').catch(function() { return []; })
+        ];
+
+        var results = await Promise.all(tasks);
+        var allImages = [].concat.apply([], results);
 
         res.status(200).json({
             query: q,
-            total: imageResults.length,
-            items: imageResults
+            total: allImages.length,
+            items: allImages
         });
     } catch (err) {
         console.error('Image search error:', err);
@@ -264,57 +255,61 @@ async function handleImageSearch(req, res) {
     }
 }
 
-
-// --- Main handler for /api/index.js (or just /) ---
-module.exports = async (req, res) => {
+// --- Main handler ---
+module.exports = async function(req, res) {
     setCors(res);
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
-    const q = (req.query.q || '').trim();
-    // NEW: Check for 'type' parameter to route the request
-    const type = (req.query.type || 'web').trim();
+    var q = (req.query.q || '').trim();
+    var type = (req.query.type || 'web').trim();
 
     if (!q) {
         res.status(400).json({ error: 'Missing query parameter q' });
         return;
     }
-    
-    // ROUTING: If type=image, run the dedicated image handler
+
     if (type === 'image') {
         return handleImageSearch(req, res);
     }
 
-    // --- Standard Web Metasearch Logic (type is 'web' or missing) ---
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.min(
+    var page = Math.max(1, parseInt(req.query.page || '1', 10));
+    var pageSize = Math.min(
         MAX_PAGE_SIZE,
         Math.max(5, parseInt(req.query.pageSize || String(DEFAULT_PAGE_SIZE), 10))
     );
 
     try {
-        const tasks = [
-            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(() => []),
-            withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(() => []),
-            withTimeout(crawlYahoo(q), TIMEOUT_MS, 'Yahoo').catch(() => []),
-            withTimeout(crawlEcosia(q), TIMEOUT_MS, 'Ecosia').catch(() => [])
+        var tasks = [
+            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(function() { return []; }),
+            withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(function() { return []; }),
+            withTimeout(crawlYahoo(q), TIMEOUT_MS, 'Yahoo').catch(function() { return []; }),
+            withTimeout(crawlEcosia(q), TIMEOUT_MS, 'Ecosia').catch(function() { return []; })
         ];
 
-        let [brave, bing, yahoo, ecosia] = await Promise.all(tasks);
-        let all = dedupe([...brave, ...bing, ...yahoo, ...ecosia]);
+        var results = await Promise.all(tasks);
+        var brave = results[0];
+        var bing = results[1];
+        var yahoo = results[2];
+        var ecosia = results[3];
 
-        const engineWeights = { brave: 0.8, bing: 0.7, yahoo: 0.5, ecosia: 0.5 };
-        all = all.map(it => ({
-            ...it,
-            score: scoreItem(it, q, engineWeights[it.source] || 0.6)
-        })).sort((a, b) => b.score - a.score);
+        var all = dedupe(brave.concat(bing, yahoo, ecosia));
 
-        const total = all.length;
-        const items = paginate(all, page, pageSize);
+        var engineWeights = { brave: 0.8, bing: 0.7, yahoo: 0.5, ecosia: 0.5 };
+        all = all.map(function(it) {
+            return Object.assign({}, it, {
+                score: scoreItem(it, q, engineWeights[it.source] || 0.6)
+            });
+        }).sort(function(a, b) {
+            return b.score - a.score;
+        });
 
-        res.status(200).json({ query: q, total, page, pageSize, items });
+        var total = all.length;
+        var items = paginate(all, page, pageSize);
+
+        res.status(200).json({ query: q, total: total, page: page, pageSize: pageSize, items: items });
     } catch (err) {
         console.error('Metasearch error:', err);
         res.status(500).json({ error: 'Oodlebot metasearch failed' });
