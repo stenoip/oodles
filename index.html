@@ -1,303 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Oodles Search</title>
-    <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        /* Styling from both versions, prioritizing the retro look */
-        body { 
-            background-color: #c0c0c0; 
-            font-family: "Courier New", Courier, monospace; 
-            color: #000080; 
-            margin: 0; 
-        }
-
-        header { 
-            background-color: #000080; 
-            text-align: center; 
-            padding: 20px; 
-            border-bottom: 3px double #fff; 
-        }
-
-        header img { 
-            max-height: 120px; 
-        }
-
-        nav { 
-            background-color: #e0e0e0; 
-            padding: 10px; 
-            text-align: center; 
-        }
-
-        nav button { 
-            margin: 0 5px; 
-            padding: 5px 10px; 
-            font-size: 14px; 
-            background-color: #000080; 
-            color: white; 
-            border: 2px outset #fff; 
-            cursor: pointer; 
-        }
-
-        nav button:hover { 
-            background-color: #ffcc00; 
-            color: #000; 
-        }
-
-        .container { 
-            padding: 20px; 
-            max-width: 980px; 
-            margin: 0 auto; 
-        }
-
-        .panel { 
-            background-color: #fff; 
-            border: 2px groove #808080; 
-            padding: 15px; 
-            margin-bottom: 20px; 
-        }
-
-        .panel h3 { 
-            margin-top: 0; 
-        }
-
-        input[type="text"], textarea, select { 
-            width: 100%; 
-            padding: 8px; 
-            font-size: 16px; 
-            border: 2px inset #808080; 
-            background-color: #fff; 
-            box-sizing: border-box; /* Ensures padding doesn't affect total width */
-            font-family: "Courier New", Courier, monospace;
-        }
-        
-        select {
-             width: auto;
-             margin-right: 10px;
-        }
-
-        textarea { 
-            min-height: 100px; 
-        }
-
-        .actions { 
-            margin-top: 10px; 
-            display: flex;
-            align-items: center;
-        }
-
-        .actions button { 
-            padding: 8px 16px; 
-            font-size: 14px; 
-            background-color: #000080; 
-            color: white; 
-            border: 2px outset #fff; 
-            cursor: pointer; 
-        }
-
-        .actions button:hover { 
-            background-color: #ffcc00; 
-            color: #000; 
-        }
-
-        .results { 
-            margin-top: 10px; 
-            font-size: 14px; 
-        }
-
-        .result-block { 
-            margin-bottom: 12px; 
-        }
-
-        .result-block a { 
-            color: #000080; 
-            font-weight: bold; 
-            text-decoration: none; 
-        }
-
-        .result-block a:hover { 
-            text-decoration: underline; 
-        }
-
-        footer { 
-            text-align: center; 
-            margin-top: 40px; 
-            font-size: 12px; 
-            color: #333; 
-        }
-
-        .two-col { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 16px; 
-        }
-
-        @media (max-width: 700px) { 
-            .two-col { 
-                grid-template-columns: 1fr; 
-            } 
-        }
-
-        .small { 
-            font-size: 12px; 
-            color: #333; 
-        }
-
-        .pagination { 
-            display: flex; 
-            gap: 8px; 
-            align-items: center; 
-            margin-top: 10px; 
-        }
-
-        .pagination button { 
-            padding: 4px 10px; 
-        }
-
-        .score { 
-            color: #555; 
-            font-size: 12px; 
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Oodles Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+      color: #202124;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+    }
+    header img {
+      max-height: 100px;
+    }
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: #5f6368;
+      font-size: 14px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+    nav button:hover {
+      text-decoration: underline;
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 5px 15px;
+      box-shadow: none;
+      transition: box-shadow 0.2s;
+    }
+    .search-box:focus-within {
+      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+      border-color: transparent;
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      padding: 10px;
+    }
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .actions select, .actions button {
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 4px;
+      border: 1px solid #dadce0;
+      background-color: #f8f9fa;
+      cursor: pointer;
+    }
+    .actions button:hover {
+      background-color: #f1f3f4;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #5f6368;
+    }
+    @media (max-width: 600px) {
+      .search-box {
+        max-width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
-    </header>
-    <nav>
-        <button onclick="switchTab('metasearch')">MetaSearch</button>
-        <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">Stenoip Wonder Computer(Web-Portal)</button>
-        <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
-        <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
-        <hr>
-        <button onclick="switchTab('about')">About</button>
-    </nav>
-    <div class="container">
-        
-        <div id="panel-metasearch" class="panel" style="display:block;">
-            <h3>Oodles MetaSearch</h3>
-            <p class="small">links from Brave, Bing, Yahoo, and Ecosia. For images,  Bing's crawl results.</p>
-            <input type="text" id="metaQuery" placeholder="Search the web or for images..." />
-            <div class="actions">
-                <select id="searchTypeSelector">
-                    <option value="web">Web Links (MetaSearch)</option>
-                    <option value="image">Images</option>
-                </select>
-                <button onclick="runMetaSearch()">Search</button>
-            </div>
-            <div class="results" id="metaResults"></div>
-            <div class="pagination" id="metaPager" style="display:none;">
-                <button onclick="alert('Pagination handled in new tab.')">Prev</button>
-                <span id="metaPageInfo">Page 1 of ?</span>
-                <button onclick="alert('Pagination handled in new tab.')">Next</button>
-            </div>
-        </div>
-        
-        <div id="panel-about" class="panel" style="display:none;">
-            <h3>About Us</h3>
-            <p>Oodles Search Engine is a fun and easy way to explore websites you care about.
-                It lets you create your own mini search engine—just pick a website and Oodles will scan it
-                and build a searchable list of pages. You can then search through that list using simple keywords,
-                like looking things up in a digital library you made yourself. No coding is needed and no setup is required.</p>
-            <p>The Oodlebot MetaSearch feature blends results from Brave, Bing, Yahoo and Ecosia with smart deduping and scoring.</p>
-            <p>For more infomation, visit out Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
-        </div>
-        
+  <header>
+    <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+  </header>
+  <nav>
+    <button onclick="switchTab('metasearch')">MetaSearch</button>
+    <button onclick="switchTab('about')">About</button>
+  </nav>
+  <div class="container">
+    <div id="panel-metasearch" style="display:block; text-align:center;">
+      <div class="search-box">
+        <input type="text" id="metaQuery" placeholder="Search Oodles...">
+      </div>
+      <div class="actions">
+        <select id="searchTypeSelector">
+          <option value="web">Web</option>
+          <option value="image">Images(WORK IN PROGRESS)</option>
+        </select>
+        <button onclick="runMetaSearch()">Search</button>
+      </div>
     </div>
-    <footer>© Stenoip Company</footer>
-    <p>Officially launched on Sunday 19th October 2025.</p>
-    <script>
-        var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-        // Remaining vars like activeIndex, currentQuery, etc., are for local search functions
-        // which are not reachable from the current HTML but are kept for file completeness.
-        var activeIndex = [];
-        var currentQuery = '';
-        var currentPage = 1;
-        var totalResults = 0;
-        var currentLimit = 10;
-        var metaState = { q: '', page: 1, pageSize: 10, total: 0 }; 
+    <div id="panel-about" style="display:none; max-width:600px;">
+      <h3>About Oodles</h3>
+      <p>Oodles MetaSearch blends results from multiple engines with smart deduping and scoring. 
+         You can search the web or images in a clean, simple interface.</p>
+    </div>
+  </div>
+  <footer>© Stenoip Company • Launched October 19, 2025</footer>
 
-        // Consolidated switchTab function to handle all panels
-        function switchTab(tab) {
-            document.getElementById('panel-about').style.display = 'none';
-            document.getElementById('panel-metasearch').style.display = 'none';
+  <script>
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 
-            var panelId = 'panel-' + tab;
-            var selectedPanel = document.getElementById(panelId);
-            if (selectedPanel) {
-                selectedPanel.style.display = 'block';
-            }
-        }
+    function switchTab(tab) {
+      document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
+      document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
+    }
 
-        // --- Utility Functions ---
-        function escapeHtml(s) {
-            return String(s)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-        }
-        
-        // Placeholder utility functions for completeness (local index search)
-        function normalizeUrl(input) { return (input || '').trim(); }
-        function renderIndexPreview(elId, index, showScore) { /* ... */ }
-        function downloadCurrentIndex() { /* ... */ }
-        function generateIndex() { /* ... */ }
-        function loadUploadedIndex() { /* ... */ }
-        function performSearch(page) { /* ... */ }
-        function performAdhocSearch() { /* ... */ }
-        function updatePagination() { /* ... */ }
-        function prevPage() { /* ... */ }
-        function nextPage() { /* ... */ }
-        function trackClick(encodedUrl) { /* ... */ }
-        // --- End Utility Functions ---
+    function runMetaSearch() {
+      var q = document.getElementById('metaQuery').value.trim();
+      var type = document.getElementById('searchTypeSelector').value;
+      if (!q) return;
+      sessionStorage.setItem('metaSearchQuery', q);
+      sessionStorage.setItem('searchType', type);
+      window.open('search.html', '_blank');
+    }
 
-        // --- MetaSearch Logic (MODIFIED for search type) ---
-        async function runMetaSearch() {
-            var q = document.getElementById('metaQuery')?.value.trim();
-            // NEW: Get the selected search type
-            var type = document.getElementById('searchTypeSelector')?.value;
-            
-            if (!q) {
-                document.getElementById('metaResults').innerHTML = '<div class="small">Please enter a search query.</div>';
-                return;
-            }
-            
-            // Show immediate feedback
-            var resultsEl = document.getElementById('metaResults');
-            resultsEl.innerHTML = '<div class="small">Preparing results for **search.html**... Please wait.</div>';
-
-            // Pass the query AND the selected search type to the results page
-            sessionStorage.setItem('metaSearchQuery', q);
-            sessionStorage.setItem('searchType', type); // Pass 'web' or 'image'
-
-            // Open the search results in a new tab/window
-            window.open('search.html', '_blank');
-
-            resultsEl.innerHTML = `<div class="small">Results opened in a new tab (**search.html**) for **${type}** search.</div>`;
-        }
-
-        // --- End MetaSearch Logic ---
-
-        // Initialize the default tab to 'metasearch'
-        switchTab('metasearch');
-
-        // Add event listener for Enter key on MetaSearch
-        document.getElementById('panel-metasearch')?.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && document.getElementById('metaQuery') === document.activeElement) {
-                e.preventDefault(); 
-                runMetaSearch();
-            }
-        });
-
-        // Optional health check
-        (function pingHealth() {
-            fetch(BACKEND_BASE + '/health')
-                .then(function(res) { return res.json(); })
-                .then(function(data) { console.log('Backend health:', data); })
-                .catch(function() { console.warn('Backend health check failed'); });
-        })();
-    </script>
+    document.getElementById('metaQuery').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runMetaSearch();
+    });
+  </script>
 </body>
 </html>
