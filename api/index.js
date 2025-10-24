@@ -8,7 +8,6 @@
 Copyright Stenoip Company. All rights reserved.
 
 Oodleant is a trademark of Stenoip Company
-
 */
 'use strict';
 
@@ -41,7 +40,6 @@ function normalize({ title, url, snippet, source }) {
     };
 }
 
-// New normalization function for image results
 function normalizeImage({ thumbnail, originalUrl, pageUrl, source }) {
     if (!thumbnail || !originalUrl || !pageUrl) return null;
     return {
@@ -57,7 +55,7 @@ function dedupe(items) {
     var out = [];
     for (const it of items) {
         try {
-            var u = new URL(it.url);
+            var u = new URL(it.url || it.pageUrl || '');
             var key = `${u.origin}${u.pathname}`.toLowerCase();
             if (!seen.has(key)) {
                 seen.add(key);
@@ -72,8 +70,8 @@ function dedupe(items) {
 
 function scoreItem(item, query, weight = 0.6) {
     var q = query.toLowerCase();
-    var titleHit = item.title.toLowerCase().includes(q) ? 1 : 0;
-    var snippetHit = item.snippet.toLowerCase().includes(q) ? 0.6 : 0;
+    var titleHit = item.title?.toLowerCase().includes(q) ? 1 : 0;
+    var snippetHit = item.snippet?.toLowerCase().includes(q) ? 0.6 : 0;
     var httpsBonus = 0;
     try {
         var u = new URL(item.url);
@@ -93,9 +91,7 @@ async function getHTML(url) {
     return resp.text();
 }
 
-/*OODLEANTS!
-Each ant is assigned a search engine
-*/
+// --- Web Crawlers ---
 async function crawlYahoo(query) {
     var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
     var html = await getHTML(url);
@@ -210,7 +206,7 @@ async function crawlBrave(query) {
     return out.slice(0, 20);
 }
 
-// --- IMAGE CRAWLING FUNCTION ---
+// --- Image Crawlers ---
 async function crawlBingImages(query) {
     const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
     const html = await getHTML(url);
@@ -221,42 +217,85 @@ async function crawlBingImages(query) {
         const data = $(el).find('a').attr('m');
         if (data) {
             try {
-                // Bing embeds image metadata in a JSON string in the 'm' attribute
                 const metadata = JSON.parse(data);
                 const thumbnail = metadata.turl;
                 const originalUrl = metadata.murl;
-                const pageUrl = metadata.purl; // URL of the page hosting the image
-
-                const item = normalizeImage({
-                    thumbnail,
-                    originalUrl,
-                    pageUrl,
-                    source: 'bing-images'
-                });
+                const pageUrl = metadata.purl;
+                const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'bing-images' });
                 if (item) out.push(item);
             } catch (e) {
-                // Ignore parsing errors
                 console.warn('Error parsing Bing image data:', e.message);
             }
         }
     });
-    // Return a maximum of 30 image results
+    return out.slice(0, 30);
+}
+
+async function crawlYahooImages(query) {
+    const url = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
+    const $ = cheerio.load(html);
+        const out = [];
+
+    $('li img').each((_, el) => {
+        const thumbnail = $(el).attr('data-src') || $(el).attr('src');
+        const pageUrl = $(el).closest('a').attr('href');
+        const originalUrl = $(el).attr('data-src') || $(el).attr('src');
+
+        const item = normalizeImage({
+            thumbnail,
+            originalUrl,
+            pageUrl,
+            source: 'yahoo-images'
+        });
+        if (item) out.push(item);
+    });
+
+    return out.slice(0, 30);
+}
+
+async function crawlBraveImages(query) {
+    const url = `https://search.brave.com/images?q=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
+    const $ = cheerio.load(html);
+    const out = [];
+
+    $('div.results-grid a').each((_, el) => {
+        const a = $(el);
+        const thumbnail = a.find('img').attr('src') || a.find('img').attr('data-src');
+        const pageUrl = a.attr('href');
+        const originalUrl = thumbnail;
+
+        const item = normalizeImage({
+            thumbnail,
+            originalUrl,
+            pageUrl,
+            source: 'brave-images'
+        });
+        if (item) out.push(item);
+    });
+
     return out.slice(0, 30);
 }
 
 // --- Dedicated Image Search Handler ---
 async function handleImageSearch(req, res) {
-    // 'q' is guaranteed to be present and trimmed by the main handler
     const q = (req.query.q || '').trim(); 
     
     try {
-        // Only crawling Bing for images for simplicity
-        const imageResults = await withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images');
+        const tasks = [
+            withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images').catch(() => []),
+            withTimeout(crawlYahooImages(q), TIMEOUT_MS, 'Yahoo Images').catch(() => []),
+            withTimeout(crawlBraveImages(q), TIMEOUT_MS, 'Brave Images').catch(() => [])
+        ];
+
+        let [bing, yahoo, brave] = await Promise.all(tasks);
+        let all = dedupe([...bing, ...yahoo, ...brave]);
 
         res.status(200).json({
             query: q,
-            total: imageResults.length,
-            items: imageResults
+            total: all.length,
+            items: all
         });
     } catch (err) {
         console.error('Image search error:', err);
@@ -264,8 +303,7 @@ async function handleImageSearch(req, res) {
     }
 }
 
-
-// --- Main handler for /api/index.js (or just /) ---
+// --- Main handler for /api/index.js ---
 module.exports = async (req, res) => {
     setCors(res);
     if (req.method === 'OPTIONS') {
@@ -274,7 +312,6 @@ module.exports = async (req, res) => {
     }
 
     const q = (req.query.q || '').trim();
-    // NEW: Check for 'type' parameter to route the request
     const type = (req.query.type || 'web').trim();
 
     if (!q) {
@@ -282,12 +319,10 @@ module.exports = async (req, res) => {
         return;
     }
     
-    // ROUTING: If type=image, run the dedicated image handler
     if (type === 'image') {
         return handleImageSearch(req, res);
     }
 
-    // --- Standard Web Metasearch Logic (type is 'web' or missing) ---
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(
         MAX_PAGE_SIZE,
