@@ -107,7 +107,7 @@
   </header>
   <nav>
     <a href="#" id="tab-links" class="active" onclick="switchTab('links')">Links</a>
-    <a href="#" id="tab-images" onclick="switchTab('images')">Images</a>
+    <a href="#" id="tab-images" onclick="switchTab('images')">Images (WIP)</a>
     <a href="https://stenoip.github.io/video_plus.html" target="_blank">Video</a>
     <a href="https://stenoip.github.io/" target="_blank">SWC Web Portal</a>
   </nav>
@@ -145,11 +145,9 @@
       if (tab === 'links') {
         document.getElementById('tab-links').classList.add('active');
         document.getElementById('linksSection').style.display = 'block';
-        sessionStorage.setItem('searchType', 'web'); // Store new type
       } else if (tab === 'images') {
         document.getElementById('tab-images').classList.add('active');
         document.getElementById('imagesSection').style.display = 'block';
-        sessionStorage.setItem('searchType', 'image'); // Store new type
       }
     }
 
@@ -189,11 +187,9 @@
 
     async function displayResults() {
       const query = sessionStorage.getItem('metaSearchQuery') || '';
-      // The default search type is 'web'. If no type is stored, use 'web'.
-      const searchType = sessionStorage.getItem('searchType') || 'web'; 
+      const searchType = sessionStorage.getItem('searchType') || 'web';
       sessionStorage.removeItem('metaSearchQuery');
-      // Do NOT remove searchType, so that tab switching doesn't reset it on reload.
-      // sessionStorage.removeItem('searchType'); // REMOVED THIS LINE
+      sessionStorage.removeItem('searchType');
 
       document.getElementById('currentQuery').value = query;
 
@@ -229,31 +225,10 @@
     document.getElementById('currentQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         sessionStorage.setItem('metaSearchQuery', this.value.trim());
-        // The switchTab function already handles setting 'searchType' when a tab is clicked.
-        // We only need to check the active tab for a search initiated by the search box.
-        // sessionStorage.setItem('searchType', document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web'); // REDUNDANT, using the existing stored value or active tab is better.
+        sessionStorage.setItem('searchType', document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web');
         window.location.reload();
       }
     });
-    
-    // Call displayResults again after tab switch to initiate a new search for the new type
-    document.getElementById('tab-links').addEventListener('click', function(e) {
-        e.preventDefault();
-        if (!this.classList.contains('active')) {
-            switchTab('links');
-            sessionStorage.setItem('metaSearchQuery', document.getElementById('currentQuery').value.trim());
-            window.location.reload();
-        }
-    });
-
-    document.getElementById('tab-images').addEventListener('click', function(e) {
-        e.preventDefault();
-        if (!this.classList.contains('active')) {
-            switchTab('images');
-            sessionStorage.setItem('metaSearchQuery', document.getElementById('currentQuery').value.trim());
-            window.location.reload();
-        }
-    });
   </script>
 </body>
 </html>
