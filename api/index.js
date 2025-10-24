@@ -6,7 +6,6 @@
 ########  ########  ########    ########  ######    ########    Search
 
 Copyright Stenoip Company. All rights reserved.
-
 Oodleant is a trademark of Stenoip Company
 */
 'use strict';
@@ -42,12 +41,7 @@ function normalize({ title, url, snippet, source }) {
 
 function normalizeImage({ thumbnail, originalUrl, pageUrl, source }) {
     if (!thumbnail || !originalUrl || !pageUrl) return null;
-    return {
-        thumbnail,
-        originalUrl,
-        pageUrl,
-        source
-    };
+    return { thumbnail, originalUrl, pageUrl, source };
 }
 
 function dedupe(items) {
@@ -135,16 +129,6 @@ async function crawlEcosia(query) {
         if (item) out.push(item);
     });
 
-    if (out.length === 0) {
-        $('a.result-title').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
-            const snippet = $(el).closest('article').find('.result-snippet').text();
-            const item = normalize({ title, url: href, snippet, source: 'ecosia' });
-            if (item) out.push(item);
-        });
-    }
     return out.slice(0, 20);
 }
 
@@ -163,17 +147,6 @@ async function crawlBing(query) {
         if (item) out.push(item);
     });
 
-    if (out.length === 0) {
-        $('h2 a').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
-            if (!href || !/^https?:\/\//.test(href)) return;
-            const snippet = $(el).closest('li, div').find('p').first().text();
-            const item = normalize({ title, url: href, snippet, source: 'bing' });
-            if (item) out.push(item);
-        });
-    }
     return out.slice(0, 20);
 }
 
@@ -192,17 +165,6 @@ async function crawlBrave(query) {
         if (item) out.push(item);
     });
 
-    if (out.length === 0) {
-        $('a.result-title, a[href^="http"]').each((_, el) => {
-            const a = $(el);
-            const title = a.text();
-            const href = a.attr('href');
-            if (!href || !/^https?:\/\//.test(href)) return;
-            const snippet = $(el).closest('div').find('p, div').eq(1).text();
-            const item = normalize({ title, url: href, snippet, source: 'brave' });
-            if (item) out.push(item);
-        });
-    }
     return out.slice(0, 20);
 }
 
@@ -223,9 +185,7 @@ async function crawlBingImages(query) {
                 const pageUrl = metadata.purl;
                 const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'bing-images' });
                 if (item) out.push(item);
-            } catch (e) {
-                console.warn('Error parsing Bing image data:', e.message);
-            }
+            } catch {}
         }
     });
     return out.slice(0, 30);
@@ -235,19 +195,13 @@ async function crawlYahooImages(query) {
     const url = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
     const html = await getHTML(url);
     const $ = cheerio.load(html);
-        const out = [];
+    const out = [];
 
     $('li img').each((_, el) => {
         const thumbnail = $(el).attr('data-src') || $(el).attr('src');
         const pageUrl = $(el).closest('a').attr('href');
-        const originalUrl = $(el).attr('data-src') || $(el).attr('src');
-
-        const item = normalizeImage({
-            thumbnail,
-            originalUrl,
-            pageUrl,
-            source: 'yahoo-images'
-        });
+        const originalUrl = thumbnail;
+        const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'yahoo-images' });
         if (item) out.push(item);
     });
 
@@ -265,13 +219,7 @@ async function crawlBraveImages(query) {
         const thumbnail = a.find('img').attr('src') || a.find('img').attr('data-src');
         const pageUrl = a.attr('href');
         const originalUrl = thumbnail;
-
-        const item = normalizeImage({
-            thumbnail,
-            originalUrl,
-            pageUrl,
-            source: 'brave-images'
-        });
+        const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'brave-images' });
         if (item) out.push(item);
     });
 
@@ -281,16 +229,14 @@ async function crawlBraveImages(query) {
 // --- Dedicated Image Search Handler ---
 async function handleImageSearch(req, res) {
     const q = (req.query.q || '').trim(); 
-    
     try {
         const tasks = [
             withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images').catch(() => []),
             withTimeout(crawlYahooImages(q), TIMEOUT_MS, 'Yahoo Images').catch(() => []),
             withTimeout(crawlBraveImages(q), TIMEOUT_MS, 'Brave Images').catch(() => [])
         ];
-
         let [bing, yahoo, brave] = await Promise.all(tasks);
-        let all = dedupe([...bing, ...yahoo, ...brave]);
+                let all = dedupe([...bing, ...yahoo, ...brave]);
 
         res.status(200).json({
             query: q,
@@ -318,11 +264,13 @@ module.exports = async (req, res) => {
         res.status(400).json({ error: 'Missing query parameter q' });
         return;
     }
-    
+
+    // Route to image handler if requested
     if (type === 'image') {
         return handleImageSearch(req, res);
     }
 
+    // Otherwise, run standard web metasearch
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(
         MAX_PAGE_SIZE,
