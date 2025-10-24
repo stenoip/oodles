@@ -85,7 +85,7 @@ async function getHTML(url) {
     return resp.text();
 }
 
-// --- Web Crawlers ---
+// --- Web Crawlers (Unchanged) ---
 async function crawlYahoo(query) {
     var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=20`;
     var html = await getHTML(url);
@@ -168,86 +168,50 @@ async function crawlBrave(query) {
     return out.slice(0, 20);
 }
 
-// --- Image Crawlers ---
-async function crawlBingImages(query) {
-    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    $('.imgpt .img_cont.hoff').each((_, el) => {
-        const data = $(el).find('a').attr('m');
-        if (data) {
-            try {
-                const metadata = JSON.parse(data);
-                const thumbnail = metadata.turl;
-                const originalUrl = metadata.murl;
-                const pageUrl = metadata.purl;
-                const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'bing-images' });
-                if (item) out.push(item);
-            } catch {}
-        }
-    });
-    return out.slice(0, 30);
-}
-
-async function crawlYahooImages(query) {
-    const url = `https://images.search.yahoo.com/search/images?p=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    $('li img').each((_, el) => {
-        const thumbnail = $(el).attr('data-src') || $(el).attr('src');
-        const pageUrl = $(el).closest('a').attr('href');
-        const originalUrl = thumbnail;
-        const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'yahoo-images' });
-        if (item) out.push(item);
-    });
-
-    return out.slice(0, 30);
-}
-
-async function crawlBraveImages(query) {
-    const url = `https://search.brave.com/images?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    $('div.results-grid a').each((_, el) => {
-        const a = $(el);
-        const thumbnail = a.find('img').attr('src') || a.find('img').attr('data-src');
-        const pageUrl = a.attr('href');
-        const originalUrl = thumbnail;
-        const item = normalizeImage({ thumbnail, originalUrl, pageUrl, source: 'brave-images' });
-        if (item) out.push(item);
-    });
-
-    return out.slice(0, 30);
-}
-
-// --- Dedicated Image Search Handler ---
-async function handleImageSearch(req, res) {
-    const q = (req.query.q || '').trim(); 
+// --- Image Crawlers (Original dedicated image crawlers removed/ignored) ---
+// New function to crawl images from a single URL
+async function crawlImagesFromUrl(pageUrl, source) {
     try {
-        const tasks = [
-            withTimeout(crawlBingImages(q), TIMEOUT_MS, 'Bing Images').catch(() => []),
-            withTimeout(crawlYahooImages(q), TIMEOUT_MS, 'Yahoo Images').catch(() => []),
-            withTimeout(crawlBraveImages(q), TIMEOUT_MS, 'Brave Images').catch(() => [])
-        ];
-        let [bing, yahoo, brave] = await Promise.all(tasks);
-                let all = dedupe([...bing, ...yahoo, ...brave]);
+        const html = await withTimeout(getHTML(pageUrl), TIMEOUT_MS / 3, `Crawl Images from ${pageUrl}`);
+        const $ = cheerio.load(html);
+        const images = [];
 
-        res.status(200).json({
-            query: q,
-            total: all.length,
-            items: all
+        // Scrape common image tags
+        $('img').each((_, el) => {
+            const img = $(el);
+            // Prioritize src, then data-src
+            const originalUrl = img.attr('src') || img.attr('data-src');
+
+            // Resolve relative URLs
+            try {
+                if (originalUrl) {
+                    const resolvedUrl = new URL(originalUrl, pageUrl).href;
+                    // Use resolvedUrl for both thumbnail and originalUrl for simplicity in this general scrape
+                    const item = normalizeImage({
+                        thumbnail: resolvedUrl,
+                        originalUrl: resolvedUrl,
+                        pageUrl: pageUrl,
+                        source: `${source}-page-images` // Indicate the source of the page
+                    });
+                    if (item) images.push(item);
+                }
+            } catch (e) {
+                // Ignore invalid or unresolvable image URLs
+            }
         });
+
+        // Deduping based on originalUrl might be useful, but for now, we return all scraped images
+        return images.slice(0, 5); // Limit the number of images per page to avoid excessive results
     } catch (err) {
-        console.error('Image search error:', err);
-        res.status(500).json({ error: 'Oodlebot image search failed' });
+        // console.error(`Failed to crawl images from ${pageUrl}:`, err.message);
+        return [];
     }
 }
+
+
+// --- Dedicated Image Search Handler (Now removed/ignored) ---
+// async function handleImageSearch(req, res) { /* ... original code ... */ }
+// This handler is no longer needed as the logic is moved to the main module.exports
 
 // --- Main handler for /api/index.js ---
 module.exports = async (req, res) => {
@@ -265,12 +229,7 @@ module.exports = async (req, res) => {
         return;
     }
 
-    // Route to image handler if requested
-    if (type === 'image') {
-        return handleImageSearch(req, res);
-    }
-
-    // Otherwise, run standard web metasearch
+    // Run standard web metasearch first, regardless of the 'type'
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const pageSize = Math.min(
         MAX_PAGE_SIZE,
@@ -278,28 +237,65 @@ module.exports = async (req, res) => {
     );
 
     try {
-        const tasks = [
+        const webSearchTasks = [
             withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(() => []),
             withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(() => []),
             withTimeout(crawlYahoo(q), TIMEOUT_MS, 'Yahoo').catch(() => []),
             withTimeout(crawlEcosia(q), TIMEOUT_MS, 'Ecosia').catch(() => [])
         ];
 
-        let [brave, bing, yahoo, ecosia] = await Promise.all(tasks);
-        let all = dedupe([...brave, ...bing, ...yahoo, ...ecosia]);
+        let [brave, bing, yahoo, ecosia] = await Promise.all(webSearchTasks);
+        let allWebResults = dedupe([...brave, ...bing, ...yahoo, ...ecosia]);
 
-        const engineWeights = { brave: 0.8, bing: 0.7, yahoo: 0.5, ecosia: 0.5 };
-        all = all.map(it => ({
-            ...it,
-            score: scoreItem(it, q, engineWeights[it.source] || 0.6)
-        })).sort((a, b) => b.score - a.score);
+        if (type === 'web') {
+            // Process and return web results
+            const engineWeights = { brave: 0.8, bing: 0.7, yahoo: 0.5, ecosia: 0.5 };
+            allWebResults = allWebResults.map(it => ({
+                ...it,
+                score: scoreItem(it, q, engineWeights[it.source] || 0.6)
+            })).sort((a, b) => b.score - a.score);
 
-        const total = all.length;
-        const items = paginate(all, page, pageSize);
+            const total = allWebResults.length;
+            const items = paginate(allWebResults, page, pageSize);
 
-        res.status(200).json({ query: q, total, page, pageSize, items });
+            res.status(200).json({ query: q, total, page, pageSize, items });
+            return;
+
+        } else if (type === 'image') {
+            // Crawl images from the URLs collected by the web search
+            const urlsToCrawl = allWebResults.map(it => it.url).filter(u => u);
+
+            const imageCrawlTasks = urlsToCrawl.map(url =>
+                withTimeout(crawlImagesFromUrl(url, allWebResults.find(it => it.url === url)?.source || 'unknown'), TIMEOUT_MS, `Image Crawl from ${url}`).catch(() => [])
+            );
+
+            // Run image crawling tasks concurrently
+            let allImageResultsArrays = await Promise.all(imageCrawlTasks);
+
+            // Flatten the array of arrays and dedupe image results
+            let allImageResults = dedupe(allImageResultsArrays.flat());
+
+            // No specific sorting/scoring implemented for images, just return them
+            const total = allImageResults.length;
+            const items = paginate(allImageResults, page, pageSize);
+
+            res.status(200).json({
+                query: q,
+                total,
+                page,
+                pageSize,
+                items
+            });
+            return;
+
+        } else {
+             // Handle unknown type
+             res.status(400).json({ error: 'Invalid type parameter. Must be "web" or "image"' });
+             return;
+        }
+
     } catch (err) {
-        console.error('Metasearch error:', err);
-        res.status(500).json({ error: 'Oodlebot metasearch failed' });
+        console.error('Metasearch/Image Crawl error:', err);
+        res.status(500).json({ error: 'Oodlebot search failed' });
     }
 };
