@@ -87,11 +87,14 @@
       gap: 10px;
       margin-top: 15px;
     }
+    #imageResults a {
+        display: block;
+    }
     #imageResults img {
       width: 100%;
-      height: auto;
+      height: 150px; /* Fixed height for better grid layout */
       border-radius: 8px;
-      object-fit: cover;
+      object-fit: cover; /* Ensures image covers the area without distortion */
     }
     footer {
       text-align: center;
@@ -106,8 +109,8 @@
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
   <nav>
-    <a href="#" id="tab-links" class="active" onclick="switchTab('links')">Links</a>
-    <a href="#" id="tab-images" onclick="switchTab('images')">Images (WIP)</a>
+    <a href="#" id="tab-links" class="active" onclick="switchTab('links', true)">Links</a>
+    <a href="#" id="tab-images" onclick="switchTab('images', true)">Images</a>
     <a href="https://stenoip.github.io/video_plus.html" target="_blank">Video</a>
     <a href="https://stenoip.github.io/" target="_blank">SWC Web Portal</a>
   </nav>
@@ -117,17 +120,19 @@
     </div>
     <div class="results-section" id="linksSection">
       <h3>Links</h3>
-      <div id="linkResults"><p class="small">Searching web links...</p></div>
+      <div id="linkResults"><p class="small">Enter a search query.</p></div>
     </div>
     <div class="results-section" id="imagesSection" style="display:none;">
       <h3>Images</h3>
-      <div id="imageResults"><p class="small">Searching images...</p></div>
+      <div id="imageResults"><p class="small">Select a query from links.</p></div>
     </div>
   </div>
   <footer>© Stenoip Company • Oodles Search</footer>
 
   <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    let currentQuery = '';
+    let currentSearchType = 'web';
 
     function escapeHtml(s) {
       return String(s)
@@ -136,7 +141,46 @@
         .replace(/>/g, '&gt;');
     }
 
-    function switchTab(tab) {
+    // New function to handle search execution
+    async function executeSearch(query, type) {
+        if (!query) {
+            document.getElementById('linkResults').innerHTML = '<p class="small">No query to search.</p>';
+            document.getElementById('imageResults').innerHTML = '<p class="small">No query to search.</p>';
+            return;
+        }
+
+        currentQuery = query;
+        currentSearchType = type;
+
+        if (type === 'web') {
+            document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
+            try {
+                const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=20`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                renderLinkResults(data.items, data.total);
+            } catch {
+                document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
+            }
+        } else if (type === 'image') {
+            document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
+            try {
+                // Note: Image search usually doesn't need pagination parameters in the request,
+                // but the backend uses them by default. We'll stick to the backend's default.
+                const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=20`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                renderImageResults(data.items, data.total);
+            } catch {
+                document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
+            }
+        }
+    }
+
+    function switchTab(tab, executeNewSearch = false) {
+      // Prevent default link action
+      event.preventDefault();
+
       document.getElementById('tab-links').classList.remove('active');
       document.getElementById('tab-images').classList.remove('active');
       document.getElementById('linksSection').style.display = 'none';
@@ -148,6 +192,11 @@
       } else if (tab === 'images') {
         document.getElementById('tab-images').classList.add('active');
         document.getElementById('imagesSection').style.display = 'block';
+      }
+      
+      // If triggered by a click and a query exists, run the new search type
+      if (executeNewSearch && currentQuery) {
+          executeSearch(currentQuery, tab);
       }
     }
 
@@ -169,63 +218,64 @@
       `;
     }
 
-    function renderImageResults(items) {
+    function renderImageResults(items, total) {
       const resultsEl = document.getElementById('imageResults');
       if (!items || items.length === 0) {
         resultsEl.innerHTML = '<p class="small">No images found.</p>';
         return;
       }
+      // Use the image's originalUrl as the link target for a full-size view,
+      // and pageUrl for the source page (current implementation uses pageUrl)
       resultsEl.innerHTML = `
         ${items.map(r => `
-          <a href="${r.pageUrl}" target="_blank" rel="noopener">
+          <a href="${r.pageUrl}" target="_blank" rel="noopener" title="Source: ${r.pageUrl}">
             <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
           </a>
         `).join('')}
-        <p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${items.length} images.</p>
+        <p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images.</p>
       `;
     }
 
-    async function displayResults() {
+    function initializeFromSession() {
       const query = sessionStorage.getItem('metaSearchQuery') || '';
       const searchType = sessionStorage.getItem('searchType') || 'web';
+      
+      // Clear session storage items after use
       sessionStorage.removeItem('metaSearchQuery');
       sessionStorage.removeItem('searchType');
 
-      document.getElementById('currentQuery').value = query;
+      if (query) {
+          document.getElementById('currentQuery').value = query;
+          // Set current state
+          currentQuery = query;
+          currentSearchType = searchType;
 
-      if (!query) {
-        document.getElementById('linkResults').innerHTML = '<p class="small">No query found.</p>';
-        return;
-      }
+          // Switch to the correct tab
+          if (searchType === 'image') {
+              switchTab('images');
+          } else {
+              switchTab('links');
+          }
 
-      if (searchType === 'web') {
-        switchTab('links');
-        try {
-          const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=20`;
-          const resp = await fetch(url);
-          const data = await resp.json();
-          renderLinkResults(data.items, data.total);
-        } catch {
-          document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
-        }
-      } else if (searchType === 'image') {
-        switchTab('images');
-        try {
-          const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image`;
-          const resp = await fetch(url);
-          const data = await resp.json();
-          renderImageResults(data.items);
-        } catch {
-          document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
-        }
+          // Execute the initial search based on the session query
+          executeSearch(query, searchType);
+      } else {
+          // Default to links view if no query
+          switchTab('links');
       }
     }
 
-    document.addEventListener('DOMContentLoaded', displayResults);
+    // Event listener for new search submission
+    document.addEventListener('DOMContentLoaded', initializeFromSession);
     document.getElementById('currentQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
-        sessionStorage.setItem('metaSearchQuery', this.value.trim());
-        sessionStorage.setItem('searchType', document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web');
+        const query = this.value.trim();
+        // Use the currently active tab to determine the search type
+        const type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
+        
+        // Save to session storage and reload to restart the search/state
+        sessionStorage.setItem('metaSearchQuery', query);
+        sessionStorage.setItem('searchType', type);
         window.location.reload();
       }
     });
