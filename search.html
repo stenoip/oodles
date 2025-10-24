@@ -2,49 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MetaSearch Results</title>
-  <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+  <title>Oodles Search Results</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
-    header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
-    header img { max-height: 120px; }
-    .container { padding: 20px; max-width: 980px; margin: 0 auto; }
-    .result-block { margin-bottom: 12px; border-bottom: 1px dotted #808080; padding-bottom: 8px; }
-    .result-block a { color: #000080; font-weight: bold; text-decoration: none; }
-    .result-block a:hover { text-decoration: underline; }
-    .small { font-size: 12px; color: #333; }
-    .score { color: #555; font-size: 12px; }
-    #searchBox { padding: 10px; margin-bottom: 20px; background-color: #e0e0e0; border: 2px groove #808080; display: flex; align-items: center; }
-    #searchBox input[type="text"] { flex-grow: 1; padding: 8px; font-size: 16px; border: 2px inset #808080; background-color: #fff; margin-right: 10px; font-family: "Courier New", Courier, monospace; }
-    #searchBox button { padding: 8px 16px; font-size: 14px; background-color: #000080; color: white; border: 2px outset #fff; cursor: pointer; }
-    #imageResults { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 15px; }
-    #imageResults a { display: block; line-height: 0; }
-    #imageResults img { width: 100%; height: auto; border: 2px solid #000080; display: block; object-fit: cover; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+      color: #202124;
+    }
+    header {
+      text-align: center;
+      padding: 20px;
+    }
+    header img {
+      max-height: 60px;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      border-bottom: 1px solid #e0e0e0;
+      background-color: #f8f9fa;
+    }
+    nav a {
+      padding: 14px 20px;
+      text-decoration: none;
+      color: #5f6368;
+      font-size: 14px;
+    }
+    nav a:hover {
+      background-color: #e8eaed;
+    }
+    nav a.active {
+      border-bottom: 3px solid #1a73e8;
+      color: #1a73e8;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    .search-box {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      border: 1px solid #dfe1e5;
+      border-radius: 24px;
+      padding: 5px 15px;
+      margin-bottom: 20px;
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      padding: 10px;
+    }
+    .results-section h3 {
+      margin-top: 30px;
+      font-size: 18px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+    .result-block {
+      margin-bottom: 16px;
+    }
+    .result-block a {
+      color: #1a0dab;
+      font-size: 16px;
+      text-decoration: none;
+    }
+    .result-block a:hover {
+      text-decoration: underline;
+    }
+    .small {
+      font-size: 12px;
+      color: #5f6368;
+    }
+    #imageResults {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    #imageResults img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #5f6368;
+    }
   </style>
 </head>
 <body>
   <header>
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
+  <nav>
+    <a href="#" id="tab-links" class="active" onclick="switchTab('links')">Links</a>
+    <a href="#" id="tab-images" onclick="switchTab('images')">Images (WIP)</a>
+    <a href="https://stenoip.github.io/video_plus.html" target="_blank">Video</a>
+    <a href="https://stenoip.github.io/" target="_blank">SWC Web Portal</a>
+  </nav>
   <div class="container">
-    <div id="searchBox">
+    <div class="search-box">
       <input type="text" id="currentQuery" placeholder="Search again...">
-      <button onclick="reRunSearch()">Search</button>
     </div>
-
-    <h2>Search Results for: <span id="queryDisplay"></span></h2>
-    <h3 id="linksHeader">Links</h3>
-    <div id="linkResults"></div>
-    <h3 id="imagesHeader">Images</h3>
-    <div id="imageResults"></div>
-
-    <div class="pagination" id="metaPager" style="display:none;">
-      <button onclick="alert('Pagination not yet implemented in search.html.')">Prev</button>
-      <span id="metaPageInfo">Page 1 of ?</span>
-      <button onclick="alert('Pagination not yet implemented in search.html.')">Next</button>
+    <div class="results-section" id="linksSection">
+      <h3>Links</h3>
+      <div id="linkResults"><p class="small">Searching web links...</p></div>
+    </div>
+    <div class="results-section" id="imagesSection" style="display:none;">
+      <h3>Images</h3>
+      <div id="imageResults"><p class="small">Searching images...</p></div>
     </div>
   </div>
+  <footer>© Stenoip Company • Oodles Search</footer>
 
   <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
@@ -56,12 +135,18 @@
         .replace(/>/g, '&gt;');
     }
 
-    function reRunSearch() {
-      const newQuery = document.getElementById('currentQuery').value.trim();
-      if (newQuery) {
-        sessionStorage.setItem('metaSearchQuery', newQuery);
-        sessionStorage.setItem('searchType', 'web'); // default to web
-        window.location.reload();
+    function switchTab(tab) {
+      document.getElementById('tab-links').classList.remove('active');
+      document.getElementById('tab-images').classList.remove('active');
+      document.getElementById('linksSection').style.display = 'none';
+      document.getElementById('imagesSection').style.display = 'none';
+
+      if (tab === 'links') {
+        document.getElementById('tab-links').classList.add('active');
+        document.getElementById('linksSection').style.display = 'block';
+      } else if (tab === 'images') {
+        document.getElementById('tab-images').classList.add('active');
+        document.getElementById('imagesSection').style.display = 'block';
       }
     }
 
@@ -78,7 +163,6 @@
             <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
             <div class="small">${escapeHtml(r.url)}</div>
             <div>${escapeHtml(r.snippet || '')}</div>
-            <div class="score">Source: ${r.source} • Score: ${r.score ? r.score.toFixed(2) : ''}</div>
           </div>
         `).join('')}
       `;
@@ -106,44 +190,44 @@
       sessionStorage.removeItem('metaSearchQuery');
       sessionStorage.removeItem('searchType');
 
-      document.getElementById('queryDisplay').textContent = query;
       document.getElementById('currentQuery').value = query;
 
       if (!query) {
-        document.getElementById('linkResults').innerHTML = '<h3>No query found.</h3><p>Please return to the main page to search again.</p>';
+        document.getElementById('linkResults').innerHTML = '<p class="small">No query found.</p>';
         return;
       }
 
-      const isImageSearch = searchType === 'image';
-      document.getElementById('linksHeader').style.display = isImageSearch ? 'none' : 'block';
-      document.getElementById('imagesHeader').style.display = isImageSearch ? 'block' : 'none';
-      document.getElementById('linkResults').innerHTML = isImageSearch ? '' : '<p class="small">Searching web links...</p>';
-      document.getElementById('imageResults').innerHTML = isImageSearch ? '<p class="small">Searching images...</p>' : '';
-
-      if (!isImageSearch) {
+      if (searchType === 'web') {
+        switchTab('links');
         try {
           const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=20`;
           const resp = await fetch(url);
           const data = await resp.json();
           renderLinkResults(data.items, data.total);
         } catch {
-          document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links. Please try again.</p>';
+          document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
         }
-      }
-
-      if (isImageSearch) {
+      } else if (searchType === 'image') {
+        switchTab('images');
         try {
           const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image`;
           const resp = await fetch(url);
           const data = await resp.json();
           renderImageResults(data.items);
         } catch {
-          document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images. Please try again.</p>';
+          document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
         }
       }
     }
 
     document.addEventListener('DOMContentLoaded', displayResults);
+    document.getElementById('currentQuery').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        sessionStorage.setItem('metaSearchQuery', this.value.trim());
+        sessionStorage.setItem('searchType', document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web');
+        window.location.reload();
+      }
+    });
   </script>
 </body>
 </html>
