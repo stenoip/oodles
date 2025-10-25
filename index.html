@@ -3,60 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <title>Oodles Search</title>
- <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+  <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BASE STYLES */
+    /* ------------------------------------------- */
+
+    /* Global Background: Nature/Water/Sky */
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #fff;
+      font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
       color: #202124;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+      
+      /* Frutiger Aero Wallpaper */
+      background-image: url('https://stenoip.github.io/oodles/oodles_wallpaper.png'); /* A typical bright, glossy background */
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
     }
-    header {
-      text-align: center;
-      padding: 40px 20px 20px;
+    
+    /* Main Content Container Styling for Readability */
+    .container, .search-box {
+        backdrop-filter: blur(5px);
+        background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white */
+        border-radius: 12px;
+        padding: 10px; /* Add padding to container's content area */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
-    header img {
-      max-height: 100px;
-    }
-    nav {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    nav button {
-      background: none;
-      border: none;
-      color: #5f6368;
-      font-size: 14px;
-      margin: 0 10px;
-      cursor: pointer;
-    }
-    nav button:hover {
-      text-decoration: underline;
-    }
+    
     .container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        max-width: 90%;
+        margin: 20px auto;
     }
+
+    /* Redefine Search Box to fit new container style */
     .search-box {
       display: flex;
       align-items: center;
       width: 100%;
       max-width: 600px;
-      border: 1px solid #dfe1e5;
+      border: 1px solid rgba(130, 130, 130, 0.4);
       border-radius: 24px;
       padding: 5px 15px;
-      box-shadow: none;
-      transition: box-shadow 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .search-box:focus-within {
-      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+      box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5); /* Blue focus glow */
       border-color: transparent;
     }
     .search-box input {
@@ -65,23 +66,157 @@
       outline: none;
       font-size: 16px;
       padding: 10px;
+      background-color: transparent;
     }
+
+
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BUTTON STYLES (from prompt) */
+    /* ------------------------------------------- */
+    .frutiger-aero-button {
+      /* Base Color System (Aero defaults to bright blue/green, changed hue for search focus) */
+      --hue: 200; /* Adjusted for a bluer, Windows Vista feel */
+      --sat: 0.35;
+      --glow-intensity: 0.8;
+      
+      /* Color Variables */
+      --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
+      --bg: oklch(75% var(--sat) var(--hue) / 0.8);
+      --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
+      --bottom-glow: radial-gradient(
+        farthest-corner at bottom center,
+        rgba(255, 255, 255, var(--glow-intensity)),
+        transparent
+      );
+      
+      /* Base Styling */
+      background-color: var(--bg);
+      background: 
+        var(--bottom-glow),
+        linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue)); /* Darker, pronounced border */
+      border-radius: 9999px; /* Pill shape */
+      
+      /* Shadows and Effects */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      
+      /* Typography */
+      color: var(--fg);
+      font-family: inherit; /* Use body's inherited font */
+      font-weight: 700;
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5); /* Lighter text shadow */
+      
+      /* Layout */
+      cursor: pointer;
+      position: relative;
+      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Springy transition */
+      
+      /* Prevent text selection */
+      user-select: none;
+      -webkit-user-select: none;
+      
+      /* Reset default button styles */
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    /* Top Highlight Effect */
+    .frutiger-aero-button::after {
+      content: "";
+      position: absolute;
+      top: 4%;
+      left: 0.75em;
+      width: calc(100% - 1.5em);
+      height: 40%;
+      background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.8),
+        rgba(255, 255, 255, 0.1)
+      );
+      border-radius: inherit;
+      transition: all 400ms ease;
+      pointer-events: none;
+    }
+
+    /* Hover State */
+    .frutiger-aero-button:hover,
+    .frutiger-aero-button:focus {
+      box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    /* Active State (Press) */
+    .frutiger-aero-button:active {
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      transform: translateY(1px) scale(0.98);
+      /* Flatten the glossy reflection when pressed */
+      background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
+    }
+    .frutiger-aero-button:active::after {
+        background: linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.3), /* Make reflection much dimmer */
+            rgba(255, 255, 255, 0.05)
+        );
+    }
+
+
+    /* ------------------------------------------- */
+    /* LAYOUT & SIZE APPLICATION */
+    /* ------------------------------------------- */
+    
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+    }
+    header img {
+      max-height: 100px;
+    }
+    
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    nav button {
+        /* Apply button class and medium size */
+        padding: 0.75em 2em;
+        font-size: 1rem;
+        margin: 0 10px;
+    }
+    
+    /* Apply styles to Search Button */
+    .actions button {
+        /* Apply button class and medium size */
+        padding: 0.75em 2em;
+        font-size: 1rem;
+    }
+    
+    /* Apply button style to Select element, adjusting for native rendering */
+    .actions select {
+        padding: 0.75em 2em;
+        font-size: 1rem;
+        /* Inherit button styles */
+        border-radius: 9999px;
+        border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+        background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+        color: var(--fg);
+        font-weight: 700;
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        /* Ensure the select menu looks nice */
+        appearance: menulist-button;
+        -webkit-appearance: menulist-button;
+        height: 48px; /* Match button height */
+    }
+
     .actions {
       margin-top: 20px;
       display: flex;
       gap: 10px;
     }
-    .actions select, .actions button {
-      padding: 10px 16px;
-      font-size: 14px;
-      border-radius: 4px;
-      border: 1px solid #dadce0;
-      background-color: #f8f9fa;
-      cursor: pointer;
-    }
-    .actions button:hover {
-      background-color: #f1f3f4;
-    }
+
     footer {
       text-align: center;
       padding: 20px;
@@ -100,8 +235,8 @@
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
   <nav>
-    <button onclick="switchTab('metasearch')">MetaSearch</button>
-    <button onclick="switchTab('about')">About</button>
+    <button class="frutiger-aero-button" onclick="switchTab('metasearch')">MetaSearch</button>
+    <button class="frutiger-aero-button" onclick="switchTab('about')">About</button>
   </nav>
   <div class="container">
     <div id="panel-metasearch" style="display:block; text-align:center;">
@@ -109,29 +244,26 @@
         <input type="text" id="metaQuery" placeholder="Search Oodles...">
       </div>
       <div class="actions">
-        <select id="searchTypeSelector">
+        <select id="searchTypeSelector" class="frutiger-aero-button">
           <option value="web">Web</option>
           <option value="image">Images(WORK IN PROGRESS)</option>
         </select>
-        <button onclick="runMetaSearch()">Search</button>
+        <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
     </div>
     <div id="panel-about" style="display:none; max-width:600px;">
       <h3>About Oodles</h3>
-      <p>Oodles MetaSearch blends results from multiple engines with smart deduping and scoring. 
-         You can search the web or images in a clean, simple interface.</p>
+      <p>Oodles MetaSearch blends results from multiple engines with smart deduping and scoring. You can compare results from multiple search engines! 
+        You can search the web or images in a clean, simple interface. Copyright Stenoip Company</p>
     </div>
   </div>
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
-
   <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-
     function switchTab(tab) {
       document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
       document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
     }
-
     function runMetaSearch() {
       var q = document.getElementById('metaQuery').value.trim();
       var type = document.getElementById('searchTypeSelector').value;
@@ -140,7 +272,6 @@
       sessionStorage.setItem('searchType', type);
       window.open('search.html', '_blank');
     }
-
     document.getElementById('metaQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') runMetaSearch();
     });
