@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,236 +7,319 @@
 <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    /* ------------------------------------------- */
-    /* FRUTIGER AERO STYLES */
-    /* ------------------------------------------- */
+   /* ------------------------------------------- */
+/* FRUTIGER AERO STYLES - OODLES SEARCH        */
+/* ------------------------------------------- */
 
-    /* Base Color System (Aero defaults to bright blue/green) */
-    :root {
-      --hue: 200; /* Bluer, Vista feel */
-      --sat: 0.35;
-      --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
-      --bg: oklch(75% var(--sat) var(--hue) / 0.8);
-      --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
-      --glow-intensity: 0.8;
-      --bottom-glow: radial-gradient(
-        farthest-corner at bottom center,
-        rgba(255, 255, 255, var(--glow-intensity)),
-        transparent
-      );
-    }
-    
-    body {
-      margin: 0;
-      font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
-      color: #202124;
-      
-      /* Frutiger Aero Wallpaper */
-      background-image: url('https://stenoip.github.io/oodles/oodles_wallpaper.png');
-      background-size: cover;
-      background-attachment: fixed;
-      background-position: center;
-    }
-    
-    /* Main Content Container Styling for Readability */
-    .container, .results-section {
-        background-color: rgba(255, 255, 255, 0.75); /* Semi-transparent white */
-        backdrop-filter: blur(5px);
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        margin-bottom: 20px;
-    }
+/* Base Color System (Aero defaults to bright blue/green) */
+:root {
+  --hue: 200; /* Bluer, Vista feel */
+  --sat: 0.35;
+  --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
+  --bg: oklch(75% var(--sat) var(--hue) / 0.8);
+  --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
+  --glow-intensity: 0.8;
+  --bottom-glow: radial-gradient(
+    farthest-corner at bottom center,
+    rgba(255, 255, 255, var(--glow-intensity)),
+    transparent
+  );
+}
 
-    .container {
-      max-width: 900px;
-      margin: 20px auto;
-      padding: 15px; /* Added internal padding */
-    }
+/* BODY */
+body {
+  margin: 0;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
+  color: #202124;
 
-    /* Tabs/Menu */
-    nav {
-      display: flex;
-      justify-content: center;
-      background-color: transparent; /* Transparent nav bar */
-      border-bottom: none;
-    }
-    
-    /* Frutiger Aero Tab Links (Styled like buttons) */
-    .frutiger-aero-tab {
-      /* Applying button styles */
-      background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
-      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
-      border-radius: 9999px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      color: var(--fg);
-      font-weight: 700;
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-      cursor: pointer;
-      position: relative;
-      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      text-decoration: none;
+  /* Frutiger Aero Wallpaper */
+  background-image: url('https://stenoip.github.io/oodles/oodles_wallpaper.png');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
 
-      padding: 0.5em 1.5em; /* Small size padding */
-      font-size: 14px;
-      margin: 0 5px;
-    }
+/* ------------------------------------------- */
+/* HEADER + TOP BAR                            */
+/* ------------------------------------------- */
+header {
+  padding: 15px 20px;
+  max-width: 950px;
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
 
-    .frutiger-aero-tab::after {
-      content: "";
-      position: absolute;
-      top: 4%;
-      left: 0.75em;
-      width: calc(100% - 1.5em);
-      height: 40%;
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.8),
-        rgba(255, 255, 255, 0.1)
-      );
-      border-radius: inherit;
-      transition: all 400ms ease;
-      pointer-events: none;
-    }
+/* Top row: logo on left, search box on right */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 
-    .frutiger-aero-tab:hover {
-      box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
-      transform: translateY(-2px) scale(1.02);
-    }
-    
-    nav a.active {
-      /* Active tab retains base styles but is slightly "pressed" */
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-      transform: translateY(1px);
-      border-bottom: none; /* Override default border */
-      color: var(--fg); /* Ensure text color remains consistent */
-      
-      background: linear-gradient(to bottom, var(--bg-dark), var(--bg)); /* Flatten gradient slightly */
-    }
-    nav a.active::after {
-        background: linear-gradient(
-            to bottom,
-            rgba(255, 255, 255, 0.3), /* Make reflection much dimmer */
-            rgba(255, 255, 255, 0.05)
-        );
-    }
+.logo-area img {
+  height: 60px;
+  width: auto;
+  display: block;
+}
 
+/* Search bar beside logo */
+.search-area {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
 
-    /* Search Box */
-    .search-box {
-      border: 1px solid rgba(130, 130, 130, 0.4);
-      border-radius: 24px;
-      padding: 5px 15px;
-      margin-bottom: 20px;
-      background-color: rgba(255, 255, 255, 0.9); /* Opaque white input area */
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .search-box input {
-      flex: 1;
-      border: none;
-      outline: none;
-      font-size: 16px;
-      padding: 10px;
-      background-color: transparent;
-    }
+.search-area input {
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid rgba(130, 130, 130, 0.4);
+  border-radius: 24px;
+  padding: 10px 15px;
+  font-size: 16px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
 
-    /* Results Sections */
-    .results-section {
-        padding: 15px;
-        margin-top: 10px;
-    }
-    .results-section h3 {
-      margin-top: 0; /* Adjusted due to container padding */
-      font-size: 18px;
-      border-bottom: 1px solid #e0e0e0;
-      padding-bottom: 5px;
-      margin-bottom: 15px;
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8); /* Light text shadow */
-    }
-    
-    /* Ensure result snippets and titles are legible */
-    .result-block {
-      margin-bottom: 16px;
-    }
-    .result-block a {
-      color: #0055ff; /* Stronger link color */
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .result-block a:hover {
-      text-decoration: underline;
-    }
-    .small {
-      font-size: 12px;
-      color: #333; /* Darker small text for contrast */
-    }
-    
-    /* Image Results Grid */
-    #imageResults {
-        /* No change to layout */
-    }
-    #imageResults img {
-      /* Added subtle aero border/shadow to images */
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* Footer */
-    footer {
-        /* Adjusted for visibility against the background */
-      text-align: center;
-      padding: 20px;
-      font-size: 12px;
-      color: #000;
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-      background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent */
-      backdrop-filter: blur(2px);
-    }
+.search-area input:focus {
+  outline: none;
+  border-color: oklch(65% var(--sat) var(--hue));
+  box-shadow: 0 0 8px rgba(0, 120, 255, 0.5);
+}
 
-    /* ------------------------------------------- */
-    /* ANT FEATURE STYLES */
-    /* ------------------------------------------- */
-    #ant-walker {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 60px; /* Size of the ant image */
-        height: 60px;
-        z-index: 10000;
-        transform: translateX(-100%); /* Start off-screen left */
-        display: none; /* Hidden until script runs */
-    }
-    /* ------------------------------------------- */
+/* ------------------------------------------- */
+/* NAVIGATION BAR                              */
+/* ------------------------------------------- */
+nav {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: transparent;
+  border: none;
+}
+
+/* Frutiger Aero Tab Links (Styled like buttons) */
+.frutiger-aero-tab {
+  background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+  border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+  font-weight: 700;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  position: relative;
+  transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-decoration: none;
+  padding: 0.5em 1.5em;
+  font-size: 14px;
+  margin: 0 5px;
+}
+
+.frutiger-aero-tab::after {
+  content: "";
+  position: absolute;
+  top: 4%;
+  left: 0.75em;
+  width: calc(100% - 1.5em);
+  height: 40%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0.1)
+  );
+  border-radius: inherit;
+  transition: all 400ms ease;
+  pointer-events: none;
+}
+
+.frutiger-aero-tab:hover {
+  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px) scale(1.02);
+}
+
+nav a.active {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transform: translateY(1px);
+  background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
+}
+
+nav a.active::after {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.05)
+  );
+}
+
+/* Divider line below nav */
+hr.divider {
+  margin: 15px auto 20px auto;
+  border: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.2);
+  width: 90%;
+  backdrop-filter: blur(1px);
+}
+
+/* ------------------------------------------- */
+/* MAIN CONTENT CONTAINERS                     */
+/* ------------------------------------------- */
+.container, .results-section {
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(5px);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 15px;
+}
+
+.results-section {
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.results-section h3 {
+  margin-top: 0;
+  font-size: 18px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Results styling */
+.result-block {
+  margin-bottom: 16px;
+}
+
+.result-block a {
+  color: #0055ff;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.result-block a:hover {
+  text-decoration: underline;
+}
+
+.small {
+  font-size: 12px;
+  color: #333;
+}
+
+/* Image Results Grid */
+#imageResults img {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin: 5px;
+  max-width: 150px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------- */
+/* FOOTER                                      */
+/* ------------------------------------------- */
+footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: #000;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 12px;
+  max-width: 900px;
+  margin: 0 auto 20px auto;
+}
+
+/* ------------------------------------------- */
+/* ANT FEATURE STYLES                          */
+/* ------------------------------------------- */
+#ant-walker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 60px;
+  z-index: 10000;
+  transform: translateX(-100%);
+  display: none;
+}
+
+/* ------------------------------------------- */
+/* RESPONSIVE TWEAKS                           */
+/* ------------------------------------------- */
+@media (max-width: 600px) {
+  .logo-area img {
+    height: 45px;
+  }
+
+  .search-area input {
+    max-width: 100%;
+  }
+
+  nav {
+    gap: 5px;
+  }
+
+  .frutiger-aero-tab {
+    font-size: 13px;
+    padding: 0.4em 1em;
+  }
+}
+
   </style>
 </head>
 <body>
   <header>
-    <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
-  </header>
-  <nav>
-    <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
-    <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
-    <a href="https://stenoip.github.io/video_plus.html" class="frutiger-aero-tab" target="_blank">Video</a>
-    <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
-  </nav>
-  <div class="container">
-    <div class="search-box">
-      <input type="text" id="currentQuery" placeholder="Search again...">
+    <div class="top-bar">
+      <div class="logo-area">
+        <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+      </div>
+      <div class="search-area">
+        <input type="text" id="currentQuery" placeholder="Search again...">
+      </div>
     </div>
-    
+
+    <nav>
+      <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
+      <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
+      <a href="https://stenoip.github.io/video_plus.html" class="frutiger-aero-tab" target="_blank">Video</a>
+      <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
+    </nav>
+
+    <hr class="divider">
+  </header>
+
+  <div class="container">
     <div class="results-section" id="linksSection">
       <h3>Links</h3>
       <div id="linkResults"><p class="small">Enter a search query.</p></div>
     </div>
-    
+
     <div class="results-section" id="imagesSection" style="display:none;">
       <h3>Images</h3>
       <div id="imageResults"><p class="small">Select a query from links.</p></div>
     </div>
   </div>
-  <footer>© Stenoip Company • Oodles Search</footer>
 
+  <footer>© Stenoip Company • Oodles Search</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
+
 
   <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
