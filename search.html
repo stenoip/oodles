@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Oodles Search Results</title>
+  <meta charset="UTF-8">
+  <title>Oodles Search Results</title>
 <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    /* ------------------------------------------- */
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+  /* ------------------------------------------- */
     /* FRUTIGER AERO STYLES */
     /* ------------------------------------------- */
 
@@ -206,178 +206,179 @@
         display: none; /* Hidden until script runs */
     }
     /* ------------------------------------------- */
-  </style>
+  </style>
 </head>
 <body>
-  <header>
-    <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
-  </header>
-  <nav>
-    <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
-    <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
-    <a href="https://stenoip.github.io/video_plus.html" class="frutiger-aero-tab" target="_blank">Video</a>
-    <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
-  </nav>
-  <div class="container">
-    <div class="search-box">
-      <input type="text" id="currentQuery" placeholder="Search again...">
-    </div>
-    
-    <div class="results-section" id="linksSection">
-      <h3>Links</h3>
-      <div id="linkResults"><p class="small">Enter a search query.</p></div>
-    </div>
-    
-    <div class="results-section" id="imagesSection" style="display:none;">
-      <h3>Images</h3>
-      <div id="imageResults"><p class="small">Select a query from links.</p></div>
-    </div>
-  </div>
-  <footer>© Stenoip Company • Oodles Search</footer>
+  <header>
+    <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+  </header>
+  <nav>
+        <a href="#" id="tab-links" class="active" onclick="switchTab('links', true)">Links</a>
+    <a href="#" id="tab-images" onclick="switchTab('images', true)">Images</a>
+        <a href="https://stenoip.github.io/video_plus.html" class="frutiger-aero-tab" target="_blank">Video</a>
+    <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
+  </nav>
+  <div class="container">
+    <div class="search-box">
+      <input type="text" id="currentQuery" placeholder="Search again...">
+    </div>
 
-  <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
+    <div class="results-section" id="linksSection">
+      <h3>Links</h3>
+      <div id="linkResults"><p class="small">Enter a search query.</p></div>
+    </div>
 
-  <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-    var currentQuery = '';
-    var currentSearchType = 'web';
+    <div class="results-section" id="imagesSection" style="display:none;">
+      <h3>Images</h3>
+      <div id="imageResults"><p class="small">Select a query from links.</p></div>
+    </div>
+  </div>
+  <footer>© Stenoip Company • Oodles Search</footer>
 
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
+  <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
-    async function executeSearch(query, type) {
-        if (!query) {
-            document.getElementById('linkResults').innerHTML = '<p class="small">No query to search.</p>';
-            document.getElementById('imageResults').innerHTML = '<p class="small">No query to search.</p>';
-            return;
-        }
+  <script>
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    var currentQuery = '';
+    var currentSearchType = 'web';
 
-        currentQuery = query;
-        currentSearchType = type;
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
 
-        if (type === 'web') {
-            document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
-            try {
-                var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=1&pageSize=20';
-                var resp = await fetch(url);
-                var data = await resp.json();
-                renderLinkResults(data.items, data.total);
-            } catch (error) {
-                console.error('Web search error:', error);
-                document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
-            }
-        } else if (type === 'image') {
-            document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
-            try {
-                var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=1&pageSize=20';
-                var resp = await fetch(url);
-                var data = await resp.json();
-                renderImageResults(data.items, data.total);
-            } catch (error) {
-                console.error('Image search error:', error);
-                document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
-            }
-        }
-    }
+    async function executeSearch(query, type) {
+        if (!query) {
+            document.getElementById('linkResults').innerHTML = '<p class="small">No query to search.</p>';
+            document.getElementById('imageResults').innerHTML = '<p class="small">No query to search.</p>';
+            return;
+        }
 
-    function switchTab(tab, executeNewSearch) {
-      // Prevent default link action only if event object is available (i.e., from click)
-      if (window.event) event.preventDefault(); 
+        currentQuery = query;
+        currentSearchType = type;
 
-      // Remove active class from all tabs
-      document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
-          a.classList.remove('active');
-      });
+        if (type === 'web') {
+            document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
+            try {
+                var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=1&pageSize=20';
+                var resp = await fetch(url);
+                var data = await resp.json();
+                renderLinkResults(data.items, data.total);
+            } catch (error) {
+                console.error('Web search error:', error);
+                document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
+            }
+        } else if (type === 'image') {
+            document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
+            try {
+                var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=1&pageSize=20';
+                var resp = await fetch(url);
+                var data = await resp.json();
+                renderImageResults(data.items, data.total);
+            } catch (error) {
+                console.error('Image search error:', error);
+                document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
+            }
+        }
+    }
 
-      document.getElementById('linksSection').style.display = 'none';
-      document.getElementById('imagesSection').style.display = 'none';
+    function switchTab(tab, executeNewSearch) {
+      // Prevent default link action only if event object is available (i.e., from click)
+      if (window.event) event.preventDefault();
 
-      if (tab === 'links') {
-        document.getElementById('tab-links').classList.add('active');
-        document.getElementById('linksSection').style.display = 'block';
-      } else if (tab === 'images') {
-        document.getElementById('tab-images').classList.add('active');
-        document.getElementById('imagesSection').style.display = 'block';
-      }
-      
-      if (executeNewSearch && currentQuery) {
-          executeSearch(currentQuery, tab);
-      }
-    }
+      // Remove active class from all tabs, regardless of button style
+      document.querySelectorAll('nav a').forEach(function(a) {
+          a.classList.remove('active');
+      });
 
-    function renderLinkResults(items, total) {
-      var resultsEl = document.getElementById('linkResults');
-      if (!items || items.length === 0) {
-        resultsEl.innerHTML = '<p class="small">No web links found.</p>';
-        return;
-      }
-      resultsEl.innerHTML = `
-        <p class="small">Found ${total} links.</p>
-        ` + items.map(function(r) {
-            return `
-              <div class="result-block">
-                <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-                <div class="small">${escapeHtml(r.url)}</div>
-                <div>${escapeHtml(r.snippet || '')}</div>
-              </div>
-            `;
-        }).join('')
-      ;
-    }
+      document.getElementById('linksSection').style.display = 'none';
+      document.getElementById('imagesSection').style.display = 'none';
 
-    function renderImageResults(items, total) {
-      var resultsEl = document.getElementById('imageResults');
-      if (!items || items.length === 0) {
-        resultsEl.innerHTML = '<p class="small">No images found.</p>';
-        return;
-      }
-      resultsEl.innerHTML = items.map(function(r) {
-        return `
-          <a href="${r.pageUrl}" target="_blank" rel="noopener" title="Source: ${r.pageUrl}">
-            <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
-          </a>
-        `;
-      }).join('') + 
-        '<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ' + total + ' images.</p>';
-    }
+      if (tab === 'links') {
+        document.getElementById('tab-links').classList.add('active');
+        document.getElementById('linksSection').style.display = 'block';
+      } else if (tab === 'images') {
+        document.getElementById('tab-images').classList.add('active');
+        document.getElementById('imagesSection').style.display = 'block';
+      }
 
-    function initializeFromSession() {
-      var query = sessionStorage.getItem('metaSearchQuery') || '';
-      var searchType = sessionStorage.getItem('searchType') || 'web';
-      
-      sessionStorage.removeItem('metaSearchQuery');
-      sessionStorage.removeItem('searchType');
+      if (executeNewSearch && currentQuery) {
+          executeSearch(currentQuery, tab);
+      }
+    }
 
-      if (query) {
-          document.getElementById('currentQuery').value = query;
-          currentQuery = query;
-          currentSearchType = searchType;
+    function renderLinkResults(items, total) {
+      var resultsEl = document.getElementById('linkResults');
+      if (!items || items.length === 0) {
+        resultsEl.innerHTML = '<p class="small">No web links found.</p>';
+        return;
+      }
+      resultsEl.innerHTML = `
+        <p class="small">Found ${total} links.</p>
+        ` + items.map(function(r) {
+            return `
+              <div class="result-block">
+                <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+                <div class="small">${escapeHtml(r.url)}</div>
+                <div>${escapeHtml(r.snippet || '')}</div>
+              </div>
+            `;
+        }).join('')
+      ;
+    }
 
-          switchTab(searchType); // Switch tabs without triggering a new search
-          executeSearch(query, searchType);
-      } else {
-          switchTab('links');
-      }
-    }
+    function renderImageResults(items, total) {
+      var resultsEl = document.getElementById('imageResults');
+      if (!items || items.length === 0) {
+        resultsEl.innerHTML = '<p class="small">No images found.</p>';
+        return;
+      }
+      resultsEl.innerHTML = items.map(function(r) {
+        return `
+          <a href="${r.pageUrl}" target="_blank" rel="noopener" title="Source: ${r.pageUrl}">
+            <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
+          </a>
+        `;
+      }).join('') +
+        '<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ' + total + ' images.</p>';
+    }
 
-    // Event listener for new search submission
-    document.addEventListener('DOMContentLoaded', initializeFromSession);
-    
-    document.getElementById('currentQuery').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        var query = this.value.trim();
-        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
-        
-        sessionStorage.setItem('metaSearchQuery', query);
-        sessionStorage.setItem('searchType', type);
-        window.location.reload();
-      }
-    });
-  </script>
-  <script src="ant_walking.js"></script>
+    function initializeFromSession() {
+      var query = sessionStorage.getItem('metaSearchQuery') || '';
+      var searchType = sessionStorage.getItem('searchType') || 'web';
+
+      sessionStorage.removeItem('metaSearchQuery');
+      sessionStorage.removeItem('searchType');
+
+      if (query) {
+          document.getElementById('currentQuery').value = query;
+          currentQuery = query;
+          currentSearchType = searchType;
+
+          switchTab(searchType); // Switch tabs without triggering a new search
+          executeSearch(query, searchType);
+      } else {
+          switchTab('links');
+      }
+    }
+
+    // Event listener for new search submission
+    document.addEventListener('DOMContentLoaded', initializeFromSession);
+
+    document.getElementById('currentQuery').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        var query = this.value.trim();
+        // Determine the current tab type based on the active class
+        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
+
+        sessionStorage.setItem('metaSearchQuery', query);
+        sessionStorage.setItem('searchType', type);
+        window.location.reload();
+      }
+    });
+  </script>
+  <script src="https://stenoip.github.io/oodles/ant_walking.js"></script>
 </body>
 </html>
