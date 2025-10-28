@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praterich A.I. on Oodles Search</title>
+    <link rel="icon" href="praterich.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+       /* FRUTIGER AERO STYLING - BLACK, BLUE, PURPLE THEME */
+:root {
+    /* Base Glass Colors (Kept the white for the Aero 'glass') */
+    --glass-color: rgba(255, 255, 255, 0.2); /* More transparent for dark theme */
+    --glass-border: rgba(255, 255, 255, 0.6); /* Sharper border for reflection */
+    
+    /* New Black, Blue, Purple Theme Colors */
+    --dark-primary: #1a0033; /* Very dark purple/black for main theme color */
+    --accent-blue: #0077ff; /* Bright blue for accents */
+    --accent-purple: #9900ff; /* Bright purple for user/send */
+    --text-color: #f0f0f0; /* Light text for dark background */
+    --shadow-color: rgba(0, 0, 0, 0.4); /* Darker shadows */
+}
+/* --- FULL SCREEN FIX START --- */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* SETTING THE BACKGROUND IMAGE AND MAKING IT COVER THE SCREEN */
+    background: url('https://commons.wikimedia.org/wiki/File:Rotating_earth_animated.gif') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+/* Make app-wrapper fill the entire available space and act as a dark overlay */
+#app-wrapper {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    /* Dark semi-transparent overlay over the background image */
+    background: rgba(0, 0, 0, 0.6); 
+    backdrop-filter: blur(10px); /* Slightly less blur over the GIF */
+    border: none;
+    /* Adjusted inner shadow for a subtle glow */
+    box-shadow: inset 0 0 50px rgba(100, 100, 255, 0.4); 
+    position: relative;
+}
+/* Glass shine effect (a pseudo-element for the sparkle) */
+#app-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px; /* Thin reflection line */
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.8) 50%, transparent 100%);
+    opacity: 0.7;
+    pointer-events: none;
+}
+/* --- FULL SCREEN FIX END --- */
+
+/* --- MAIN CHAT AREA (Now filling the whole space) --- */
+#chat-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+/* HEADER */
+#chat-header {
+    /* Transparent Dark Purple/Blue */
+    background-color: rgba(26, 0, 51, 0.7); 
+    color: var(--text-color);
+    padding: 15px 20px;
+    font-size: 1.5em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    backdrop-filter: blur(10px);
+    /* Added refraction highlight on the bottom edge (white glow) */
+    box-shadow: 0 2px 5px var(--shadow-color), inset 0 -2px 5px rgba(255, 255, 255, 0.3);
+}
+#praterich-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-blue); /* Blue border for icon */
+}
+/* CHAT WINDOW */
+#chat-window {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    /* Transparent chat window */
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-color); /* Light text for chat messages */
+}
+/* SUGGESTION ITEMS */
+#suggestion-box {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+.suggestions-item {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 20px;
+    /* Glass style */
+    background-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.4) 100%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+    color: #333; /* Dark text on glass */
+}
+.suggestions-item:hover {
+    /* Accent Blue on hover */
+    background-color: var(--accent-blue);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-blue);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.suggestions-item p {
+    margin: 0;
+    font-size: 0.9em;
+    font-weight: 500;
+    white-space: normal;
+}
+.message {
+    display: flex;
+    max-width: 85%;
+}
+.user-message {
+    justify-content: flex-end;
+    margin-left: auto;
+}
+.ai-message {
+    justify-content: flex-start;
+}
+.message-content {
+    padding: 12px 18px;
+    border-radius: 20px;
+    word-wrap: break-word;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+.user-message .message-content {
+    /* User Message - Accent Purple */
+    background-color: var(--accent-purple);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%), var(--accent-purple);
+    color: white;
+    border-bottom-right-radius: 5px;
+    box-shadow: 0 4px 10px var(--shadow-color), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.ai-message .message-content {
+    /* AI MESSAGE - Glass over Dark Background */
+    background-color: var(--glass-color);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+    color: var(--text-color); /* Light text on AI message */
+    border: 1px solid var(--glass-border);
+    border-bottom-left-radius: 5px;
+    /* Added refraction (inner shadow top) and base shadow */
+    box-shadow: 0 4px 10px var(--shadow-color), inset 0 2px 5px rgba(255, 255, 255, 0.5);
+}
+/* Removed File Preview CSS */
+
+/* TYPING INDICATOR */
+#typing-indicator {
+    padding: 10px 20px;
+    color: var(--text-color);
+    font-style: italic;
+    display: none;
+    background: rgba(255, 255, 255, 0.1);
+}
+/* INPUT AREA */
+#input-area {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    /* Darker, more glass-like input area */
+    background: rgba(0, 0, 0, 0.6);
+    border-top: 1px solid var(--glass-border);
+    gap: 10px;
+}
+.input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+#user-input {
+    flex-grow: 1;
+    padding: 10px 15px;
+    border: 1px solid #333; /* Darker border */
+    border-radius: 15px;
+    font-size: 1em;
+    outline: none;
+    transition: all 0.3s;
+    background-color: #222; /* Dark input field */
+    color: white;
+    resize: none;
+    min-height: 40px;
+    overflow-y: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+#user-input:focus {
+    /* Focus glow is Accent Blue */
+    box-shadow: 0 0 5px var(--accent-blue), inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    border-color: var(--accent-blue);
+}
+/* Character counter and warning */
+#char-counter {
+    font-size: 0.8em;
+    color: #aaa; /* Light grey text */
+    padding: 0 10px 5px 0;
+    text-align: right;
+    transition: color 0.3s;
+}
+.limit-warning {
+    color: #ff4d4d !important;
+    font-weight: 600;
+}
+.limit-suggestion {
+    color: var(--accent-purple);
+    font-style: italic;
+    cursor: pointer;
+    text-decoration: underline;
+}
+/* Glassy Input Buttons */
+.input-button {
+    /* GLOSSY/3D BASE STYLES - Light glass over dark */
+    background-color: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-blue); /* Blue icon color */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.1em;
+    /* 3D shadow */
+    box-shadow: 0 4px 8px var(--shadow-color), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
+    flex-shrink: 0;
+}
+/* Make send button more prominent */
+#send-button {
+    /* SHADOWS FOR SEND BUTTON - Accent Purple */
+    background-color: var(--accent-purple);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 100%), var(--accent-purple);
+    color: white;
+    border: 1px solid #6600cc; /* Darker purple border */
+    /* Increased blur/spread on outer shadow */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.input-button:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.3) 100%);
+    color: var(--accent-blue);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+#send-button:hover {
+    background-color: #6600cc;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 100%), #6600cc;
+    color: white;
+    /* Larger, darker shadow on hover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.input-button:active {
+    /* Pressed (3D click) state */
+    transform: scale(0.95) translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 0 5px rgba(0, 0, 0, 0.5);
+}
+#send-button:disabled {
+    background-color: rgba(153, 0, 255, 0.5);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%), rgba(153, 0, 255, 0.5);
+    cursor: not-allowed;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* OUTPUT STYLING (For Markdown Content) */
+.ai-message .message-content ul,
+.ai-message .message-content ol {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+.ai-message .message-content pre {
+    background: rgba(255, 255, 255, 0.1); /* Lighter code block for dark theme */
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-size: 0.9em;
+    margin: 8px 0;
+    color: #e0e0e0; /* Light text in code block */
+}
+.ai-message .message-content code {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+.ai-message .message-content strong {
+    font-weight: 700;
+}
+/* ACTION BUTTONS ON AI MESSAGE */
+.ai-message-actions {
+    position: absolute;
+    top: -15px;
+    right: 0px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    gap: 5px;
+}
+.ai-message:hover .ai-message-actions {
+    opacity: 1;
+}
+.action-button {
+    /* 3D/Gloss to action buttons */
+    background: rgba(255, 255, 255, 0.8);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.7) 100%);
+    color: #333;
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    font-size: 0.8em;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+.action-button:hover {
+    background-color: white;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.action-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), inset 0 0 3px rgba(0, 0, 0, 0.2);
+}
+/* --- MOBILE-FRIENDLY ADJUSTMENTS --- */
+@media (max-width: 768px) {
+    /* Only adjusting message width for smaller screens as the sidebar/menu is gone */
+    .message {
+        max-width: 90%;
+    }
+    #input-area {
+        padding: 10px;
+    }
+    #suggestion-box {
+        padding: 5px 0;
+    }
+    /* Removing sidebar/menu related mobile CSS */
+    #chat-header {
+        padding-left: 20px; /* Reset padding since menu toggle is gone */
+    }
+}
+/* --- COPYRIGHT STYLING --- */
+#copyright {
+    font-size: 0.7em;
+    color: #aaa; /* Light grey text for dark theme */
+    text-align: center;
+    padding: 5px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent dark background */
+}
+    </style>
+</head>
+<body>
+    <div id="app-wrapper">
+        <div id="chat-container">
+            <div id="chat-header">
+                <img id="praterich-icon" src="https://stenoip.github.io/praterich/praterich.png" alt="Praterich A.I. Icon" onerror="this.onerror=null; this.src='https://via.placeholder.com/30/ff9900/ffffff?text=P';">
+                <span>Praterich A.I. on Oodles Search</span>
+            </div>
+            <div id="chat-window">
+                <ul id="suggestion-box">
+                    <li class="suggestions-item">
+                        <p class="text">How can I level up my web development expertise in 2025?</p>
+                    </li>
+                    <li class="suggestions-item">
+                        <p class="text">Explain quantum computing in simple terms.</p>
+                    </li>
+                    <li class="suggestions-item">
+                        <p class="text">Write a short, casual Python script for file processing.</p>
+                    </li>
+                </ul>
+            </div>
+            <div id="typing-indicator">Praterich A.I. is typing...</div>
+            <div id="input-area">
+                <div class="input-row">
+                    <textarea id="user-input" placeholder="Type your message here..."></textarea>
+                    <button id="send-button" class="input-button" title="Send" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="char-counter">0 / 10710 characters.</div>
+            </div>
+        </div>
+    </div>
+    <script src="praterich-script.js"></script>
+    
+</body>
+</html>
