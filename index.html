@@ -24,15 +24,9 @@
       background-position: center;
     }
 
-    /* Main Content Container Styling for Readability */
-    .container, .search-box {
-        backdrop-filter: blur(5px);
-        background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white */
-        border-radius: 12px;
-        padding: 10px; /* Add padding to container's content area */
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
+   
+    
+    /* Container for layout without background/glass effect */
     .container {
         flex: 1;
         display: flex;
@@ -42,18 +36,25 @@
         max-width: 90%;
         margin: 20px auto;
     }
-
-    /* Redefine Search Box to fit new container style */
+    
+    /* Search Box needs to carry the Aero styling now */
     .search-box {
+      /* Re-added background/blur to the search box element */
+      backdrop-filter: blur(5px);
+      background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white */
+      border-radius: 24px; /* Match the input border-radius for the whole box */
+      padding: 5px 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow now that it's floating */
+        
       display: flex;
       align-items: center;
       width: 100%;
       max-width: 600px;
       border: 1px solid rgba(130, 130, 130, 0.4);
-      border-radius: 24px;
-      padding: 5px 15px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
     }
+    
+    /* Input field inside search box */
     .search-box:focus-within {
       box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5); /* Blue focus glow */
       border-color: transparent;
@@ -66,63 +67,38 @@
       padding: 10px;
       background-color: transparent;
     }
-
     /* ------------------------------------------- */
-    /* FRUTIGER AERO BUTTON STYLES (Kept for Search button and Select) */
+    /* FRUTIGER AERO BUTTON STYLES (General) */
     /* ------------------------------------------- */
-    .frutiger-aero-button {
-      /* Base Color System (Aero defaults to bright blue/green, changed hue for search focus) */
-      --hue: 200; /* Adjusted for a bluer, Windows Vista feel */
-      --sat: 0.35;
+    .frutiger-aero-button {      
+      --hue: 200; 
+      --sat: 0.35;      
       --glow-intensity: 0.8;
-
-      /* Color Variables */
       --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
       --bg: oklch(75% var(--sat) var(--hue) / 0.8);
       --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
-      --bottom-glow: radial-gradient(
-        farthest-corner at bottom center,
-        rgba(255, 255, 255, var(--glow-intensity)),
-        transparent
-      );
-
-      /* Base Styling */
+      --bottom-glow: radial-gradient(        farthest-corner at bottom center,        rgba(255, 255, 255, var(--glow-intensity)),        transparent      );
+      
       background-color: var(--bg);
-      background:
-        var(--bottom-glow),
-        linear-gradient(to bottom, var(--bg-dark), var(--bg));
-
-      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue)); /* Darker, pronounced border */
-      border-radius: 9999px; /* Pill shape */
-
-      /* Shadows and Effects */
+      background:        var(--bottom-glow),        linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue)); 
+      border-radius: 9999px; 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-
-      /* Typography */
       color: var(--fg);
-      font-family: inherit; /* Use body's inherited font */
+      font-family: inherit; 
       font-weight: 700;
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5); /* Lighter text shadow */
-
-      /* Layout */
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5); 
       cursor: pointer;
       position: relative;
-      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Springy transition */
-
-      /* Prevent text selection */
+      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275); 
       user-select: none;
       -webkit-user-select: none;
-
-      /* Reset default button styles */
       appearance: none;
       -webkit-appearance: none;
-
-      /* Added for <a> tags when used as buttons */
       text-decoration: none;
       display: inline-block;
       text-align: center;
     }
-    /* Top Highlight Effect */
     .frutiger-aero-button::after {
       content: "";
       position: absolute;
@@ -139,33 +115,64 @@
       transition: all 400ms ease;
       pointer-events: none;
     }
-
-    /* Hover State */
     .frutiger-aero-button:hover,
     .frutiger-aero-button:focus {
       box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
       transform: translateY(-2px) scale(1.02);
     }
-
-    /* Active State (Press) */
     .frutiger-aero-button:active {
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
       transform: translateY(1px) scale(0.98);
-      /* Flatten the glossy reflection when pressed */
       background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
     }
     .frutiger-aero-button:active::after {
         background: linear-gradient(
             to bottom,
-            rgba(255, 255, 255, 0.3), /* Make reflection much dimmer */
+            rgba(255, 255, 255, 0.3), 
             rgba(255, 255, 255, 0.05)
         );
+    }
+    
+    /* ------------------------------------------- */
+    /* PRATERICH AI BUTTON STYLES (Multi-color)    */
+    /* ------------------------------------------- */
+    .ai-button {
+      --ai-hue: 300; 
+      --ai-sat: 0.6;
+      --ai-fg: white; 
+      --ai-bg-dark: oklch(50% calc(var(--ai-sat) * 0.7) var(--ai-hue) / 0.9);
+      --ai-bg: oklch(80% var(--ai-sat) var(--ai-hue) / 0.9);
+
+      border: 1px solid oklch(50% 0.8 280); 
+      background: 
+        radial-gradient(circle at top right, rgba(255, 0, 255, 0.5), transparent), 
+        linear-gradient(135deg, var(--ai-bg-dark) 0%, var(--ai-bg) 50%, oklch(75% 0.5 120) 100%); 
+      
+      color: var(--ai-fg);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5); 
+      font-size: 1.1rem; 
+      padding: 0.8em 2.5em; 
+      margin-top: 20px;
+    }
+
+    .ai-button:hover {
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), 0 8px 10px rgba(0, 0, 0, 0.35); 
+    }
+    
+    /* Styles for the About panel which still needs a visible background */
+    #panel-about {
+        backdrop-filter: blur(5px);
+        background-color: rgba(255, 255, 255, 0.85); /* Slightly less transparent */
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        margin-top: 20px;
     }
 
     /* ------------------------------------------- */
     /* LAYOUT & SIZE APPLICATION */
     /* ------------------------------------------- */
-
+    
     header {
       text-align: center;
       padding: 40px 20px 20px;
@@ -173,40 +180,36 @@
     header img {
       max-height: 100px;
     }
-
+    
     nav {
       text-align: center;
       margin-bottom: 20px;
     }
-
-    /* STYLES FOR LINKS IN NAV (NEW) */
+    
+    /* STYLES FOR LINKS IN NAV */
     nav a {
         font-size: 1rem;
         margin: 0 15px;
-        padding: 5px 10px; /* Add slight padding for click target */
-        color: #0000FF; /* Standard link blue */
+        padding: 5px 10px; 
+        color: #0000FF; 
         text-decoration: underline;
         font-weight: 600;
         cursor: pointer;
         transition: color 0.2s;
     }
-
     nav a:hover {
-        color: #990099; /* Standard link purple on hover */
+        color: #990099; 
     }
-
+    
     /* Apply styles to Search Button (reusing the button class) */
     .actions button {
-        /* Apply button class and medium size */
         padding: 0.75em 2em;
         font-size: 1rem;
     }
-
-    /* Apply button style to Select element, adjusting for native rendering */
+    /* Apply button style to Select element */
     .actions select {
         padding: 0.75em 2em;
         font-size: 1rem;
-        /* Inherit button styles */
         border-radius: 9999px;
         border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
         background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
@@ -214,22 +217,23 @@
         font-weight: 700;
         text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        /* Ensure the select menu looks nice */
         appearance: menulist-button;
         -webkit-appearance: menulist-button;
-        height: 48px; /* Match button height */
+        height: 48px; 
     }
     .actions {
-      margin-top: 20px;
       display: flex;
       gap: 10px;
+      justify-content: center; 
     }
+    
     footer {
       text-align: center;
       padding: 20px;
       font-size: 12px;
       color: #5f6368;
     }
+    
     @media (max-width: 600px) {
       .search-box {
         max-width: 100%;
@@ -241,15 +245,20 @@
   <header>
     <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
   </header>
+  
   <nav>
     <a href="#" onclick="switchTab('metasearch'); return false;">MetaSearch</a>
     <a href="#" onclick="switchTab('about'); return false;">About</a>
   </nav>
+  
   <div class="container">
-    <div id="panel-metasearch" style="display:block; text-align:center;">
+    
+    <div id="panel-metasearch" style="display:block; text-align:center; max-width:600px; width:100%;">
+      
       <div class="search-box">
         <input type="text" id="metaQuery" placeholder="Search Oodles...">
       </div>
+      
       <div class="actions">
         <select id="searchTypeSelector" class="frutiger-aero-button">
           <option value="web">Web</option>
@@ -257,20 +266,34 @@
         </select>
         <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
+      
+      <button class="frutiger-aero-button ai-button" onclick="runAIAnalysis()">
+          NEW! AI Analysis with Praterich AI
+      </button>
+
     </div>
+    
     <div id="panel-about" style="display:none; max-width:600px;">
-      <h3>About Oodles</h3>
-      <p>Oodles MetaSearch blends results from multiple engines with smart deduping and scoring. You can compare results from multiple search engines!
-        You can search the web or images in a clean, simple interface. Copyright Stenoip Company</p>
+       <h3>About Us</h3>
+      <p>Oodles MetaSearch Engine is where infomation from various other
+      search engines are gathered into one. Less bias and more infomation. Most importantly, it is private and homemade.<p>
+      <p>For more infomation, visit out Github page at  <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.
+      </p>
+      <p>Visit wikipedia page about Metasearch Search Engines at<a href="https://en.wikipedia.org/wiki/Metasearch_engine">https://en.wikipedia.org/wiki/Metasearch_engine</a></p>
     </div>
+    
   </div>
+  
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
+  
   <script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    
     function switchTab(tab) {
       document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
       document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
     }
+    
     function runMetaSearch() {
       var q = document.getElementById('metaQuery').value.trim();
       var type = document.getElementById('searchTypeSelector').value;
@@ -279,6 +302,18 @@
       sessionStorage.setItem('searchType', type);
       window.open('search.html', '_blank');
     }
+    
+    // New function for AI Analysis
+    function runAIAnalysis() {
+        var q = document.getElementById('metaQuery').value.trim();
+        if (!q) {
+            alert("Please enter a query to analyze.");
+            return;
+        }
+        // Placeholder action for AI analysis: opens a new page/tab with the query
+        window.open('ai_analysis.html' + encodeURIComponent(q), '_blank');
+    }
+    
     document.getElementById('metaQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') runMetaSearch();
     });
