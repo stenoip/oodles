@@ -288,7 +288,7 @@ footer {
   <header>
     <div class="top-bar">
       <div class="logo-area">
-        <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+        <a href="index.html"> <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo"></a>
       </div>
       <div class="search-area">
         <input type="text" id="currentQuery" placeholder="Search again...">
@@ -321,7 +321,7 @@ footer {
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
 
-  <script>
+<script>
     var BACKEND_BASE = 'https://oodles-backend.vercel.app';
     var currentQuery = '';
     var currentSearchType = 'web';
@@ -368,28 +368,44 @@ footer {
         }
     }
 
-    function switchTab(tab, executeNewSearch) {
+    function switchTab(tabName, executeNewSearch) {
       // Prevent default link action only if event object is available (i.e., from click)
       if (window.event) event.preventDefault(); 
+      
+      // Determine the correct UI ID and the backend search type
+      let normalizedTab = tabName;
+      let newSearchType = tabName;
 
+      if (tabName === 'web' || tabName === 'links') {
+          normalizedTab = 'links';
+          newSearchType = 'web';
+      } else if (tabName === 'image' || tabName === 'images') {
+          normalizedTab = 'images';
+          newSearchType = 'image';
+      }
+      
+      // Update global state immediately
+      currentSearchType = newSearchType;
+      
       // Remove active class from all tabs
-      document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
-          a.classList.remove('active');
-      });
+      document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {          a.classList.remove('active');      });
 
+      // Hide both sections
       document.getElementById('linksSection').style.display = 'none';
       document.getElementById('imagesSection').style.display = 'none';
 
-      if (tab === 'links') {
+      // Show the selected section and set the tab to active
+      if (normalizedTab === 'links') {
         document.getElementById('tab-links').classList.add('active');
         document.getElementById('linksSection').style.display = 'block';
-      } else if (tab === 'images') {
+      } else if (normalizedTab === 'images') {
         document.getElementById('tab-images').classList.add('active');
         document.getElementById('imagesSection').style.display = 'block';
       }
-      
+            
+      // If triggered by a tab click (executeNewSearch is true), and a query exists, run a new search
       if (executeNewSearch && currentQuery) {
-          executeSearch(currentQuery, tab);
+          executeSearch(currentQuery, newSearchType); 
       }
     }
 
@@ -425,43 +441,49 @@ footer {
             <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
           </a>
         `;
-      }).join('') + 
-        '<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ' + total + ' images.</p>';
+      }).join('') +
+         '<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ' + total + ' images.</p>';
     }
 
     function initializeFromSession() {
       var query = sessionStorage.getItem('metaSearchQuery') || '';
-      var searchType = sessionStorage.getItem('searchType') || 'web';
-      
+      var searchType = sessionStorage.getItem('searchType') || 'web'; 
+            
+      // Remove items immediately after reading them
       sessionStorage.removeItem('metaSearchQuery');
       sessionStorage.removeItem('searchType');
 
       if (query) {
           document.getElementById('currentQuery').value = query;
           currentQuery = query;
-          currentSearchType = searchType;
-
-          switchTab(searchType); // Switch tabs without triggering a new search
+          
+          // 1. Switch the tab and update currentSearchType global
+          switchTab(searchType, false); 
+          
+          // 2. Execute the search 
           executeSearch(query, searchType);
       } else {
-          switchTab('links');
+          // If no query, default to the web/links tab
+          switchTab('web', false);
       }
     }
 
     // Event listener for new search submission
     document.addEventListener('DOMContentLoaded', initializeFromSession);
-    
+        
     document.getElementById('currentQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         var query = this.value.trim();
-        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
+        // Use the current active tab to determine the search type for submission
+        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web'; 
         
         sessionStorage.setItem('metaSearchQuery', query);
         sessionStorage.setItem('searchType', type);
         window.location.reload();
       }
     });
-  </script>
-  <script src="ant_walking.js"></script>
+  
+</script>
+<script src="ant_walking.js"></script>
 </body>
 </html>
