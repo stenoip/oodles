@@ -1,4 +1,4 @@
-/ --- Configuration Variables ---
+// --- Configuration Variables ---
 var API_URL = "https://praterich.vercel.app/api/praterich";
 var STORAGE_KEY_SESSIONS = 'praterich_chats';
 var MAX_CHARS = 10710; 
