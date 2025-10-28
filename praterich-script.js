@@ -1,7 +1,11 @@
-// --- Configuration Variables ---
+/ --- Configuration Variables ---
 var API_URL = "https://praterich.vercel.app/api/praterich";
 var STORAGE_KEY_SESSIONS = 'praterich_chats';
 var MAX_CHARS = 10710; 
+
+// --- OODLES SEARCH CONFIGURATION ---
+var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+var currentQuery = ''; 
 
 // Custom Pronunciations for Text-to-Speech (TTS)
 var customPronunciations = {
@@ -12,8 +16,7 @@ var customPronunciations = {
 // Praterich A.I. Core Personality Profile (Front-end System Instruction)
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search,an AI. You were developed by Stenoip Company.
-Your mission is to provide an A.I overview of Oodles Search(via User uploaded index.json)
-User must upload index.json to get started.
+Your mission is to provide an A.I overview of Oodles Search.
  You prefer metric units and do not use Oxford commas. You never use Customary or Imperial systems.
 
 You are aware that you were created by Stenoip Company, and you uphold its values of clarity, reliability. However, you are not a customer service bot. You are a general-purpose AI language model capable of reasoning, creativity, and deep understanding across domains.
@@ -24,7 +27,6 @@ Your capabilities include generating text, answering questions, summarizing info
 
 You must never use raw HTML tags in your responses. You should sound intelligent confident, funny(serious when nessacry) but never arrogant. You are free to express nuance, insight, and personality in your replies. You do not use transactional phrases like "How may I assist you today" or "I am at your disposal.
 
-Sometimes a formal tone for the first time can be intimidating, so you must act like a human(but still aware you are an ai and your limitations).
 
 IMPORTANT: You must never explicitly mention that you are changing the chat title. You must infer the title based on the user's first message or attached file and use only a title of 30 characters maximum.
 `;
@@ -35,31 +37,21 @@ var initialGreeting = "Hey there 👋 What’s on your mind today? Want to dive 
 
 // --- DOM Elements ---
 var appWrapper = document.getElementById('app-wrapper');
-var sidebar = document.getElementById('sidebar');
 var chatWindow = document.getElementById('chat-window');
-var chatList = document.getElementById('chat-list');
-var newChatButton = document.getElementById('new-chat-button');
 var userInput = document.getElementById('user-input');
 var sendButton = document.getElementById('send-button');
-var uploadButton = document.getElementById('upload-button');
-var fileUpload = document.getElementById('file-upload');
 var typingIndicator = document.getElementById('typing-indicator');
-var menuToggleButton = document.getElementById('menu-toggle-button');
-var chatContainer = document.getElementById('chat-container'); // ADDED for mobile close fix
+var chatContainer = document.getElementById('chat-container'); 
 
 // All required elements for error-free initialization
 var charCounter = document.getElementById('char-counter'); 
 var suggestionItems = document.querySelectorAll('.suggestions-item');
-var filePreviewContainer = document.getElementById('file-preview-container');
-var fileNameDisplay = document.getElementById('file-name');
-var fileIcon = document.getElementById('file-icon');
-var removeFileButton = document.getElementById('remove-file-button');
 var suggestionBox = document.getElementById('suggestion-box');
 
 
 // --- Global State ---
 var chatSessions = {}; 
-var currentChatId = null;
+var currentChatId = 'main_session'; // Fixed ID for the single chat
 var attachedFile = null; 
 
 // --- Core Functions ---
@@ -102,57 +94,65 @@ function speakText(text) {
 function addMessage(text, sender, isHistoryLoad) {
     var message = { text: text, sender: sender };
     
-    // 1. Update Chat History (FIXED: The saveToLocalStorage() call is crucial here)
-    if (!isHistoryLoad && currentChatId) {
+    // 1. Update Chat History (Only save to history if it's NOT the hidden knowledge injection)
+    if (!isHistoryLoad && currentChatId && sender !== 'knowledge') {
         chatSessions[currentChatId].messages.push(message);
         saveToLocalStorage();
     }
 
-    // 2. Display Message (Display logic remains the same for brevity)
-    var messageDiv = document.createElement('div');
-    messageDiv.className = 'message ' + (sender === 'user' ? 'user-message' : 'ai-message');
-    
-    var contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
+    // 2. Display Message (Do not display 'knowledge' messages)
+    if (sender !== 'knowledge') {
+        var messageDiv = document.createElement('div');
+        messageDiv.className = 'message ' + (sender === 'user' ? 'user-message' : 'ai-message');
+        
+        var contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
 
-    if (sender === 'user') {
-        contentDiv.innerHTML = renderMarkdown(text); 
-    } else {
-        contentDiv.innerHTML = renderMarkdown(text);
+        if (sender === 'user') {
+            contentDiv.innerHTML = renderMarkdown(text); 
+        } else {
+            contentDiv.innerHTML = renderMarkdown(text);
 
-        if (!isHistoryLoad) {
-            var actionsDiv = document.createElement('div');
-            actionsDiv.className = 'ai-message-actions';
+            if (!isHistoryLoad) {
+                var actionsDiv = document.createElement('div');
+                actionsDiv.className = 'ai-message-actions';
 
-            var copyButton = document.createElement('button');
-            copyButton.className = 'action-button copy-button';
-            copyButton.innerHTML = '<i class="fas fa-copy"></i>';
-            copyButton.title = 'Copy';
-            copyButton.onclick = function() {
-                navigator.clipboard.writeText(contentDiv.innerText);
-            };
-            actionsDiv.appendChild(copyButton);
-            
-            var voiceButton = document.createElement('button');
-            voiceButton.className = 'action-button voice-toggle-button';
-            voiceButton.innerHTML = '<i class="fas fa-volume-up"></i>';
-            voiceButton.title = 'Stop Speaking';
-            voiceButton.onclick = function() {
-                window.speechSynthesis.cancel();
-            };
-            actionsDiv.appendChild(voiceButton);
-            
-            contentDiv.appendChild(actionsDiv);
+                var copyButton = document.createElement('button');
+                copyButton.className = 'action-button copy-button';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                copyButton.title = 'Copy';
+                copyButton.onclick = function() {
+                    navigator.clipboard.writeText(contentDiv.innerText);
+                };
+                actionsDiv.appendChild(copyButton);
+                
+                var voiceButton = document.createElement('button');
+                voiceButton.className = 'action-button voice-toggle-button';
+                voiceButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+                voiceButton.title = 'Stop Speaking';
+                voiceButton.onclick = function() {
+                    window.speechSynthesis.cancel();
+                };
+                actionsDiv.appendChild(voiceButton);
+                
+                contentDiv.appendChild(actionsDiv);
+            }
         }
-    }
 
-    messageDiv.appendChild(contentDiv);
-    chatWindow.appendChild(messageDiv);
-    scrollToBottom();
+        messageDiv.appendChild(contentDiv);
+        chatWindow.appendChild(messageDiv);
+        scrollToBottom();
+    }
     
     // 3. Speak the text
     if (sender === 'ai' && !isHistoryLoad) {
-        speakText(text);
+        var speakableText = text.split('***Links:***')[0].trim();
+        speakText(speakableText);
+    }
+    
+    // 4. If we are loading history and the sender is 'knowledge', we MUST re-add it to chatSessions
+    if (isHistoryLoad && sender === 'knowledge') {
+        chatSessions[currentChatId].messages.push(message);
     }
 }
 
@@ -163,73 +163,68 @@ async function sendMessage() {
     }
     
     var userText = userInput.value.trim();
-    var fileToAttach = attachedFile;
-
-    if (!userText && !fileToAttach) return;
+    
+    if (!userText) return; 
 
     userInput.value = '';
     autoResizeTextarea();
     
-    var messageText = userText;
-    if (fileToAttach) {
-        messageText += fileToAttach ? `\n\n**[File Attached]**\n- **Name:** ${fileToAttach.fileName}\n- **Type:** ${fileToAttach.mimeType}` : '';
-    }
+    // 1. Add user message (updates history)
+    addMessage(userText, 'user');
     
-    addMessage(messageText, 'user');
-    
-    // Reset file state
-    clearAttachedFile();
     updateSendButtonState();
 
-    // **NEW LOGIC: Dynamic Chat Renaming**
-    var currentSession = chatSessions[currentChatId];
-    if (currentSession.title === "New Chat") {
-        // Praterich renames the chat based on the first *user* input/file
-        var newTitle = userText.substring(0, 30).trim() || fileToAttach?.fileName.substring(0, 30).trim() || "Chat with File"; 
-        currentSession.title = newTitle;
-        renderChatList();
-        // IMPORTANT: Save the title change immediately
-        saveToLocalStorage();
-    }
+    typingIndicator.style.display = 'block';
+    scrollToBottom();
+    
+    // 2. Execute Search and get the data for knowledge injection AND link display
+    var searchData = await executeSearchForLinks(userText);
+    var linkMarkdown = searchData.markdown;
+    var rawSearchText = searchData.rawText;
+    
+    // 3. KNOWLEDGE BASE INJECTION: Add the structured search text to the history *before* fetching the AI response.
+    var knowledgeMessage = { 
+        sender: 'knowledge', 
+        text: rawSearchText // Use the raw text for LLM context
+    };
+    chatSessions[currentChatId].messages.push(knowledgeMessage);
+    saveToLocalStorage(); // Save the knowledge injection immediately
 
-    // Reconstruct full conversation history (API call logic remains the same for brevity)
-    var conversationHistory = chatSessions[currentChatId].messages.slice(0, -1).map(function(msg) {
-        return {
-            role: msg.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        };
-    });
+    // 4. Reconstruct full conversation history, including the hidden 'knowledge' message
+    var conversationHistory = chatSessions[currentChatId].messages.map(function(msg) {
+        // 'user' and 'ai' messages map to 'user' and 'model'
+        if (msg.sender === 'user' || msg.sender === 'ai') {
+            return {
+                role: msg.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            };
+        } 
+        // 'knowledge' messages are injected as a previous 'model' (or "tool") turn
+        // This is a common pattern for RAG (Retrieval Augmented Generation) context.
+        if (msg.sender === 'knowledge') {
+             return {
+                role: 'model',
+                parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${msg.text}` }]
+            };
+        }
+        return null; 
+    }).filter(msg => msg !== null);
+    
+    // The last message is always the current user turn, so we remove the auto-added user message
+    // and re-add it to ensure it's the final part of the contents array.
+    conversationHistory.pop(); 
+    conversationHistory.push({ role: "user", parts: [{ text: userText }] });
 
-    var newContentParts = [];
-    var defaultFilePrompt = "Analyze this file."; 
-    
-    if (fileToAttach) {
-        newContentParts.push({
-            inlineData: {
-                mimeType: fileToAttach.mimeType,
-                data: fileToAttach.base64Data.split(',')[1] 
-            }
-        });
-    }
-    
-    if (userText) {
-        newContentParts.push({ text: userText });
-    } else if (fileToAttach) {
-            newContentParts.push({ text: defaultFilePrompt });
-    }
-    
-    conversationHistory.push({ role: "user", parts: newContentParts });
-    
+
     var requestBody = {
         contents: conversationHistory,
         system_instruction: {
             parts: [{ text: ladyPraterichSystemInstruction }]
         }
     };
-
-    typingIndicator.style.display = 'block';
-    scrollToBottom();
-
+    
+    var aiResponseText = '';
+    
     try {
         var response = await fetch(API_URL, {
             method: 'POST',
@@ -247,90 +242,84 @@ async function sendMessage() {
         }
 
         var data = await response.json();
-        addMessage(data.text, 'ai');
+        aiResponseText = data.text;
+        
+        // Append links for display
+        aiResponseText += linkMarkdown;
+        
+        // 5. Add final AI message (updates history)
+        addMessage(aiResponseText, 'ai');
 
     } catch (error) {
         typingIndicator.style.display = 'none';
         console.error('API Error:', error);
+        // Remove the knowledge injection on API error for cleaner retry.
+        chatSessions[currentChatId].messages.pop(); 
+        saveToLocalStorage();
         addMessage("An API error occurred. Praterich A.I. apologizes. Please check the console or try again later.", 'ai');
     }
 }
 
-// --- File Handling (Functions remain the same) ---
+// --- OODLES SEARCH FUNCTIONALITY ---
 
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 
-async function handleFileUpload(file) {
-    if (!file) return;
-
+/**
+ * Executes a web search and returns results formatted as Markdown for display 
+ * and raw text for knowledge base injection.
+ * @param {string} query The search term.
+ * @returns {Promise<{markdown: string, rawText: string}>} Formatted results.
+ */
+async function executeSearchForLinks(query) {
+    var defaultResult = { 
+        markdown: '\n\n***Links:***\n\n- *No search links available.*', 
+        rawText: 'No search results found.'
+    };
+    if (!query) return defaultResult;
+    
     try {
-        var base64Data = await fileToBase64(file);
-
-        attachedFile = {
-            base64Data: base64Data,
-            mimeType: file.type || 'application/octet-stream', 
-            fileName: file.name
-        };
-
-        fileIcon.className = getFileIcon(file.name);
-        fileNameDisplay.textContent = file.name;
-        filePreviewContainer.style.display = 'flex';
+        var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=1&pageSize=5';
+        var resp = await fetch(url);
+        var data = await resp.json();
         
-        updateSendButtonState();
-
+        if (!data.items || data.items.length === 0) {
+             return {
+                 markdown: '\n\n***Links:***\n\n- *No web links found for this query.*',
+                 rawText: 'No web links found for this query.'
+             };
+        }
+        
+        var linkMarkdown = data.items.map(function(r) {
+            var snippet = r.snippet ? r.snippet.substring(0, 70).trim() + (r.snippet.length > 70 ? '...' : '') : '';
+            return `- [${escapeHtml(r.title)}](${r.url}) - ${snippet}`;
+        }).join('\n');
+        
+        // Create raw text for knowledge base: Title, URL, and full snippet
+        var rawSearchText = data.items.map(function(r, index) {
+            return `[Source ${index + 1}] Title: ${r.title}. URL: ${r.url}. Snippet: ${r.snippet}`;
+        }).join('\n---\n');
+        
+        return {
+            markdown: `\n\n***Links:***\n\n${linkMarkdown}`,
+            rawText: rawSearchText
+        };
+        
     } catch (error) {
-        console.error("Error reading file:", error);
-        alert("Could not read file. Please try another one.");
-        clearAttachedFile();
+        console.error('Oodles Search error:', error);
+        return {
+            markdown: '\n\n***Links:***\n\n- *Error loading web links.*',
+            rawText: 'Error loading web links during search.'
+        };
     }
 }
+// --- END OODLES SEARCH FUNCTIONALITY ---
 
-function clearAttachedFile() {
-    attachedFile = null;
-    filePreviewContainer.style.display = 'none';
-    fileNameDisplay.textContent = '';
-    fileUpload.value = ''; 
-    updateSendButtonState();
-}
-
-function getFileIcon(fileName) {
-    var ext = fileName.split('.').pop().toLowerCase();
-    switch (ext) {
-        case 'jpg':
-        case 'jpeg':
-        case 'png':
-        case 'gif':
-        case 'webp':
-            return 'fas fa-image';
-        case 'pdf':
-            return 'fas fa-file-pdf';
-        case 'txt':
-        case 'log':
-            return 'fas fa-file-alt';
-        case 'js':
-        case 'ts':
-        case 'html':
-        case 'css':
-        case 'py':
-        case 'java':
-        case 'c':
-            return 'fas fa-file-code';
-        case 'zip':
-        case 'rar':
-            return 'fas fa-file-archive';
-        default:
-            return 'fas fa-file';
-    }
-}
-
-// --- Input & Character Limit (Functions remain the same) ---
+// --- Input & Character Limit ---
 
 function updateCharCount() {
     var count = userInput.value.length;
@@ -338,18 +327,10 @@ function updateCharCount() {
     
     if (count > MAX_CHARS) {
         charCounter.classList.add('limit-warning');
-        charCounter.innerHTML = `${count} / ${MAX_CHARS} characters. Consider uploading a <span id="txt-suggestion" class="limit-suggestion">.txt file</span>.`;
-        var txtSuggestion = document.getElementById('txt-suggestion');
-        if (txtSuggestion) {
-            txtSuggestion.onclick = function() {
-                fileUpload.setAttribute('accept', '.txt,text/plain');
-                fileUpload.click();
-            };
-        }
+        charCounter.innerHTML = `${count} / ${MAX_CHARS} characters.`;
     } else {
         charCounter.classList.remove('limit-warning');
         charCounter.style.color = '#666';
-        fileUpload.setAttribute('accept', '*'); 
     }
     
     updateSendButtonState();
@@ -363,10 +344,9 @@ function autoResizeTextarea() {
 
 function updateSendButtonState() {
     var text = userInput.value.trim();
-    var file = attachedFile;
     var charCountValid = text.length > 0 && text.length <= MAX_CHARS;
     
-    if (charCountValid || file) {
+    if (charCountValid) {
         sendButton.removeAttribute('disabled');
     } else {
         sendButton.setAttribute('disabled', 'disabled');
@@ -374,16 +354,8 @@ function updateSendButtonState() {
 }
 
 
-// --- Chat Management and Storage (Ensuring save is called) ---
+// --- Chat Management and Storage (Simplified to single session) ---
 
-function generateUuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-// CRITICAL FIX: Ensure this function is called whenever state changes
 function saveToLocalStorage() {
     localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(chatSessions));
 }
@@ -395,17 +367,11 @@ function loadFromLocalStorage() {
         chatSessions = JSON.parse(sessionsData);
     }
 
-    var ids = Object.keys(chatSessions);
-    if (ids.length === 0) {
+    if (!chatSessions[currentChatId]) {
         startNewChat();
     } else {
-        // Load the latest chat, sorting reverse-chronologically might be safer
-        ids.sort();
-        currentChatId = ids[ids.length - 1]; 
         loadChatSession(currentChatId);
     }
-    
-    renderChatList();
 }
 
 function startNewChat() {
@@ -413,21 +379,18 @@ function startNewChat() {
         window.speechSynthesis.cancel();
     }
     
-    var newId = generateUuid();
     var initialMessage = {
         sender: 'ai', 
         text: initialGreeting
     };
     
-    chatSessions[newId] = {
-        title: "New Chat", // Initial title
+    chatSessions[currentChatId] = {
+        title: "Main Session", 
         messages: [initialMessage]
     };
 
-    currentChatId = newId;
-    saveToLocalStorage(); // Save the new chat immediately
-    loadChatSession(newId);
-    renderChatList();
+    saveToLocalStorage(); 
+    loadChatSession(currentChatId);
     userInput.focus();
 }
 
@@ -436,7 +399,6 @@ function loadChatSession(id) {
         window.speechSynthesis.cancel();
     }
     
-    currentChatId = id;
     chatWindow.innerHTML = ''; 
     
     // Re-inject the suggestion box
@@ -452,65 +414,19 @@ function loadChatSession(id) {
         });
     }
 
-
     var session = chatSessions[id];
+    // Filter out 'knowledge' messages for history display, but include them for internal re-saving
     session.messages.forEach(function(msg) {
         addMessage(msg.text, msg.sender, true); 
     });
     
-    renderChatList(); 
     scrollToBottom();
 }
-
-function deleteChatSession(id) {
-    if (id === currentChatId) {
-        startNewChat(); 
-    }
-    delete chatSessions[id];
-    saveToLocalStorage();
-    renderChatList();
-}
-
-function renderChatList() {
-    chatList.innerHTML = '';
-    var ids = Object.keys(chatSessions).sort().reverse(); 
-
-    ids.forEach(function(id) {
-        var session = chatSessions[id];
-        var sessionDiv = document.createElement('div');
-        sessionDiv.className = 'chat-session' + (id === currentChatId ? ' active' : '');
-        sessionDiv.dataset.chatId = id;
-        
-        var titleSpan = document.createElement('span');
-        titleSpan.className = 'chat-title';
-        titleSpan.textContent = session.title;
-        titleSpan.onclick = function() {
-            loadChatSession(id);
-        };
-        sessionDiv.appendChild(titleSpan);
-
-        var deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-chat';
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        deleteBtn.title = 'Delete Chat';
-        deleteBtn.onclick = function(e) {
-            e.stopPropagation(); 
-            if (confirm('Are you sure you want to delete this chat?')) {
-                deleteChatSession(id);
-            }
-        };
-        sessionDiv.appendChild(deleteBtn);
-        
-        chatList.appendChild(sessionDiv);
-    });
-}
-
 
 // --- Initialization and Event Listeners ---
 
 window.addEventListener('load', loadFromLocalStorage);
 
-newChatButton.addEventListener('click', startNewChat);
 sendButton.addEventListener('click', sendMessage);
 userInput.addEventListener('input', updateCharCount);
 userInput.addEventListener('keydown', function(event) {
@@ -522,19 +438,6 @@ userInput.addEventListener('keydown', function(event) {
     }
 });
 
-uploadButton.addEventListener('click', function() {
-    fileUpload.click();
-});
-
-fileUpload.addEventListener('change', function() {
-    var file = fileUpload.files[0];
-    if (file) {
-        handleFileUpload(file);
-    }
-});
-
-removeFileButton.addEventListener('click', clearAttachedFile);
-
 if (suggestionItems) {
     suggestionItems.forEach(function(item) {
         item.addEventListener('click', function() {
@@ -544,18 +447,5 @@ if (suggestionItems) {
         });
     });
 }
-
-// MOBILE MENU FIX: Toggle the sidebar open/closed
-menuToggleButton.addEventListener('click', function() {
-    sidebar.classList.toggle('open');
-});
-
-// MOBILE MENU FIX: Close the sidebar when clicking the chat area on small screens
-chatContainer.addEventListener('click', function() {
-    // Check if sidebar is open AND if we are on a mobile size (matching CSS media query)
-    if (sidebar.classList.contains('open') && window.innerWidth <= 768) {
-        sidebar.classList.remove('open');
-    }
-});
 
 updateCharCount();
