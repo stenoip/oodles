@@ -287,13 +287,13 @@
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
   
   <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-    
+   var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+        
     function switchTab(tab) {
       document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
       document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
     }
-    
+        
     function runMetaSearch() {
       var q = document.getElementById('metaQuery').value.trim();
       var type = document.getElementById('searchTypeSelector').value;
@@ -302,18 +302,12 @@
       sessionStorage.setItem('searchType', type);
       window.open('search.html', '_blank');
     }
-    
-    // New function for AI Analysis
+        
+  
     function runAIAnalysis() {
-        var q = document.getElementById('metaQuery').value.trim();
-        if (!q) {
-            alert("Please enter a query to analyze.");
-            return;
-        }
-        // Placeholder action for AI analysis: opens a new page/tab with the query
-        window.open('ai_analysis.html' + encodeURIComponent(q), '_blank');
+        window.open('ai_analysis.html', '_blank');
     }
-    
+        
     document.getElementById('metaQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') runMetaSearch();
     });
