@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oodles 3-D World Search</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+            }
+        }
+    </script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; }
+        
+        /* 3D World Controls (Movement & Look) */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        button {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            cursor: pointer;
+            touch-action: manipulation; /* Improves touch response */
+        }
+        .look-controls {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        /* Search UI Overlay */
+        .search-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+        #currentQuery {
+            padding: 10px;
+            width: 300px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        /* Results Pop-up (for mobile/debugging) - Hidden by default */
+        #resultsOverlay {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 400px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 9;
+            display: none; /* Only visible if needed for debugging/mobile */
+        }
+        .result-block {
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 5px;
+        }
+        .result-block a {
+            font-weight: bold;
+            color: #007bff;
+            text-decoration: none;
+            display: block;
+        }
+        .small {
+            font-size: 0.8em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="search-container">
+        <input type="text" id="currentQuery" placeholder="Search the 3D world (e.g., Three.js, planets)" />
+    </div>
+
+    <div class="controls">
+        <button id="left">◀</button>
+        <button id="forward">▲</button>
+        <button id="back">▼</button>
+        <button id="right">▶</button>
+    </div>
+    <div class="look-controls">
+        <button id="turnLeft">⤺</button>
+        <button id="turnRight">⤻</button>
+    </div>
+    
+    <div id="resultsOverlay">
+        <div id="linkResults"></div>
+    </div>
+
+    <script type="module" src="world.js"></script>
+</body>
+</html>
