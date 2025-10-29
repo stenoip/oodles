@@ -9,7 +9,6 @@
     /* ------------------------------------------- */
     /* FRUTIGER AERO BASE STYLES */
     /* ------------------------------------------- */
-    /* Global Background: Nature/Water/Sky */
     body {
       margin: 0;
       font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
@@ -17,48 +16,42 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      /* Frutiger Aero Wallpaper */
-      background-image: url('https://stenoip.github.io/oodles/oodles_wallpaper.png'); /* A typical bright, glossy background */
+      background-image: url('https://stenoip.github.io/oodles/oodles_wallpaper.png');
       background-size: cover;
       background-attachment: fixed;
       background-position: center;
     }
 
-   
-    
-    /* Container for layout without background/glass effect */
     .container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px;
-        max-width: 90%;
-        margin: 20px auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      max-width: 90%;
+      margin: 20px auto;
     }
     
-    /* Search Box needs to carry the Aero styling now */
     .search-box {
-      /* Re-added background/blur to the search box element */
       backdrop-filter: blur(5px);
-      background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white */
-      border-radius: 24px; /* Match the input border-radius for the whole box */
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 24px;
       padding: 5px 15px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow now that it's floating */
-        
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       display: flex;
       align-items: center;
       width: 100%;
       max-width: 600px;
       border: 1px solid rgba(130, 130, 130, 0.4);
       margin-bottom: 20px;
+      justify-content: space-between; /* Aligns the buttons on the right */
     }
     
-    /* Input field inside search box */
     .search-box:focus-within {
-      box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5); /* Blue focus glow */
+      box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5);
       border-color: transparent;
     }
+
     .search-box input {
       flex: 1;
       border: none;
@@ -67,8 +60,27 @@
       padding: 10px;
       background-color: transparent;
     }
+
+    .microphone-btn, .ai-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #666;
+      font-size: 24px; /* microphone icon size */
+      margin-left: 10px;
+      transition: color 0.3s;
+    }
+
+    .microphone-btn:hover, .ai-btn:hover {
+      color: #0078D4; /* Change color on hover */
+    }
+
+    .microphone-btn:focus, .ai-btn:focus {
+      outline: none;
+    }
+
     /* ------------------------------------------- */
-    /* FRUTIGER AERO BUTTON STYLES (General) */
+    /* FRUTIGER AERO BUTTON STYLES */
     /* ------------------------------------------- */
     .frutiger-aero-button {      
       --hue: 200; 
@@ -77,10 +89,10 @@
       --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
       --bg: oklch(75% var(--sat) var(--hue) / 0.8);
       --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
-      --bottom-glow: radial-gradient(        farthest-corner at bottom center,        rgba(255, 255, 255, var(--glow-intensity)),        transparent      );
+      --bottom-glow: radial-gradient(farthest-corner at bottom center, rgba(255, 255, 255, var(--glow-intensity)), transparent);
       
       background-color: var(--bg);
-      background:        var(--bottom-glow),        linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
       border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue)); 
       border-radius: 9999px; 
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -92,13 +104,11 @@
       position: relative;
       transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275); 
       user-select: none;
-      -webkit-user-select: none;
-      appearance: none;
-      -webkit-appearance: none;
       text-decoration: none;
       display: inline-block;
       text-align: center;
     }
+
     .frutiger-aero-button::after {
       content: "";
       position: absolute;
@@ -106,121 +116,83 @@
       left: 0.75em;
       width: calc(100% - 1.5em);
       height: 40%;
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.8),
-        rgba(255, 255, 255, 0.1)
-      );
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.1));
       border-radius: inherit;
       transition: all 400ms ease;
       pointer-events: none;
     }
+
     .frutiger-aero-button:hover,
     .frutiger-aero-button:focus {
       box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
       transform: translateY(-2px) scale(1.02);
     }
+
     .frutiger-aero-button:active {
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
       transform: translateY(1px) scale(0.98);
       background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
     }
+
     .frutiger-aero-button:active::after {
-        background: linear-gradient(
-            to bottom,
-            rgba(255, 255, 255, 0.3), 
-            rgba(255, 255, 255, 0.05)
-        );
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
     }
     
-    /* ------------------------------------------- */
-    /* PRATERICH AI BUTTON STYLES (Multi-color)    */
-    /* ------------------------------------------- */
-    .ai-button {
-      --ai-hue: 300; 
-      --ai-sat: 0.6;
-      --ai-fg: white; 
-      --ai-bg-dark: oklch(50% calc(var(--ai-sat) * 0.7) var(--ai-hue) / 0.9);
-      --ai-bg: oklch(80% var(--ai-sat) var(--ai-hue) / 0.9);
-
-      border: 1px solid oklch(50% 0.8 280); 
-      background: 
-        radial-gradient(circle at top right, rgba(255, 0, 255, 0.5), transparent), 
-        linear-gradient(135deg, var(--ai-bg-dark) 0%, var(--ai-bg) 50%, oklch(75% 0.5 120) 100%); 
-      
-      color: var(--ai-fg);
-      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5); 
-      font-size: 1.1rem; 
-      padding: 0.8em 2.5em; 
-      margin-top: 20px;
-    }
-
-    .ai-button:hover {
-        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), 0 8px 10px rgba(0, 0, 0, 0.35); 
-    }
-    
-    /* Styles for the About panel which still needs a visible background */
-    #panel-about {
-        backdrop-filter: blur(5px);
-        background-color: rgba(255, 255, 255, 0.85); /* Slightly less transparent */
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        padding: 20px;
-        margin-top: 20px;
-    }
-
     /* ------------------------------------------- */
     /* LAYOUT & SIZE APPLICATION */
     /* ------------------------------------------- */
-    
     header {
       text-align: center;
       padding: 40px 20px 20px;
+      width: 100%;
     }
+
     header img {
-      max-height: 100px;
+      max-height: 100px;        /* keep height the same */
+      width: 100%;              /* make the image stretch across the header */
+      object-fit: contain;      /* maintain aspect ratio (no distortion) */
     }
-    
+
     nav {
       text-align: center;
       margin-bottom: 20px;
     }
     
-    /* STYLES FOR LINKS IN NAV */
     nav a {
-        font-size: 1rem;
-        margin: 0 15px;
-        padding: 5px 10px; 
-        color: #0000FF; 
-        text-decoration: underline;
-        font-weight: 600;
-        cursor: pointer;
-        transition: color 0.2s;
+      font-size: 1rem;
+      margin: 0 15px;
+      padding: 5px 10px; 
+      color: #0000FF; 
+      text-decoration: underline;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s;
     }
+
     nav a:hover {
-        color: #990099; 
+      color: #990099; 
     }
-    
-    /* Apply styles to Search Button (reusing the button class) */
+
     .actions button {
-        padding: 0.75em 2em;
-        font-size: 1rem;
+      padding: 0.75em 2em;
+      font-size: 1rem;
     }
-    /* Apply button style to Select element */
+
     .actions select {
-        padding: 0.75em 2em;
-        font-size: 1rem;
-        border-radius: 9999px;
-        border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
-        background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
-        color: var(--fg);
-        font-weight: 700;
-        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        appearance: menulist-button;
-        -webkit-appearance: menulist-button;
-        height: 48px; 
+      padding: 0.75em 2em;
+      font-size: 1rem;
+      border-radius: 9999px;
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+      background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      color: var(--fg);
+      font-weight: 700;
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      appearance: menulist-button;
+      -webkit-appearance: menulist-button;
+      height: 48px; 
     }
+
     .actions {
       display: flex;
       gap: 10px;
@@ -252,13 +224,14 @@
   </nav>
   
   <div class="container">
-    
     <div id="panel-metasearch" style="display:block; text-align:center; max-width:600px; width:100%;">
-      
       <div class="search-box">
         <input type="text" id="metaQuery" placeholder="Search Oodles...">
+        <button class="microphone-btn" onclick="startVoiceSearch()">
+          <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Microphone" style="width: 24px; height: 24px;"/>
+        </button>
+        <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
       </div>
-      
       <div class="actions">
         <select id="searchTypeSelector" class="frutiger-aero-button">
           <option value="web">Web</option>
@@ -266,34 +239,31 @@
         </select>
         <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
-      
-      <button class="frutiger-aero-button ai-button" onclick="runAIAnalysis()">
-          NEW! AI Analysis with Praterich AI
-      </button>
-
     </div>
     
     <div id="panel-about" style="display:none; max-width:600px;">
-       <h3>About Us</h3>
-      <p>Oodles MetaSearch Engine is where infomation from various other
-      search engines are gathered into one. Less bias and more infomation. Most importantly, it is private and homemade.<p>
-      <p>For more infomation, visit out Github page at  <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.
-      </p>
-      <p>Visit wikipedia page about Metasearch Search Engines at<a href="https://en.wikipedia.org/wiki/Metasearch_engine">https://en.wikipedia.org/wiki/Metasearch_engine</a></p>
+      <h3>About Us</h3>
+      <p>Oodles MetaSearch Engine is where information from various other
+      search engines are gathered into one. Less bias and more information. Most importantly, it is private and homemade.</p>
+      <p>For more information, visit our GitHub page at 
+      <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
+      <p>Visit the Wikipedia page about Metasearch Search Engines at 
+      <a href="https://en.wikipedia.org/wiki/Metasearch_engine">https://en.wikipedia.org/wiki/Metasearch_engine</a>.</p>
     </div>
-    
   </div>
   
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
   
   <script>
-   var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-        
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    
+    // Function to switch between tabs
     function switchTab(tab) {
       document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
       document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
     }
-        
+    
+    // Function to run meta search
     function runMetaSearch() {
       var q = document.getElementById('metaQuery').value.trim();
       var type = document.getElementById('searchTypeSelector').value;
@@ -302,12 +272,38 @@
       sessionStorage.setItem('searchType', type);
       window.open('search.html', '_blank');
     }
-        
-  
+    
+    // Function to run AI analysis
     function runAIAnalysis() {
-        window.open('ai_analysation.html', '_blank');
+      window.open('ai_analysation.html', '_blank');
     }
-        
+    
+    // Function to start voice search
+    function startVoiceSearch() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert('Your browser does not support speech recognition.');
+        return;
+      }
+      
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('metaQuery').value = transcript;
+        runMetaSearch(); // Automatically run search after transcription
+      };
+
+      recognition.onerror = function(event) {
+        alert('Voice recognition failed: ' + event.error);
+      };
+    }
+    
+    // Add keyboard event to trigger search on Enter key
     document.getElementById('metaQuery').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') runMetaSearch();
     });
