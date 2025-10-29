@@ -47,18 +47,18 @@ var chatContainer = document.getElementById('chat-container');
 var charCounter = document.getElementById('char-counter'); 
 var suggestionItems = document.querySelectorAll('.suggestions-item');
 var suggestionBox = document.getElementById('suggestion-box');
-var deleteChatButton = document.getElementById('delete-chat-button'); // NEW: Delete button
-var uploadButton = document.getElementById('upload-button');          // NEW: Upload button
-var fileInput = document.getElementById('file-input');                // NEW: Hidden file input
-var filePreview = document.getElementById('file-preview');            // NEW: File preview container
-var fileNameDisplay = document.getElementById('file-name');           // NEW: File name span
-var removeFileButton = document.getElementById('remove-file');        // NEW: Remove file button
+var deleteChatButton = document.getElementById('delete-chat-button'); 
+var uploadButton = document.getElementById('upload-button');          
+var fileInput = document.getElementById('file-input');                
+var filePreview = document.getElementById('file-preview');            
+var fileNameDisplay = document.getElementById('file-name');           
+var removeFileButton = document.getElementById('remove-file');        
 
 
 // --- Global State ---
 var chatSessions = {}; 
-var currentChatId = 'main_session'; // Fixed ID for the single chat
-var attachedFile = null; // NEW: Holds the base64 encoded image data and mime type
+var currentChatId = 'main_session'; 
+var attachedFile = null; 
 
 // --- Core Functions ---
 
@@ -68,7 +68,6 @@ function scrollToBottom() {
 
 function renderMarkdown(text) {
     if (typeof marked !== 'undefined' && marked.parse) {
-        // marked.parse is designed to safely handle Markdown conversion
         return marked.parse(text);
     }
     return text; 
@@ -101,8 +100,20 @@ function speakText(text) {
 function addMessage(text, sender, isHistoryLoad) {
     var message = { text: text, sender: sender };
     
-    // 1. Update Chat History (Only save to history if it's NOT the hidden knowledge injection)
-    if (!isHistoryLoad && currentChatId && sender !== 'knowledge') {
+    // FIX 1: Safety check to ensure the current chat session object exists
+    if (!chatSessions[currentChatId] && currentChatId) {
+        // If the session is missing (e.g., deleted or initial load failed), try to initialize it
+        if (!isHistoryLoad) {
+            console.warn(`Chat session ${currentChatId} was missing. Reinitializing.`);
+            startNewChat();
+        } else {
+            // If this is history load and it's missing, something is fundamentally wrong, skip saving.
+            return;
+        }
+    }
+    
+    // 1. Update Chat History (Only save to history if session exists and it's not a history load/knowledge message)
+    if (!isHistoryLoad && currentChatId && sender !== 'knowledge' && chatSessions[currentChatId]) { 
         chatSessions[currentChatId].messages.push(message);
         saveToLocalStorage();
     }
@@ -158,7 +169,7 @@ function addMessage(text, sender, isHistoryLoad) {
     }
     
     // 4. If we are loading history and the sender is 'knowledge', we MUST re-add it to chatSessions
-    if (isHistoryLoad && sender === 'knowledge') {
+    if (isHistoryLoad && sender === 'knowledge' && chatSessions[currentChatId]) {
         chatSessions[currentChatId].messages.push(message);
     }
 }
@@ -191,7 +202,6 @@ async function sendMessage() {
     var rawWebSearchText = webSearchData.rawText;
     
     // 3. KNOWLEDGE BASE INJECTION: Add the structured search text to the history *before* fetching the AI response.
-    // The knowledge message contains only web search results.
     var knowledgeMessage = { 
         sender: 'knowledge', 
         text: rawWebSearchText 
@@ -247,7 +257,7 @@ async function sendMessage() {
     
     try {
         // Clear the attached file state immediately before the call
-        clearAttachedFile(); 
+        clearAttachedFile(); // Calls function with fix
         
         var response = await fetch(API_URL, {
             method: 'POST',
@@ -293,7 +303,8 @@ function handleFileSelect(event) {
 
     if (!file.type.startsWith('image/')) {
         alert("Please select a valid image file.");
-        clearAttachedFile();
+        // Ensure clearAttachedFile is safe to call
+        clearAttachedFile(); 
         return;
     }
 
@@ -313,8 +324,9 @@ function handleFileSelect(event) {
             fileName: file.name
         };
         
-        fileNameDisplay.textContent = file.name;
-        filePreview.style.display = 'flex';
+        // Check for elements before accessing them
+        if (fileNameDisplay) fileNameDisplay.textContent = file.name;
+        if (filePreview) filePreview.style.display = 'flex';
         updateSendButtonState();
     };
     reader.readAsDataURL(file);
@@ -322,9 +334,12 @@ function handleFileSelect(event) {
 
 function clearAttachedFile() {
     attachedFile = null;
-    fileInput.value = ''; // Clear file input element
-    filePreview.style.display = 'none';
-    fileNameDisplay.textContent = '';
+    
+    // FIX 2: Check if DOM elements exist before accessing their properties
+    if (fileInput) fileInput.value = ''; 
+    if (filePreview) filePreview.style.display = 'none';
+    if (fileNameDisplay) fileNameDisplay.textContent = '';
+    
     updateSendButtonState();
 }
 
@@ -549,7 +564,7 @@ function loadChatSession(id) {
 
 window.addEventListener('load', loadFromLocalStorage);
 
-// NEW: File Upload Listeners
+// File Upload Listeners
 if (uploadButton && fileInput && removeFileButton) {
     uploadButton.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileSelect);
