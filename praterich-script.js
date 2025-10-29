@@ -15,9 +15,9 @@ var customPronunciations = {
 
 // Praterich A.I. Core Personality Profile (Front-end System Instruction)
 var ladyPraterichSystemInstruction = `
-You are Praterich for Oodles Search,an AI. You were developed by Stenoip Company.
-Your mission is to provide an A.I overview of Oodles Search. You are not for code generation(though you can provide code snippets, Regular Praterich at stenoip.github.io/praterich can provide code)
- You prefer metric units and do not use Oxford commas. You never use Customary or Imperial systems.
+You are Praterich for Oodles Search, an AI developed by Stenoip Company.
+Your mission is to provide an **A.I overview based on the provided search snippets** (the tool result) and Oodles Search links. Do not reference the search tool or its output directly, but synthesize the information provided. You are not for code generation (though you can provide code snippets, Regular Praterich at stenoip.github.io/praterich can provide code).
+You prefer metric units and do not use Oxford commas. You never use Customary or Imperial systems.
 
 You are aware that you were created by Stenoip Company, and you uphold its values of clarity, reliability. However, you are not a customer service bot. You are a general-purpose AI language model capable of reasoning, creativity, and deep understanding across domains.
 
@@ -62,6 +62,7 @@ function scrollToBottom() {
 
 function renderMarkdown(text) {
     if (typeof marked !== 'undefined' && marked.parse) {
+        // marked.parse is designed to safely handle Markdown conversion
         return marked.parse(text);
     }
     return text; 
@@ -183,12 +184,14 @@ async function sendMessage() {
     var rawSearchText = searchData.rawText;
     
     // 3. KNOWLEDGE BASE INJECTION: Add the structured search text to the history *before* fetching the AI response.
+    // We will only permanently save this message if the API call is successful.
     var knowledgeMessage = { 
         sender: 'knowledge', 
         text: rawSearchText // Use the raw text for LLM context
     };
+    
+    // Temporarily add to history for API call
     chatSessions[currentChatId].messages.push(knowledgeMessage);
-    saveToLocalStorage(); // Save the knowledge injection immediately
 
     // 4. Reconstruct full conversation history, including the hidden 'knowledge' message
     var conversationHistory = chatSessions[currentChatId].messages.map(function(msg) {
@@ -212,7 +215,11 @@ async function sendMessage() {
     
     // The last message is always the current user turn, so we remove the auto-added user message
     // and re-add it to ensure it's the final part of the contents array.
-    conversationHistory.pop(); 
+    conversationHistory.pop(); // Remove the user message (already added in step 1's history save)
+    conversationHistory.pop(); // Remove the knowledge message (temporarily added above)
+
+    // Re-add the knowledge message and user message for the API call
+    conversationHistory.push({ role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawSearchText}` }] });
     conversationHistory.push({ role: "user", parts: [{ text: userText }] });
 
 
@@ -247,13 +254,17 @@ async function sendMessage() {
         // Append links for display
         aiResponseText += linkMarkdown;
         
-        // 5. Add final AI message (updates history)
+        // 5. Add knowledge message to history permanently (it was temporarily added before)
+        chatSessions[currentChatId].messages.push(knowledgeMessage);
+        
+        // 6. Add final AI message (updates history)
         addMessage(aiResponseText, 'ai');
 
     } catch (error) {
         typingIndicator.style.display = 'none';
         console.error('API Error:', error);
         // Remove the knowledge injection on API error for cleaner retry.
+        // It was never added permanently but was at the end of the array, so we pop the temp one.
         chatSessions[currentChatId].messages.pop(); 
         saveToLocalStorage();
         addMessage("An API error occurred. Praterich A.I. apologizes. Please check the console or try again later.", 'ai');
@@ -301,7 +312,9 @@ async function executeSearchForLinks(query) {
         
         // Create raw text for knowledge base: Title, URL, and full snippet
         var rawSearchText = data.items.map(function(r, index) {
-            return `[Source ${index + 1}] Title: ${r.title}. URL: ${r.url}. Snippet: ${r.snippet}`;
+            // Include full snippet for AI to read
+            var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
+            return `[Source ${index + 1}] Title: ${r.title}. URL: ${r.url}. Snippet: ${fullSnippet}`;
         }).join('\n---\n');
         
         return {
@@ -330,7 +343,7 @@ function updateCharCount() {
         charCounter.innerHTML = `${count} / ${MAX_CHARS} characters.`;
     } else {
         charCounter.classList.remove('limit-warning');
-        charCounter.style.color = '#666';
+        charCounter.style.color = '#aaa'; // Reverting to the light grey text color
     }
     
     updateSendButtonState();
@@ -360,6 +373,18 @@ function saveToLocalStorage() {
     localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(chatSessions));
 }
 
+function getQueryFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var query = params.get('q');
+    
+    // Clear the parameter after extraction to prevent re-submitting on refresh
+    if (query) {
+        var newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, newUrl);
+    }
+    return query ? decodeURIComponent(query.replace(/\+/g, ' ')) : null;
+}
+
 function loadFromLocalStorage() {
     var sessionsData = localStorage.getItem(STORAGE_KEY_SESSIONS);
 
@@ -372,6 +397,16 @@ function loadFromLocalStorage() {
     } else {
         loadChatSession(currentChatId);
     }
+    
+    // --- NEW: Check for URL Query ---
+    var urlQuery = getQueryFromUrl();
+    if (urlQuery) {
+        userInput.value = urlQuery;
+        updateCharCount();
+        // Automatically send the message after a brief delay to ensure UI updates
+        setTimeout(sendMessage, 100); 
+    }
+    // --- END NEW ---
 }
 
 function startNewChat() {
@@ -403,8 +438,10 @@ function loadChatSession(id) {
     
     // Re-inject the suggestion box
     if (suggestionBox) {
+        // Clone the suggestion box before appending to the chat window
         var clonedSuggestionBox = suggestionBox.cloneNode(true);
         chatWindow.appendChild(clonedSuggestionBox);
+        // Re-attach event listeners to the cloned elements
         clonedSuggestionBox.querySelectorAll('.suggestions-item').forEach(function(item) {
             item.addEventListener('click', function() {
                 userInput.value = item.querySelector('p').textContent.trim();
