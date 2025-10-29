@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Oodles 3-D World Test</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+    button {
+      width: 60px;
+      height: 60px;
+      font-size: 20px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(0,0,0,0.6);
+      color: white;
+    }
+    .look-controls {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+<!--Copyright 2025 by Stenoip Company
+  Pronounced:Stick-noh-ikp
+  All rights reserved.
+  -->
+  <div class="controls">
+    <button id="left">◀</button>
+    <button id="forward">▲</button>
+    <button id="back">▼</button>
+    <button id="right">▶</button>
+  </div>
+  <div class="look-controls">
+    <button id="turnLeft">⤺</button>
+    <button id="turnRight">⤻</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
+  <script>
+    // Scene setup
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb); // sky
+
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Ground plane
+    var ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshLambertMaterial({ color: 0x3aaf3a })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // Lights
+    var hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    scene.add(hemi);
+    var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(20, 40, 20);
+    scene.add(dirLight);
+
+    // Camera start
+    camera.position.set(0, 1.7, 10); // eye height
+    camera.rotation.order = 'YXZ';   // yaw-pitch order
+
+    // Buildings (rectangular prisms)
+    var buildings = [];
+    var buildingMaterial = new THREE.MeshLambertMaterial({ color: 0x8b8b8b });
+
+    function addBuilding(x, z, w, d, h, color) {
+      var mat = color ? new THREE.MeshLambertMaterial({ color: color }) : buildingMaterial;
+      var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, h/2, z); // sit on ground
+      scene.add(mesh);
+      // Precompute AABB
+      var aabb = new THREE.Box3().setFromObject(mesh);
+      buildings.push({ mesh: mesh, aabb: aabb, w: w, d: d, h: h });
+    }
+
+    // Some sample buildings
+    addBuilding(0, -20, 8, 10, 12, 0x666666);
+    addBuilding(15, -5, 6, 6, 10, 0x777777);
+    addBuilding(-12, -8, 10, 6, 14, 0x555555);
+    addBuilding(-20, 15, 12, 12, 16, 0x999999);
+    addBuilding(10, 15, 8, 16, 10, 0x888888);
+
+    // Movement and look controls
+    var move = { forward: false, back: false, left: false, right: false, turnLeft: false, turnRight: false };
+    var speed = 0.12;
+    var turnSpeed = 0.02; // radians per frame
+    var playerRadius = 0.35; // collision radius
+    var upVector = new THREE.Vector3(0, 1, 0);
+
+    function bindButton(id, key) {
+      var btn = document.getElementById(id);
+      // Touch
+      btn.ontouchstart = function(e) { e.preventDefault(); move[key] = true; };
+      btn.ontouchend   = function(e) { e.preventDefault(); move[key] = false; };
+      // Mouse
+      btn.onmousedown  = function() { move[key] = true; };
+      btn.onmouseup    = function() { move[key] = false; };
+      btn.onmouseleave = function() { move[key] = false; };
+    }
+    bindButton('forward', 'forward');
+    bindButton('back', 'back');
+    bindButton('left', 'left');
+    bindButton('right', 'right');
+    bindButton('turnLeft', 'turnLeft');
+    bindButton('turnRight', 'turnRight');
+
+    // Collision helpers
+    function expandedAABB(aabb, radius) {
+      // Expand by radius in X/Z (ignore Y since camera height is constant and buildings are tall)
+      var min = aabb.min.clone();
+      var max = aabb.max.clone();
+      min.x -= radius; min.z -= radius;
+      max.x += radius; max.z += radius;
+      return new THREE.Box3(min, max);
+    }
+
+    function collidesAtPosition(nextPos) {
+      // Camera Y stays around eye height; test X/Z against expanded building bounds
+      for (var i = 0; i < buildings.length; i++) {
+        var b = buildings[i];
+        var a = expandedAABB(b.aabb, playerRadius);
+        if (
+          nextPos.x >= a.min.x && nextPos.x <= a.max.x &&
+          nextPos.z >= a.min.z && nextPos.z <= a.max.z
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function tryMove(delta) {
+      var next = camera.position.clone().add(delta);
+      if (!collidesAtPosition(next)) {
+        camera.position.copy(next);
+      } else {
+        // Simple sliding: try axis-separated moves
+        var slideX = camera.position.clone().add(new THREE.Vector3(delta.x, 0, 0));
+        if (!collidesAtPosition(slideX)) camera.position.copy(slideX);
+        var slideZ = camera.position.clone().add(new THREE.Vector3(0, 0, delta.z));
+        if (!collidesAtPosition(slideZ)) camera.position.copy(slideZ);
+        // If both blocked, we stay put
+      }
+    }
+
+    // Animate
+    var dir = new THREE.Vector3();
+    var right = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Turn (yaw)
+      if (move.turnLeft)  camera.rotation.y += turnSpeed;
+      if (move.turnRight) camera.rotation.y -= turnSpeed;
+
+      // Forward/back and strafe relative to view
+      camera.getWorldDirection(dir).normalize();
+      right.copy(dir).cross(upVector).normalize();
+
+      var step = new THREE.Vector3(0, 0, 0);
+      if (move.forward) step.addScaledVector(dir, speed);
+      if (move.back)    step.addScaledVector(dir, -speed);
+      if (move.left)    step.addScaledVector(right, -speed);
+      if (move.right)   step.addScaledVector(right, speed);
+
+      // Keep y fixed (no flying)
+      step.y = 0;
+
+      // Try movement with collision
+      if (step.lengthSq() > 0) tryMove(step);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize handling
+    window.addEventListener('resize', function() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
