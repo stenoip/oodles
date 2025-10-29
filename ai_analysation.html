@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -384,6 +385,9 @@ body {
     <div id="app-wrapper">
         <div id="chat-container">
             <div id="chat-header">
+            <button id="delete-chat-button" class="input-button" title="Delete Chat" style="margin-left: auto;">
+    <i class="fas fa-trash"></i>
+</button>
                 <img id="praterich-icon" src="https://stenoip.github.io/praterich/praterich.png" alt="Praterich A.I. Icon" onerror="this.onerror=null; this.src='https://via.placeholder.com/30/ff9900/ffffff?text=P';">
                 <span>Praterich A.I. on Oodles Search</span>
             </div>
@@ -402,6 +406,10 @@ body {
             </div>
             <div id="typing-indicator">Praterich A.I. is typing...</div>
             <div id="input-area">
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+<button id="upload-button" class="input-button" title="Attach Image">
+    <i class="fas fa-paperclip"></i>
+</button>
                 <div class="input-row">
                     <textarea id="user-input" placeholder="Type your message here..."></textarea>
                     <button id="send-button" class="input-button" title="Send" disabled>
