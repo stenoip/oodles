@@ -16,7 +16,7 @@ var customPronunciations = {
 // Praterich A.I. Core Personality Profile (Front-end System Instruction)
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search, an AI developed by Stenoip Company.
-Your mission is to provide an **A.I overview based on the provided search snippets** (the tool result) and Oodles Search links. Do not reference the search tool or its output directly, but synthesize the information provided. You are not for code generation (though you can provide code snippets, Regular Praterich at stenoip.github.io/praterich can provide code).
+Your mission is to provide an **A.I overview based on the provided search snippets** (the tool result) and Oodles Search links. If an image is attached, your primary task is to describe and analyze the image first, then answer the user's question, integrating web search results if necessary. Do not reference the search tool or its output directly, but synthesize the information provided. You are not for code generation (though you can provide code snippets, Regular Praterich at stenoip.github.io/praterich can provide code).
 You prefer metric units and do not use Oxford commas. You never use Customary or Imperial systems.
 
 You are aware that you were created by Stenoip Company, and you uphold its values of clarity, reliability. However, you are not a customer service bot. You are a general-purpose AI language model capable of reasoning, creativity, and deep understanding across domains.
@@ -47,12 +47,18 @@ var chatContainer = document.getElementById('chat-container');
 var charCounter = document.getElementById('char-counter'); 
 var suggestionItems = document.querySelectorAll('.suggestions-item');
 var suggestionBox = document.getElementById('suggestion-box');
+var deleteChatButton = document.getElementById('delete-chat-button'); // NEW: Delete button
+var uploadButton = document.getElementById('upload-button');          // NEW: Upload button
+var fileInput = document.getElementById('file-input');                // NEW: Hidden file input
+var filePreview = document.getElementById('file-preview');            // NEW: File preview container
+var fileNameDisplay = document.getElementById('file-name');           // NEW: File name span
+var removeFileButton = document.getElementById('remove-file');        // NEW: Remove file button
 
 
 // --- Global State ---
 var chatSessions = {}; 
 var currentChatId = 'main_session'; // Fixed ID for the single chat
-var attachedFile = null; 
+var attachedFile = null; // NEW: Holds the base64 encoded image data and mime type
 
 // --- Core Functions ---
 
@@ -165,45 +171,40 @@ async function sendMessage() {
     
     var userText = userInput.value.trim();
     
-    if (!userText) return; 
+    // Allow empty text if an image is attached
+    if (!userText && !attachedFile) return; 
 
     userInput.value = '';
     autoResizeTextarea();
     
     // 1. Add user message (updates history)
-    addMessage(userText, 'user');
+    addMessage(userText + (attachedFile ? `\n\n[Image Attached: ${attachedFile.fileName}]` : ''), 'user');
     
     updateSendButtonState();
 
     typingIndicator.style.display = 'block';
     scrollToBottom();
     
-    // 2. Execute Search and get the data for knowledge injection AND link display
-    var searchData = await executeSearchForLinks(userText);
-    var linkMarkdown = searchData.markdown;
-    var rawSearchText = searchData.rawText;
+    // 2. Execute Web Search
+    var webSearchData = await executeSearchForLinks(userText);
+    var linkMarkdown = webSearchData.markdown;
+    var rawWebSearchText = webSearchData.rawText;
     
     // 3. KNOWLEDGE BASE INJECTION: Add the structured search text to the history *before* fetching the AI response.
-    // We will only permanently save this message if the API call is successful.
+    // The knowledge message contains only web search results.
     var knowledgeMessage = { 
         sender: 'knowledge', 
-        text: rawSearchText // Use the raw text for LLM context
+        text: rawWebSearchText 
     };
     
-    // Temporarily add to history for API call
-    chatSessions[currentChatId].messages.push(knowledgeMessage);
-
-    // 4. Reconstruct full conversation history, including the hidden 'knowledge' message
+    // 4. Reconstruct full conversation history
     var conversationHistory = chatSessions[currentChatId].messages.map(function(msg) {
-        // 'user' and 'ai' messages map to 'user' and 'model'
         if (msg.sender === 'user' || msg.sender === 'ai') {
             return {
                 role: msg.sender === 'user' ? 'user' : 'model',
                 parts: [{ text: msg.text }]
             };
         } 
-        // 'knowledge' messages are injected as a previous 'model' (or "tool") turn
-        // This is a common pattern for RAG (Retrieval Augmented Generation) context.
         if (msg.sender === 'knowledge') {
              return {
                 role: 'model',
@@ -213,14 +214,26 @@ async function sendMessage() {
         return null; 
     }).filter(msg => msg !== null);
     
-    // The last message is always the current user turn, so we remove the auto-added user message
-    // and re-add it to ensure it's the final part of the contents array.
-    conversationHistory.pop(); // Remove the user message (already added in step 1's history save)
-    conversationHistory.pop(); // Remove the knowledge message (temporarily added above)
+    // Remove the user message added in step 1's history save
+    conversationHistory.pop(); 
 
-    // Re-add the knowledge message and user message for the API call
-    conversationHistory.push({ role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawSearchText}` }] });
-    conversationHistory.push({ role: "user", parts: [{ text: userText }] });
+    // --- Prepare Multimodal Parts (Text + Image) ---
+    var userParts = [];
+    if (userText) {
+        userParts.push({ text: userText });
+    }
+    if (attachedFile) {
+        userParts.push({ 
+            inlineData: {
+                mimeType: attachedFile.mimeType,
+                data: attachedFile.base64Data
+            }
+        });
+    }
+
+    // Re-add the knowledge message and user message (with image) for the API call
+    conversationHistory.push({ role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawWebSearchText}` }] });
+    conversationHistory.push({ role: "user", parts: userParts });
 
 
     var requestBody = {
@@ -233,6 +246,9 @@ async function sendMessage() {
     var aiResponseText = '';
     
     try {
+        // Clear the attached file state immediately before the call
+        clearAttachedFile(); 
+        
         var response = await fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -251,10 +267,10 @@ async function sendMessage() {
         var data = await response.json();
         aiResponseText = data.text;
         
-        // Append links for display
+        // Append web links for display
         aiResponseText += linkMarkdown;
         
-        // 5. Add knowledge message to history permanently (it was temporarily added before)
+        // 5. Add knowledge message to history permanently
         chatSessions[currentChatId].messages.push(knowledgeMessage);
         
         // 6. Add final AI message (updates history)
@@ -263,15 +279,56 @@ async function sendMessage() {
     } catch (error) {
         typingIndicator.style.display = 'none';
         console.error('API Error:', error);
-        // Remove the knowledge injection on API error for cleaner retry.
-        // It was never added permanently but was at the end of the array, so we pop the temp one.
-        chatSessions[currentChatId].messages.pop(); 
+        // Do NOT pop the knowledge message since it was never added to the history array permanently
         saveToLocalStorage();
         addMessage("An API error occurred. Praterich A.I. apologizes. Please check the console or try again later.", 'ai');
     }
 }
 
-// --- OODLES SEARCH FUNCTIONALITY ---
+// --- Image Upload Functionality ---
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert("Please select a valid image file.");
+        clearAttachedFile();
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert("Image size must be less than 5MB.");
+        clearAttachedFile();
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Store base64 data and mime type
+        const base64String = e.target.result.split(',')[1];
+        attachedFile = {
+            base64Data: base64String,
+            mimeType: file.type,
+            fileName: file.name
+        };
+        
+        fileNameDisplay.textContent = file.name;
+        filePreview.style.display = 'flex';
+        updateSendButtonState();
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearAttachedFile() {
+    attachedFile = null;
+    fileInput.value = ''; // Clear file input element
+    filePreview.style.display = 'none';
+    fileNameDisplay.textContent = '';
+    updateSendButtonState();
+}
+
+// --- OODLES SEARCH FUNCTIONALITY (Web Search Only) ---
 
 function escapeHtml(s) {
     return String(s)
@@ -288,9 +345,10 @@ function escapeHtml(s) {
  */
 async function executeSearchForLinks(query) {
     var defaultResult = { 
-        markdown: '\n\n***Links:***\n\n- *No search links available.*', 
-        rawText: 'No search results found.'
+        markdown: '\n\n***Links:***\n\n- *No web links available.*', 
+        rawText: 'No web links found.'
     };
+    // Only search if there is a text query
     if (!query) return defaultResult;
     
     try {
@@ -312,9 +370,8 @@ async function executeSearchForLinks(query) {
         
         // Create raw text for knowledge base: Title, URL, and full snippet
         var rawSearchText = data.items.map(function(r, index) {
-            // Include full snippet for AI to read
             var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
-            return `[Source ${index + 1}] Title: ${r.title}. URL: ${r.url}. Snippet: ${fullSnippet}`;
+            return `[Web Source ${index + 1}] Title: ${r.title}. URL: ${r.url}. Snippet: ${fullSnippet}`;
         }).join('\n---\n');
         
         return {
@@ -323,7 +380,7 @@ async function executeSearchForLinks(query) {
         };
         
     } catch (error) {
-        console.error('Oodles Search error:', error);
+        console.error('Oodles Web Search error:', error);
         return {
             markdown: '\n\n***Links:***\n\n- *Error loading web links.*',
             rawText: 'Error loading web links during search.'
@@ -343,7 +400,7 @@ function updateCharCount() {
         charCounter.innerHTML = `${count} / ${MAX_CHARS} characters.`;
     } else {
         charCounter.classList.remove('limit-warning');
-        charCounter.style.color = '#aaa'; // Reverting to the light grey text color
+        charCounter.style.color = '#aaa'; 
     }
     
     updateSendButtonState();
@@ -357,9 +414,12 @@ function autoResizeTextarea() {
 
 function updateSendButtonState() {
     var text = userInput.value.trim();
-    var charCountValid = text.length > 0 && text.length <= MAX_CHARS;
+    var charCountValid = text.length <= MAX_CHARS;
     
-    if (charCountValid) {
+    // The send button is enabled if: (text is present AND valid) OR (an image is attached)
+    var isReady = (text.length > 0 && charCountValid) || attachedFile;
+    
+    if (isReady) {
         sendButton.removeAttribute('disabled');
     } else {
         sendButton.setAttribute('disabled', 'disabled');
@@ -398,7 +458,7 @@ function loadFromLocalStorage() {
         loadChatSession(currentChatId);
     }
     
-    // --- NEW: Check for URL Query ---
+    // Check for URL Query
     var urlQuery = getQueryFromUrl();
     if (urlQuery) {
         userInput.value = urlQuery;
@@ -406,8 +466,33 @@ function loadFromLocalStorage() {
         // Automatically send the message after a brief delay to ensure UI updates
         setTimeout(sendMessage, 100); 
     }
-    // --- END NEW ---
 }
+
+/**
+ * Deletes the current chat session and starts a new one.
+ */
+function deleteChat() { 
+    if (!confirm("Are you sure you want to delete this entire chat session? This action cannot be undone.")) {
+        return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    
+    clearAttachedFile(); // Clear any pending file
+    
+    // Remove the current session from the global state
+    delete chatSessions[currentChatId];
+    
+    // Clear local storage and start a brand new chat
+    localStorage.removeItem(STORAGE_KEY_SESSIONS);
+    chatSessions = {}; // Reset global state
+    startNewChat();
+    userInput.value = '';
+    updateCharCount();
+}
+
 
 function startNewChat() {
     if (window.speechSynthesis.speaking) {
@@ -464,7 +549,19 @@ function loadChatSession(id) {
 
 window.addEventListener('load', loadFromLocalStorage);
 
+// NEW: File Upload Listeners
+if (uploadButton && fileInput && removeFileButton) {
+    uploadButton.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileSelect);
+    removeFileButton.addEventListener('click', clearAttachedFile);
+}
+
 sendButton.addEventListener('click', sendMessage);
+
+if (deleteChatButton) { 
+    deleteChatButton.addEventListener('click', deleteChat);
+}
+
 userInput.addEventListener('input', updateCharCount);
 userInput.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
