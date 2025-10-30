@@ -1,5 +1,4 @@
-/* 
-    ALL CODE IS Copyright to Stenoip Company, 2025.
+/* ALL CODE IS Copyright to Stenoip Company, 2025.
 
     YOU MUST GAIN PERMISSION TO USE THIS CODE!
     
@@ -19,10 +18,41 @@ var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Ground plane
+// --- TEXTURE LOADING ---
+const textureLoader = new THREE.TextureLoader();
+// Placeholder texture URLs. Use your own textures here!
+const BUILDING_TEXTURE_URL = 'https://threejs.org/examples/textures/brick_diffuse.jpg'; 
+const ROAD_TEXTURE_URL = 'https://threejs.org/examples/textures/hardwood2_diffuse.jpg'; // Using hardwood as a placeholder for asphalt/road
+
+let buildingTexture = null; 
+let roadTexture = null; 
+
+// Load the textures
+textureLoader.load(BUILDING_TEXTURE_URL, function (texture) {
+    buildingTexture = texture;
+    buildingTexture.wrapS = THREE.RepeatWrapping;
+    buildingTexture.wrapT = THREE.RepeatWrapping;
+    console.log("Building texture loaded.");
+});
+
+textureLoader.load(ROAD_TEXTURE_URL, function (texture) {
+    roadTexture = texture;
+    roadTexture.wrapS = THREE.RepeatWrapping;
+    roadTexture.wrapT = THREE.RepeatWrapping;
+    roadTexture.repeat.set(10, 10); // Make the road texture repeat more
+    roadTexture.colorSpace = THREE.SRGBColorSpace;
+    console.log("Road texture loaded.");
+    // Update ground material when texture is loaded
+    ground.material.map = roadTexture;
+    ground.material.needsUpdate = true;
+});
+// --- END TEXTURE LOADING ---
+
+
+// Ground plane (Road/City Floor)
 var ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshLambertMaterial({ color: 0x3aaf3a })
+    new THREE.MeshLambertMaterial({ color: 0x333333 }) // Dark grey for road
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
@@ -61,13 +91,7 @@ function clearPreviousResults() {
 
 /**
  * Creates and adds a 3D text label for one of the building's walls.
- * @param {string} text The text content.
- * @param {number} x The building's center X position.
- * @param {number} y The building's center Y position (h/2).
- * @param {number} z The building's center Z position.
- * @param {number} w The building's width.
- * @param {number} d The building's depth.
- * @param {number} rotationY The rotation (in radians) to align with the wall.
+ * 
  */
 function createTextLabel(text, x, y, z, w, d, rotationY) {
     if (!font) return;
@@ -122,10 +146,29 @@ function createTextLabel(text, x, y, z, w, d, rotationY) {
 }
 
 function addBuilding(x, z, w, d, h, color, link, title) {
-    var mat = new THREE.MeshLambertMaterial({ color: color });
-    
-    // **FIXED ERROR:** Removed the duplicate 'new' keyword
-    var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); 
+    let material;
+
+    if (buildingTexture) {
+        // Clone the texture to set different repeats for different buildings
+        const clonedTexture = buildingTexture.clone();
+        clonedTexture.needsUpdate = true;
+        // Set texture repetition based on building size for better look
+        clonedTexture.repeat.set(w / 4, h / 8); 
+        clonedTexture.offset.set(Math.random(), Math.random()); // Randomize offset
+        
+        // Use a MeshStandardMaterial for better realism with lighting
+        material = new THREE.MeshStandardMaterial({
+            map: clonedTexture, // Apply the texture
+            color: color,         // Tint the texture with the dynamic color
+            metalness: 0.2,       
+            roughness: 0.8        
+        });
+    } else {
+        // Fallback to simple color material
+        material = new THREE.MeshLambertMaterial({ color: color });
+    }
+
+    var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); 
     
     // Y is h/2 because the BoxGeometry is centered at (0,0,0)
     const yCenter = h / 2;
@@ -137,19 +180,19 @@ function addBuilding(x, z, w, d, h, color, link, title) {
     scene.add(mesh);
 
     // Create the 3D text labels on all four walls
-    // We pass the building dimensions (w, d, h) and the center (x, yCenter, z)
+    const yLabel = yCenter - 1.5; // Place text lower on the wall for better fit
     
     // 1. Front Wall (Facing Z+)
-    createTextLabel(title, x, yCenter, z, w, d, 0); 
+    createTextLabel(title, x, yLabel, z, w, d, 0); 
     
     // 2. Back Wall (Facing Z-)
-    createTextLabel(title, x, yCenter, z, w, d, Math.PI); 
+    createTextLabel(title, x, yLabel, z, w, d, Math.PI); 
 
     // 3. Right Wall (Facing X+)
-    createTextLabel(title, x, yCenter, z, w, d, Math.PI / 2); 
+    createTextLabel(title, x, yLabel, z, w, d, Math.PI / 2); 
     
     // 4. Left Wall (Facing X-)
-    createTextLabel(title, x, yCenter, z, w, d, 3 * Math.PI / 2); 
+    createTextLabel(title, x, yLabel, z, w, d, 3 * Math.PI / 2); 
 
     // Precompute AABB for collision and store it
     var aabb = new THREE.Box3().setFromObject(mesh);
@@ -191,6 +234,7 @@ function displaySearchResultsIn3D(items) {
         const h = 5 + Math.random() * 15;
         
         // Calculate a consistent color based on the index
+        // Using HSL for vibrant, distinct colors
         const color = new THREE.Color().setHSL(index / MAX_BUILDINGS, 0.7, 0.6).getHex();
 
         addBuilding(x, z, w, d, h, color, data.url, data.title);
@@ -198,6 +242,73 @@ function displaySearchResultsIn3D(items) {
 
     console.log(`Successfully created ${resultsToDraw.length} 3D buildings.`);
 }
+
+
+// ====================================================================
+// CAR SYSTEM LOGIC
+// ====================================================================
+
+const CAR_COUNT = 20;
+const CAR_WIDTH = 1.0;
+const CAR_HEIGHT = 0.5;
+const CAR_DEPTH = 2.0;
+const CAR_SPEED_MAX = 0.15;
+const CAR_LANE_Z = [-10, 10, -30, 30]; // Z-coordinates for different lanes
+const CAR_MAP_X_BOUND = 100; // Half the width of the ground plane
+
+var cars = [];
+
+function createCarMesh() {
+    const geometry = new THREE.BoxGeometry(CAR_WIDTH, CAR_HEIGHT, CAR_DEPTH);
+    const material = new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.y = CAR_HEIGHT / 2; // Sit on the ground
+    return mesh;
+}
+
+function initializeCars() {
+    for (let i = 0; i < CAR_COUNT; i++) {
+        const mesh = createCarMesh();
+        
+        // Randomly select a lane and initial position
+        const laneZ = CAR_LANE_Z[i % CAR_LANE_Z.length];
+        const direction = (Math.random() > 0.5) ? 1 : -1; // 1 for +X, -1 for -X
+        const startX = (direction > 0) ? -CAR_MAP_X_BOUND : CAR_MAP_X_BOUND;
+        
+        mesh.userData = {
+            direction: direction,
+            speed: CAR_SPEED_MAX * (0.5 + Math.random() * 0.5) // Vary the speed
+        };
+        
+        mesh.position.set(startX + Math.random() * CAR_MAP_X_BOUND * 2 * direction, CAR_HEIGHT / 2, laneZ);
+        mesh.rotation.y = (direction > 0) ? Math.PI / 2 : -Math.PI / 2; // Point in direction of travel
+
+        scene.add(mesh);
+        cars.push(mesh);
+    }
+}
+
+function updateCars() {
+    const boundary = CAR_MAP_X_BOUND + 10; // Extra buffer
+    
+    cars.forEach(car => {
+        // Move the car
+        car.position.x += car.userData.direction * car.userData.speed;
+        
+        // Check if the car is out of bounds (off the edge of the map)
+        if (car.userData.direction > 0 && car.position.x > boundary) {
+            // Car moving right (positive X)
+            // Teleport it to the far left, keeping its Z lane
+            car.position.x = -boundary; 
+        } else if (car.userData.direction < 0 && car.position.x < -boundary) {
+            // Car moving left (negative X)
+            // Teleport it to the far right, keeping its Z lane
+            car.position.x = boundary;
+        }
+    });
+}
+// Initialize the cars at startup
+initializeCars();
 
 // ====================================================================
 // INPUT & INTERACTIVITY (Collision, Movement, Clicking, KEYBOARD)
@@ -348,6 +459,10 @@ var right = new THREE.Vector3();
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // --- Car Update ---
+    updateCars();
+    // --- End Car Update ---
 
     // Turn (yaw)
     if (move.turnLeft) camera.rotation.y += turnSpeed;
