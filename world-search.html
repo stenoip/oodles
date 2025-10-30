@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oodles 3-D World Search</title>
+
+    <!-- © 2025 Stenoip Company. All rights reserved. -->
+
     <script type="importmap">
         {
             "imports": {
@@ -15,7 +18,7 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
-        
+
         /* 3D World Controls (Movement & Look) */
         .controls {
             position: fixed;
@@ -35,7 +38,7 @@
             background: rgba(0, 0, 0, 0.6);
             color: white;
             cursor: pointer;
-            touch-action: manipulation; /* Improves touch response */
+            touch-action: manipulation;
         }
         .look-controls {
             position: fixed;
@@ -78,7 +81,7 @@
             width: 400px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             z-index: 9;
-            display: none; /* Only visible if needed for debugging/mobile */
+            display: none;
         }
         .result-block {
             margin-bottom: 10px;
@@ -95,9 +98,22 @@
             font-size: 0.8em;
             color: #555;
         }
+
+        /* Footer copyright */
+        .footer {
+            position: fixed;
+            bottom: 5px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.75em;
+            color: #aaa;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Interface for 3D World Search - © Stenoip Company -->
 
     <div class="search-container">
         <input type="text" id="currentQuery" placeholder="Search the 3D world (e.g., Three.js, planets)" />
@@ -113,9 +129,13 @@
         <button id="turnLeft">⤺</button>
         <button id="turnRight">⤻</button>
     </div>
-    
+
     <div id="resultsOverlay">
         <div id="linkResults"></div>
+    </div>
+
+    <div class="footer">
+        © 2025 Stenoip Company. All rights reserved.
     </div>
 
     <script type="module" src="world.js"></script>
