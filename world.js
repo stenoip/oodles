@@ -20,9 +20,10 @@ document.body.appendChild(renderer.domElement);
 
 // --- TEXTURE LOADING ---
 const textureLoader = new THREE.TextureLoader();
-// Placeholder texture URLs. Use your own textures here!
-const BUILDING_TEXTURE_URL = 'https://threejs.org/examples/textures/brick_diffuse.jpg'; 
-const ROAD_TEXTURE_URL = 'https://threejs.org/examples/textures/hardwood2_diffuse.jpg'; // Using hardwood as a placeholder for asphalt/road
+
+// User-specified Texture URLs
+const BUILDING_TEXTURE_URL = 'https://www.textures.com/system/categories/12395/frontend-large.jpg';
+const ROAD_TEXTURE_URL = 'https://www.sketchuptextureclub.com/public/texture/0070-pebble-and-concrete-road-texture-seamless.jpg';
 
 let buildingTexture = null; 
 let roadTexture = null; 
@@ -32,6 +33,7 @@ textureLoader.load(BUILDING_TEXTURE_URL, function (texture) {
     buildingTexture = texture;
     buildingTexture.wrapS = THREE.RepeatWrapping;
     buildingTexture.wrapT = THREE.RepeatWrapping;
+    buildingTexture.colorSpace = THREE.SRGBColorSpace;
     console.log("Building texture loaded.");
 });
 
@@ -39,11 +41,11 @@ textureLoader.load(ROAD_TEXTURE_URL, function (texture) {
     roadTexture = texture;
     roadTexture.wrapS = THREE.RepeatWrapping;
     roadTexture.wrapT = THREE.RepeatWrapping;
-    roadTexture.repeat.set(10, 10); // Make the road texture repeat more
+    roadTexture.repeat.set(10, 10); // Repeat across the large ground plane
     roadTexture.colorSpace = THREE.SRGBColorSpace;
     console.log("Road texture loaded.");
     // Update ground material when texture is loaded
-    ground.material.map = roadTexture;
+    ground.material = new THREE.MeshStandardMaterial({ map: roadTexture, roughness: 0.8 });
     ground.material.needsUpdate = true;
 });
 // --- END TEXTURE LOADING ---
@@ -52,7 +54,7 @@ textureLoader.load(ROAD_TEXTURE_URL, function (texture) {
 // Ground plane (Road/City Floor)
 var ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshLambertMaterial({ color: 0x333333 }) // Dark grey for road
+    new THREE.MeshLambertMaterial({ color: 0x333333 }) // Placeholder before texture loads
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
@@ -100,7 +102,7 @@ function createTextLabel(text, x, y, z, w, d, rotationY) {
     const MAX_TITLE_LENGTH = 15; // Slightly reduced for wall visibility
     const trimmedText = text.length > MAX_TITLE_LENGTH ? text.substring(0, MAX_TITLE_LENGTH) + '...' : text;
 
-    var textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Basic material for consistent visibility
+    var textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black text for better contrast
     var textGeometry = new TextGeometry(trimmedText, {
         font: font,
         size: 0.8,
@@ -146,42 +148,75 @@ function createTextLabel(text, x, y, z, w, d, rotationY) {
 }
 
 function addBuilding(x, z, w, d, h, color, link, title) {
-    let material;
-
-    if (buildingTexture) {
-        // Clone the texture to set different repeats for different buildings
-        const clonedTexture = buildingTexture.clone();
-        clonedTexture.needsUpdate = true;
-        // Set texture repetition based on building size for better look
-        clonedTexture.repeat.set(w / 4, h / 8); 
-        clonedTexture.offset.set(Math.random(), Math.random()); // Randomize offset
-        
-        // Use a MeshStandardMaterial for better realism with lighting
-        material = new THREE.MeshStandardMaterial({
-            map: clonedTexture, // Apply the texture
-            color: color,         // Tint the texture with the dynamic color
-            metalness: 0.2,       
-            roughness: 0.8        
-        });
-    } else {
-        // Fallback to simple color material
-        material = new THREE.MeshLambertMaterial({ color: color });
-    }
-
-    var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); 
-    
-    // Y is h/2 because the BoxGeometry is centered at (0,0,0)
     const yCenter = h / 2;
+    const geometry = new THREE.BoxGeometry(w, h, d);
+    
+    // Attempt to extract the domain for favicon lookup
+    let domain = '';
+    try {
+        domain = new URL(link).hostname;
+    } catch (e) {
+        domain = 'default.com'; // Fallback domain
+    }
+    // Google's S2 service for cross-origin favicon retrieval (works for many sites)
+    const faviconUrl = `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
+
+    // 1. Side Material (Texture + Color Tint)
+    const sideTexture = buildingTexture ? buildingTexture.clone() : new THREE.Texture();
+    sideTexture.needsUpdate = true;
+    sideTexture.repeat.set(w / 4, h / 8); 
+    sideTexture.offset.set(Math.random(), Math.random());
+    const sideMaterial = new THREE.MeshStandardMaterial({
+        map: buildingTexture ? sideTexture : null,
+        color: color, 
+        metalness: 0.2,       
+        roughness: 0.8        
+    });
+
+    // 2. Top Material (Favicon) - Initialize with a placeholder color
+    const topMaterial = new THREE.MeshStandardMaterial({
+        color: 0x444444, // Placeholder dark color for top
+        metalness: 0.2,       
+        roughness: 0.8        
+    });
+
+    // Face order: [Right, Left, Top, Bottom, Front, Back]
+    // The top face is index 2.
+    const materials = [
+        sideMaterial, // Right (0)
+        sideMaterial, // Left (1)
+        topMaterial,  // TOP (2)
+        sideMaterial, // Bottom (3)
+        sideMaterial, // Front (4)
+        sideMaterial  // Back (5)
+    ];
+
+    var mesh = new THREE.Mesh(geometry, materials); 
     mesh.position.set(x, yCenter, z);
-
-    // Store link data on the mesh for the raycaster
     mesh.userData = { isBuilding: true, link: link, title: title }; 
-
     scene.add(mesh);
+
+    // 3. Load Favicon Texture Asynchronously
+    textureLoader.load(faviconUrl, 
+        function (faviconMap) {
+            faviconMap.colorSpace = THREE.SRGBColorSpace;
+            // Apply loaded favicon to the top material
+            topMaterial.map = faviconMap;
+            topMaterial.color = new THREE.Color(0xffffff); // Use white color to prevent tinting the favicon
+            topMaterial.needsUpdate = true;
+            mesh.material[2] = topMaterial; // Reassign the material to ensure update
+        },
+        undefined,
+        function (err) {
+            // console.warn(`Failed to load favicon for ${domain}`);
+        }
+    );
 
     // Create the 3D text labels on all four walls
     const yLabel = yCenter - 1.5; // Place text lower on the wall for better fit
     
+    // ... createTextLabel calls ...
+
     // 1. Front Wall (Facing Z+)
     createTextLabel(title, x, yLabel, z, w, d, 0); 
     
@@ -208,6 +243,8 @@ function displaySearchResultsIn3D(items) {
         console.log("No search results to display in 3D.");
         return;
     }
+    
+    // ... existing grid setup ...
 
     // Grid Parameters
     const MAX_BUILDINGS = 50; 
@@ -245,7 +282,7 @@ function displaySearchResultsIn3D(items) {
 
 
 // ====================================================================
-// CAR SYSTEM LOGIC
+// CAR SYSTEM LOGIC (DETAILED CARS)
 // ====================================================================
 
 const CAR_COUNT = 20;
@@ -253,17 +290,59 @@ const CAR_WIDTH = 1.0;
 const CAR_HEIGHT = 0.5;
 const CAR_DEPTH = 2.0;
 const CAR_SPEED_MAX = 0.15;
-const CAR_LANE_Z = [-10, 10, -30, 30]; // Z-coordinates for different lanes
-const CAR_MAP_X_BOUND = 100; // Half the width of the ground plane
+// Lanes placed between building rows
+const CAR_LANE_Z = [-18, 18, -36, 36]; 
+const CAR_MAP_X_BOUND = 100;
 
 var cars = [];
 
 function createCarMesh() {
-    const geometry = new THREE.BoxGeometry(CAR_WIDTH, CAR_HEIGHT, CAR_DEPTH);
-    const material = new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.y = CAR_HEIGHT / 2; // Sit on the ground
-    return mesh;
+    const group = new THREE.Group();
+    const carColor = Math.random() * 0xffffff;
+    
+    // 1. Chassis (Body)
+    const chassisGeometry = new THREE.BoxGeometry(CAR_WIDTH, CAR_HEIGHT * 0.5, CAR_DEPTH);
+    const chassisMaterial = new THREE.MeshLambertMaterial({ color: carColor });
+    const chassis = new new THREE.Mesh(chassisGeometry, chassisMaterial);
+    chassis.position.y = CAR_HEIGHT * 0.25; 
+    group.add(chassis);
+
+    // 2. Cab (Top cabin)
+    const cabWidth = CAR_WIDTH * 0.9;
+    const cabHeight = CAR_HEIGHT * 0.7;
+    const cabDepth = CAR_DEPTH * 0.4;
+    const cabGeometry = new THREE.BoxGeometry(cabWidth, cabHeight, cabDepth);
+    const cabMaterial = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grey window tint
+    const cab = new new THREE.Mesh(cabGeometry, cabMaterial);
+    cab.position.y = CAR_HEIGHT * 0.5 + cabHeight / 2;
+    cab.position.z = CAR_DEPTH * 0.1;
+    group.add(cab);
+    
+    // 3. Wheel Cylinders
+    const wheelRadius = 0.15;
+    const wheelThickness = 0.4;
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelThickness, 8);
+    wheelGeometry.rotateX(Math.PI / 2); // Orient for x-axis rotation
+    const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.5 });
+    
+    // Positions relative to the car center
+    const wheelOffsetZ = CAR_DEPTH / 2 * 0.7;
+    const wheelOffsetX = CAR_WIDTH / 2 + wheelThickness / 2;
+    
+    const wheelPositions = [
+        {x: wheelOffsetX, z: wheelOffsetZ},    // Front Right
+        {x: -wheelOffsetX, z: wheelOffsetZ},   // Front Left
+        {x: wheelOffsetX, z: -wheelOffsetZ},   // Back Right
+        {x: -wheelOffsetX, z: -wheelOffsetZ},  // Back Left
+    ];
+
+    wheelPositions.forEach(pos => {
+        const wheel = new new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.position.set(pos.x * 0.9, wheelRadius, pos.z); // Slightly tuck wheels inside
+        group.add(wheel);
+    });
+
+    return group; // Return the entire car group
 }
 
 function initializeCars() {
@@ -272,7 +351,7 @@ function initializeCars() {
         
         // Randomly select a lane and initial position
         const laneZ = CAR_LANE_Z[i % CAR_LANE_Z.length];
-        const direction = (Math.random() > 0.5) ? 1 : -1; // 1 for +X, -1 for -X
+        const direction = (i % 2 === 0) ? 1 : -1; // Alternate lane direction
         const startX = (direction > 0) ? -CAR_MAP_X_BOUND : CAR_MAP_X_BOUND;
         
         mesh.userData = {
@@ -280,8 +359,8 @@ function initializeCars() {
             speed: CAR_SPEED_MAX * (0.5 + Math.random() * 0.5) // Vary the speed
         };
         
-        mesh.position.set(startX + Math.random() * CAR_MAP_X_BOUND * 2 * direction, CAR_HEIGHT / 2, laneZ);
-        mesh.rotation.y = (direction > 0) ? Math.PI / 2 : -Math.PI / 2; // Point in direction of travel
+        mesh.position.set(startX + Math.random() * CAR_MAP_X_BOUND * 2 * direction, 0, laneZ);
+        mesh.rotation.y = (direction > 0) ? -Math.PI / 2 : Math.PI / 2; // Point in direction of travel (cars move on X axis)
 
         scene.add(mesh);
         cars.push(mesh);
