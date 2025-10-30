@@ -22,8 +22,8 @@ document.body.appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
 
 // User-specified Texture URLs
-const BUILDING_TEXTURE_URL = 'https://www.textures.com/system/categories/12395/frontend-large.jpg';
-const ROAD_TEXTURE_URL = 'https://www.sketchuptextureclub.com/public/texture/0070-pebble-and-concrete-road-texture-seamless.jpg';
+const BUILDING_TEXTURE_URL = 'textures/buildling_texture.jpg';
+const ROAD_TEXTURE_URL = 'textures/ground_texture.jpg';
 
 let buildingTexture = null; 
 let roadTexture = null; 
