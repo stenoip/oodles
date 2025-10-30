@@ -303,7 +303,8 @@ function createCarMesh() {
     // 1. Chassis (Body)
     const chassisGeometry = new THREE.BoxGeometry(CAR_WIDTH, CAR_HEIGHT * 0.5, CAR_DEPTH);
     const chassisMaterial = new THREE.MeshLambertMaterial({ color: carColor });
-    const chassis = new new THREE.Mesh(chassisGeometry, chassisMaterial);
+    // FIX: Removed the extra 'new'
+    const chassis = new THREE.Mesh(chassisGeometry, chassisMaterial); 
     chassis.position.y = CAR_HEIGHT * 0.25; 
     group.add(chassis);
 
@@ -313,7 +314,8 @@ function createCarMesh() {
     const cabDepth = CAR_DEPTH * 0.4;
     const cabGeometry = new THREE.BoxGeometry(cabWidth, cabHeight, cabDepth);
     const cabMaterial = new THREE.MeshLambertMaterial({ color: 0x888888 }); // Grey window tint
-    const cab = new new THREE.Mesh(cabGeometry, cabMaterial);
+    // FIX: Removed the extra 'new'
+    const cab = new THREE.Mesh(cabGeometry, cabMaterial); 
     cab.position.y = CAR_HEIGHT * 0.5 + cabHeight / 2;
     cab.position.z = CAR_DEPTH * 0.1;
     group.add(cab);
@@ -337,14 +339,14 @@ function createCarMesh() {
     ];
 
     wheelPositions.forEach(pos => {
-        const wheel = new new THREE.Mesh(wheelGeometry, wheelMaterial);
+        // FIX: Removed the extra 'new'
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial); 
         wheel.position.set(pos.x * 0.9, wheelRadius, pos.z); // Slightly tuck wheels inside
         group.add(wheel);
     });
 
     return group; // Return the entire car group
 }
-
 function initializeCars() {
     for (let i = 0; i < CAR_COUNT; i++) {
         const mesh = createCarMesh();
