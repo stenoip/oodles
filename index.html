@@ -21,7 +21,6 @@
       background-attachment: fixed;
       background-position: center;
     }
-
     .container {
       flex: 1;
       display: flex;
@@ -31,7 +30,6 @@
       max-width: 90%;
       margin: 20px auto;
     }
-    
     .search-box {
       backdrop-filter: blur(5px);
       background-color: rgba(255, 255, 255, 0.7);
@@ -46,12 +44,10 @@
       margin-bottom: 20px;
       justify-content: space-between; /* Aligns the buttons on the right */
     }
-    
     .search-box:focus-within {
       box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5);
       border-color: transparent;
     }
-
     .search-box input {
       flex: 1;
       border: none;
@@ -60,55 +56,84 @@
       padding: 10px;
       background-color: transparent;
     }
-
-    .microphone-btn, .ai-btn {
+    /* --- NEW CSS for Microphone Button & Red Circle --- */
+    .microphone-btn {
       border: none;
       background: transparent;
       cursor: pointer;
       color: #666;
-      font-size: 24px; /* microphone icon size */
       margin-left: 10px;
       transition: color 0.3s;
+      padding: 0; /* Important: Removes default button padding */
+      line-height: 0; /* Fixes vertical alignment issue */
     }
+    /* Container for the microphone image/icon */
+    .microphone-btn i {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; /* Slightly larger than the image */
+      height: 32px;
+      border-radius: 50%;
+      transition: background-color 0.3s, box-shadow 0.3s;
+      position: relative;
+    }
+    /* Class to apply the red circle effect */
+    .mic-recording {
+      background-color: #f44336; /* Red background color */
+      box-shadow: 0 0 0 8px rgba(244, 67, 54, 0.4); /* Subtle glow effect */
+    }
+    /* Ensure the image inside the button is correctly sized */
+    .microphone-btn img {
+      width: 24px; 
+      height: 24px;
+      display: block;
+    }
+    /* --- END NEW CSS --- */
 
     .microphone-btn:hover, .ai-btn:hover {
       color: #0078D4; /* Change color on hover */
     }
-
     .microphone-btn:focus, .ai-btn:focus {
       outline: none;
     }
-
+    .ai-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #666;
+      font-size: 24px; /* ai icon size */
+      margin-left: 10px;
+      transition: color 0.3s;
+    }
     /* ------------------------------------------- */
     /* FRUTIGER AERO BUTTON STYLES */
     /* ------------------------------------------- */
-    .frutiger-aero-button {      
-      --hue: 200; 
-      --sat: 0.35;      
+    .frutiger-aero-button {
+      --hue: 200;
+      --sat: 0.35;
       --glow-intensity: 0.8;
       --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
       --bg: oklch(75% var(--sat) var(--hue) / 0.8);
       --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
       --bottom-glow: radial-gradient(farthest-corner at bottom center, rgba(255, 255, 255, var(--glow-intensity)), transparent);
-      
       background-color: var(--bg);
       background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
-      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue)); 
-      border-radius: 9999px; 
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+      border-radius: 9999px;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
       color: var(--fg);
-      font-family: inherit; 
+      font-family: inherit;
       font-weight: 700;
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5); 
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
       cursor: pointer;
       position: relative;
-      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
       user-select: none;
       text-decoration: none;
       display: inline-block;
       text-align: center;
     }
-
     .frutiger-aero-button::after {
       content: "";
       position: absolute;
@@ -121,23 +146,19 @@
       transition: all 400ms ease;
       pointer-events: none;
     }
-
     .frutiger-aero-button:hover,
     .frutiger-aero-button:focus {
       box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
       transform: translateY(-2px) scale(1.02);
     }
-
     .frutiger-aero-button:active {
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
       transform: translateY(1px) scale(0.98);
       background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
     }
-
     .frutiger-aero-button:active::after {
       background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
     }
-    
     /* ------------------------------------------- */
     /* LAYOUT & SIZE APPLICATION */
     /* ------------------------------------------- */
@@ -146,38 +167,32 @@
       padding: 40px 20px 20px;
       width: 100%;
     }
-
     header img {
       max-height: 100px;        /* keep height the same */
       width: 100%;              /* make the image stretch across the header */
       object-fit: contain;      /* maintain aspect ratio (no distortion) */
     }
-
     nav {
       text-align: center;
       margin-bottom: 20px;
     }
-    
     nav a {
       font-size: 1rem;
       margin: 0 15px;
-      padding: 5px 10px; 
-      color: #0000FF; 
+      padding: 5px 10px;
+      color: #0000FF;
       text-decoration: underline;
       font-weight: 600;
       cursor: pointer;
       transition: color 0.2s;
     }
-
     nav a:hover {
-      color: #990099; 
-    }
-
+      color: #990099;
+     }
     .actions button {
       padding: 0.75em 2em;
       font-size: 1rem;
     }
-
     .actions select {
       padding: 0.75em 2em;
       font-size: 1rem;
@@ -190,22 +205,19 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
       appearance: menulist-button;
       -webkit-appearance: menulist-button;
-      height: 48px; 
-    }
-
+      height: 48px;
+     }
     .actions {
       display: flex;
       gap: 10px;
-      justify-content: center; 
-    }
-    
+      justify-content: center;
+     }
     footer {
       text-align: center;
       padding: 20px;
       font-size: 12px;
       color: #5f6368;
     }
-    
     @media (max-width: 600px) {
       .search-box {
         max-width: 100%;
@@ -217,18 +229,20 @@
   <header>
     <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo">
   </header>
-  
+
   <nav>
     <a href="#" onclick="switchTab('metasearch'); return false;">MetaSearch</a>
     <a href="#" onclick="switchTab('about'); return false;">About</a>
   </nav>
-  
+
   <div class="container">
     <div id="panel-metasearch" style="display:block; text-align:center; max-width:600px; width:100%;">
       <div class="search-box">
         <input type="text" id="metaQuery" placeholder="Search Oodles...">
         <button class="microphone-btn" onclick="startVoiceSearch()">
-          <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Microphone" style="width: 24px; height: 24px;"/>
+          <i id="mic-icon-circle">
+            <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Microphone" style="width: 24px; height: 24px;"/>
+          </i>
         </button>
         <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
       </div>
@@ -240,73 +254,152 @@
         <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
     </div>
-    
+
     <div id="panel-about" style="display:none; max-width:600px;">
       <h3>About Us</h3>
       <p>Oodles MetaSearch Engine is where information from various other
       search engines are gathered into one. Less bias and more information. Most importantly, it is private and homemade.</p>
-      <p>For more information, visit our GitHub page at 
+      <p>For more information, visit our GitHub page at
       <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
-      <p>Visit the Wikipedia page about Metasearch Search Engines at 
+      <p>Visit the Wikipedia page about Metasearch Search Engines at
       <a href="https://en.wikipedia.org/wiki/Metasearch_engine">https://en.wikipedia.org/wiki/Metasearch_engine</a>.</p>
     </div>
   </div>
-  
+
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
-  
-  <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-    
-    // Function to switch between tabs
-    function switchTab(tab) {
-      document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
-      document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
-    }
-    
-    // Function to run meta search
-    function runMetaSearch() {
-      var q = document.getElementById('metaQuery').value.trim();
-      var type = document.getElementById('searchTypeSelector').value;
-      if (!q) return;
-      sessionStorage.setItem('metaSearchQuery', q);
-      sessionStorage.setItem('searchType', type);
-      window.open('search.html', '_blank');
-    }
-    
-    // Function to run AI analysis
-    function runAIAnalysis() {
-      window.open('ai_analysation.html', '_blank');
-    }
-    
-    // Function to start voice search
-    function startVoiceSearch() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert('Your browser does not support speech recognition.');
-        return;
-      }
-      
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = false;
 
-      recognition.start();
+<script>
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    const micCircle = document.getElementById('mic-icon-circle');
 
-      recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById('metaQuery').value = transcript;
-        runMetaSearch(); // Automatically run search after transcription
-      };
+    // Web Audio API Context
+    // Always initialize the AudioContext when the user interacts with the page
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-      recognition.onerror = function(event) {
-        alert('Voice recognition failed: ' + event.error);
-      };
-    }
+    /**
+     * Generates and plays a simple tone using the Web Audio API.
+     * @param {number} frequency - The tone frequency in Hz.
+     * @param {number} duration - The tone duration in seconds.
+     * @param {number} volume - The tone volume (0.0 to 1.0).
+     * @param {number} delay - The delay before the tone starts (in seconds).
+     * @param {number|null} endFrequency - Optional frequency to ramp to.
+     */
+    function playTone(frequency, duration, volume, delay = 0, endFrequency = null) {
+      const startTime = audioContext.currentTime + delay;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Set tone parameters
+      oscillator.type = 'sine'; // Sine wave is a clean tone
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      
+      // Apply frequency sweep if an endFrequency is provided
+      if (endFrequency !== null) {
+        oscillator.frequency.linearRampToValueAtTime(endFrequency, startTime + duration);
+  	  }
+
+      // Set volume and apply a short fade out to prevent clicks
+      gainNode.gain.setValueAtTime(volume, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      oscillator.start(startTime);
+      oscillator.stop(audioContext.currentTime + duration);
+    }
+
+    // Function to switch between tabs
+    function switchTab(tab) {
+      document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
+      document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
+    }
+
+    // Function to run meta search
+    function runMetaSearch() {
+      var q = document.getElementById('metaQuery').value.trim();
+      var type = document.getElementById('searchTypeSelector').value;
+      if (!q) return;
+      sessionStorage.setItem('metaSearchQuery', q);
+      sessionStorage.setItem('searchType', type);
+      window.open('search.html', '_blank');
+    }
+
+   // Function to run AI analysis
+function runAIAnalysis() {
+  var q = document.getElementById('metaQuery').value.trim();
+  if (!q) {
+    // MODIFIED: Alert the user if the query is empty
+    alert('Please enter a query before running AI Analysis.');
+    return; 
+  }
     
-    // Add keyboard event to trigger search on Enter key
-    document.getElementById('metaQuery').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') runMetaSearch();
-    });
-  </script>
+  // ... rest of the function remains the same ...
+  window.open('ai_analysation.html?q=' + encodeURIComponent(q), '_blank');
+}
+
+    // Function to start voice search
+    function startVoiceSearch() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert('Your browser does not support speech recognition.');
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      // START LISTENING: Red circle appears and Middle C sound plays
+      micCircle.classList.add('mic-recording');
+      
+      // START BEEP: Middle C (approx 261.63 Hz)
+      playTone(261.63, 0.3, 0.5); 
+      
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('metaQuery').value = transcript;
+      };
+
+      recognition.onend = function() {
+        const query = document.getElementById('metaQuery').value.trim();
+
+        // END LISTENING: Remove red circle
+        micCircle.classList.remove('mic-recording');
+
+        if (query) {
+          // Success: Play 2-beep sequence (la LA!) and run search
+          // First beep ("la")
+          playTone(800, 0.1, 0.6); 
+          
+          // Second beep ("LA!")
+          playTone(1200, 0.1, 0.6, 0.15); 
+          
+          runMetaSearch();
+        } else {
+          // No match/Timeout: Play a failure sound 
+          playTone(150, 0.4, 0.6, 0, 100); // Low-to-low tone for subtle failure
+        }
+      };
+
+      recognition.onerror = function(event) {
+        // ERROR: Remove red circle and play error sound
+        micCircle.classList.remove('mic-recording');
+        
+        // NEW FAILURE SOUND: A low, sweeping tone
+        playTone(150, 0.4, 0.6, 0, 100); 
+        
+        alert('Voice recognition failed: ' + event.error);
+      };
+    }
+
+    // Add keyboard event to trigger search on Enter key
+    document.getElementById('metaQuery').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runMetaSearch();
+    });
+</script>
 </body>
 </html>
