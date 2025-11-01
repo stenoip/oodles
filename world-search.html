@@ -109,6 +109,49 @@
             color: #aaa;
             z-index: 5;
         }
+
+        /* Tutorial Overlay */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .tutorial-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            text-align: left;
+        }
+        .tutorial-content h2 {
+            margin-top: 0;
+        }
+        .tutorial-content p {
+            font-size: 1rem;
+            color: #333;
+        }
+        .close-tutorial {
+            background: #d9534f;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .close-tutorial:hover {
+            background: #c9302c;
+        }
     </style>
 </head>
 <body>
@@ -138,7 +181,37 @@
         © 2025 Stenoip Company. All rights reserved.
     </div>
 
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay" class="tutorial-overlay">
+        <div class="tutorial-content">
+            <h2>Welcome to the Oodles World Search by Stenoip Company!</h2>
+            <p>This interactive interface allows you to search and explore the world in 3D. Here's how to get started:</p>
+            <ul>
+                <li><strong>Search:</strong> Type your query (e.g., "ice cream", "Walmart") in the search box at the top.</li>
+                <li><strong>Move:</strong> Use the arrow buttons to move around the 3D world.</li>
+                <li><strong>Look Around:</strong> Use the left and right turn buttons to look around in the world.</li>
+                <li><strong>View Results:</strong> After entering your query, the search results will on "buildings". Go to them, click on them to visit website!</li>
+            </ul>
+            <p>If you need more assistance, click the tutorial button again!</p>
+            <button class="close-tutorial" onclick="closeTutorial()">Got it!</button>
+        </div>
+    </div>
+
    <script type="module" src="world-search/world.js"></script> 
     <script type="module" src="world-search/search.js"></script>
+
+    <script>
+        // Function to close the tutorial overlay
+        function closeTutorial() {
+            document.getElementById('tutorialOverlay').style.display = 'none';
+        }
+
+        // Show tutorial on page load
+        window.onload = function() {
+            setTimeout(() => {
+                document.getElementById('tutorialOverlay').style.display = 'flex';
+            }, 500); // Delay to make it less abrupt
+        };
+    </script>
 </body>
 </html>
