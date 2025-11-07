@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,18 +10,19 @@
     /* ------------------------------------------- */
     /* FRUTIGER AERO BASE STYLES */
     /* ------------------------------------------- */
-    body {
-      margin: 0;
-      font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
-      color: #202124;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      background-image: url('https://stenoip.github.io/oodles/new_new_wallpaper.png');
-      background-size: cover;
-      background-attachment: fixed;
-      background-position: center;
-    }
+   body {
+  margin: 0;
+  font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
+    color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-image: url('https://stenoip.github.io/oodles/new_new_wallpaper.png');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
+
     .container {
       flex: 1;
       display: flex;
@@ -223,6 +225,54 @@
         max-width: 100%;
       }
     }
+    .play-pong-container {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .play-pong-btn {
+      position: relative;
+      display: inline-block;
+      background: linear-gradient(90deg, #00ccff, #00ffcc);
+      border: none;
+      color: #000;
+      font-size: 1.4em;
+      font-weight: bold;
+      padding: 16px 55px;
+      border-radius: 50px;
+      cursor: pointer;
+      text-decoration: none;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,255,255,0.5);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .play-pong-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(0,255,255,0.8);
+    }
+    .play-pong-btn .ball {
+      position: absolute;
+      top: 10%;
+      left: 20%;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #fff;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    @keyframes bounce {
+      0%, 100% { top: 10%; background: #00ffcc; transform: scaleY(1); }
+      50% { top: 65%; background: #00ccff; transform: scaleY(0.8); }
+    }
+    @media (max-width:600px) {
+      .play-pong-btn { font-size: 1.1em; padding: 14px 40px; }
+      .play-pong-btn .ball { width: 12px; height: 12px; }
+    }
+    * {
+  color: white !important;
+}
+
+    
   </style>
 </head>
 <body>
@@ -253,7 +303,15 @@
         </select>
         <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
-    </div>
+   
+     <div class="play-pong-container">
+        <a href="pong.html" class="play-pong-btn">
+          <div class="ball"></div>
+          PLAY POWER PONG
+        </a>
+  </div>
+  </div>
+   
 
     <div id="panel-about" style="display:none; max-width:600px;">
       <h3>About Us</h3>
@@ -269,63 +327,63 @@
   <footer>© Stenoip Company • Launched 19th October, 2025</footer>
 
 <script>
-    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-    const micCircle = document.getElementById('mic-icon-circle');
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    const micCircle = document.getElementById('mic-icon-circle');
 
-    // Web Audio API Context
-    // Always initialize the AudioContext when the user interacts with the page
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // Web Audio API Context
+    // Always initialize the AudioContext when the user interacts with the page
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    /**
-     * Generates and plays a simple tone using the Web Audio API.
-     * @param {number} frequency - The tone frequency in Hz.
-     * @param {number} duration - The tone duration in seconds.
-     * @param {number} volume - The tone volume (0.0 to 1.0).
-     * @param {number} delay - The delay before the tone starts (in seconds).
-     * @param {number|null} endFrequency - Optional frequency to ramp to.
-     */
-    function playTone(frequency, duration, volume, delay = 0, endFrequency = null) {
-      const startTime = audioContext.currentTime + delay;
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+    /**
+     * Generates and plays a simple tone using the Web Audio API.
+     * @param {number} frequency - The tone frequency in Hz.
+     * @param {number} duration - The tone duration in seconds.
+     * @param {number} volume - The tone volume (0.0 to 1.0).
+     * @param {number} delay - The delay before the tone starts (in seconds).
+     * @param {number|null} endFrequency - Optional frequency to ramp to.
+     */
+    function playTone(frequency, duration, volume, delay = 0, endFrequency = null) {
+      const startTime = audioContext.currentTime + delay;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-      // Set tone parameters
-      oscillator.type = 'sine'; // Sine wave is a clean tone
-      oscillator.frequency.setValueAtTime(frequency, startTime);
-      
-      // Apply frequency sweep if an endFrequency is provided
-      if (endFrequency !== null) {
-        oscillator.frequency.linearRampToValueAtTime(endFrequency, startTime + duration);
-  	  }
+      // Set tone parameters
+      oscillator.type = 'sine'; // Sine wave is a clean tone
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      
+      // Apply frequency sweep if an endFrequency is provided
+      if (endFrequency !== null) {
+        oscillator.frequency.linearRampToValueAtTime(endFrequency, startTime + duration);
+  	  }
 
-      // Set volume and apply a short fade out to prevent clicks
-      gainNode.gain.setValueAtTime(volume, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      // Set volume and apply a short fade out to prevent clicks
+      gainNode.gain.setValueAtTime(volume, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-      oscillator.start(startTime);
-      oscillator.stop(audioContext.currentTime + duration);
-    }
+      oscillator.start(startTime);
+      oscillator.stop(audioContext.currentTime + duration);
+    }
 
-    // Function to switch between tabs
-    function switchTab(tab) {
-      document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
-      document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
-    }
+    // Function to switch between tabs
+    function switchTab(tab) {
+      document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
+      document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
+    }
 
-    // Function to run meta search
-    function runMetaSearch() {
-      var q = document.getElementById('metaQuery').value.trim();
-      var type = document.getElementById('searchTypeSelector').value;
-      if (!q) return;
-      sessionStorage.setItem('metaSearchQuery', q);
-      sessionStorage.setItem('searchType', type);
-      window.open('search.html', '_blank');
-    }
+    // Function to run meta search
+    function runMetaSearch() {
+      var q = document.getElementById('metaQuery').value.trim();
+      var type = document.getElementById('searchTypeSelector').value;
+      if (!q) return;
+      sessionStorage.setItem('metaSearchQuery', q);
+      sessionStorage.setItem('searchType', type);
+      window.open('search.html', '_blank');
+    }
 
-   // Function to run AI analysis
+   // Function to run AI analysis
 function runAIAnalysis() {
   var q = document.getElementById('metaQuery').value.trim();
   if (!q) {
@@ -338,68 +396,68 @@ function runAIAnalysis() {
   window.open('ai_analysation.html?q=' + encodeURIComponent(q), '_blank');
 }
 
-    // Function to start voice search
-    function startVoiceSearch() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert('Your browser does not support speech recognition.');
-        return;
-      }
+    // Function to start voice search
+    function startVoiceSearch() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert('Your browser does not support speech recognition.');
+        return;
+      }
 
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
-      // START LISTENING: Red circle appears and Middle C sound plays
-      micCircle.classList.add('mic-recording');
-      
-      // START BEEP: Middle C (approx 261.63 Hz)
-      playTone(261.63, 0.3, 0.5); 
-      
+      // START LISTENING: Red circle appears and Middle C sound plays
+      micCircle.classList.add('mic-recording');
+      
+      // START BEEP: Middle C (approx 261.63 Hz)
+      playTone(261.63, 0.3, 0.5); 
+      
 
-      recognition.start();
+      recognition.start();
 
-      recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById('metaQuery').value = transcript;
-      };
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('metaQuery').value = transcript;
+      };
 
-      recognition.onend = function() {
-        const query = document.getElementById('metaQuery').value.trim();
+      recognition.onend = function() {
+        const query = document.getElementById('metaQuery').value.trim();
 
-        // END LISTENING: Remove red circle
-        micCircle.classList.remove('mic-recording');
+        // END LISTENING: Remove red circle
+        micCircle.classList.remove('mic-recording');
 
-        if (query) {
-          // Success: Play 2-beep sequence (la LA!) and run search
-          // First beep ("la")
-          playTone(800, 0.1, 0.6); 
-          
-          // Second beep ("LA!")
-          playTone(1200, 0.1, 0.6, 0.15); 
-          
-          runMetaSearch();
-        } else {
-          // No match/Timeout: Play a failure sound 
-          playTone(150, 0.4, 0.6, 0, 100); // Low-to-low tone for subtle failure
-        }
-      };
+        if (query) {
+          // Success: Play 2-beep sequence (la LA!) and run search
+          // First beep ("la")
+          playTone(800, 0.1, 0.6); 
+          
+          // Second beep ("LA!")
+          playTone(1200, 0.1, 0.6, 0.15); 
+          
+          runMetaSearch();
+        } else {
+          // No match/Timeout: Play a failure sound 
+          playTone(150, 0.4, 0.6, 0, 100); // Low-to-low tone for subtle failure
+        }
+      };
 
-      recognition.onerror = function(event) {
-        // ERROR: Remove red circle and play error sound
-        micCircle.classList.remove('mic-recording');
-        
-        // NEW FAILURE SOUND: A low, sweeping tone
-        playTone(150, 0.4, 0.6, 0, 100); 
-        
-        alert('Voice recognition failed: ' + event.error);
-      };
-    }
+      recognition.onerror = function(event) {
+        // ERROR: Remove red circle and play error sound
+        micCircle.classList.remove('mic-recording');
+        
+        // NEW FAILURE SOUND: A low, sweeping tone
+        playTone(150, 0.4, 0.6, 0, 100); 
+        
+        alert('Voice recognition failed: ' + event.error);
+      };
+    }
 
-    // Add keyboard event to trigger search on Enter key
-    document.getElementById('metaQuery').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') runMetaSearch();
-    });
+    // Add keyboard event to trigger search on Enter key
+    document.getElementById('metaQuery').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runMetaSearch();
+    });
 </script>
 </body>
 </html>
