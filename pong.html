@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Power Pong Deluxe</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; margin: auto; background: #000; }
+  </style>
+</head>
+<body>
+<canvas id="pong" width="800" height="500"></canvas>
+
+<!-- 
+Copyright Stenoip Company
+
+Powerup Type	Color	Description/Effect
+Speed	Red	    Increases ball speed.
+Slow	Blue	 Decreases ball speed.
+Invert	Green	Inverts the background color (toggles between black and white/light grey).
+Disco	Yellow	 Makes the background flash random colors.
+Ghost	White	Makes the ball translucent and the background a dark teal (#003333).
+Gravity	Purple	Applies a continuous downward/upward acceleration (gravity) to the ball and changes the background to a dark purple (#220033).
+-->
+<script>
+  var canvas = document.getElementById("pong");
+  var ctx = canvas.getContext("2d");
+
+  var paddleWidth = 10, paddleHeight = 100;
+  var player = { x: 10, y: canvas.height / 2 - paddleHeight / 2, score: 0 };
+  var ai = { x: canvas.width - paddleWidth - 10, y: canvas.height / 2 - paddleHeight / 2, score: 0 };
+  var ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 10,
+    speed: 5,
+    dx: 5,
+    dy: 0,
+    color: "cyan",
+    ghost: false,
+    gravity: false
+  };
+
+  var powerups = [];
+  var backgroundColor = "#000";
+  var lastPowerupTime = 0;
+  var activePowerup = null;
+  var powerupEndTime = 0;
+
+  function drawRect(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  function drawPlasmaBall(x, y, r, color, ghost) {
+    var gradient = ctx.createRadialGradient(x, y, r * 0.3, x, y, r);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, ghost ? "rgba(0,0,0,0.1)" : "transparent");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawNet() {
+    for (var i = 0; i < canvas.height; i += 20) {
+      drawRect(canvas.width / 2 - 1, i, 2, 10, "white");
+    }
+  }
+
+  function drawText(text, x, y) {
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText(text, x, y);
+  }
+
+  function resetBall() {
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+    ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+    ball.dy = 0;
+  }
+
+  function collision(paddle) {
+    return ball.x - ball.radius < paddle.x + paddleWidth &&
+           ball.x + ball.radius > paddle.x &&
+           ball.y - ball.radius < paddle.y + paddleHeight &&
+           ball.y + ball.radius > paddle.y;
+  }
+
+  function spawnPowerup() {
+    var types = ["speed", "slow", "invert", "disco", "ghost", "gravity"];
+    var type = types[Math.floor(Math.random() * types.length)];
+    var px = Math.random() * (canvas.width - 100) + 50;
+    var py = Math.random() * (canvas.height - 100) + 50;
+    powerups.push({ x: px, y: py, r: 15, type: type });
+    lastPowerupTime = Date.now();
+  }
+
+  function applyPowerup(type) {
+    activePowerup = type;
+    powerupEndTime = Date.now() + 7000;
+
+    if (type === "speed") {
+      ball.speed += 3;
+      backgroundColor = "#330000";
+    } else if (type === "slow") {
+      ball.speed = Math.max(3, ball.speed - 2);
+      backgroundColor = "#001133";
+    } else if (type === "invert") {
+      backgroundColor = backgroundColor === "#000" ? "#eee" : "#000";
+    } else if (type === "disco") {
+      backgroundColor = "disco";
+    } else if (type === "ghost") {
+      ball.ghost = true;
+      backgroundColor = "#003333";
+    } else if (type === "gravity") {
+      ball.gravity = true;
+      backgroundColor = "#220033";
+    }
+
+    ball.dx = (ball.dx > 0 ? 1 : -1) * ball.speed;
+    ball.dy = (ball.dy > 0 ? 1 : -1) * ball.speed;
+  }
+
+  function clearPowerup() {
+    activePowerup = null;
+    ball.speed = 5;
+    ball.ghost = false;
+    ball.gravity = false;
+    backgroundColor = "#000";
+  }
+
+  function update() {
+    if (activePowerup === "gravity") {
+      ball.dy += (ball.dy > 0 ? 0.05 : -0.05);
+    }
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+      ball.dy = -ball.dy;
+    }
+
+    var aiCenter = ai.y + paddleHeight / 2;
+    var ballOffset = ball.y - aiCenter;
+    var move = ballOffset * 0.05;
+    var maxAiSpeed = 4;
+    ai.y += Math.max(-maxAiSpeed, Math.min(maxAiSpeed, move));
+
+    if (collision(player)) {
+      var angle = ((ball.y - (player.y + paddleHeight / 2)) / (paddleHeight / 2)) * Math.PI / 4;
+      ball.dx = ball.speed * Math.cos(angle);
+      ball.dy = ball.speed * Math.sin(angle);
+    }
+
+    if (collision(ai)) {
+      var angle = ((ball.y - (ai.y + paddleHeight / 2)) / (paddleHeight / 2)) * Math.PI / 4;
+      ball.dx = -ball.speed * Math.cos(angle);
+      ball.dy = ball.speed * Math.sin(angle);
+    }
+
+    if (ball.x - ball.radius < 0) {
+      ai.score++;
+      resetBall();
+    } else if (ball.x + ball.radius > canvas.width) {
+      player.score++;
+      resetBall();
+    }
+
+    for (var i = powerups.length - 1; i >= 0; i--) {
+      var p = powerups[i];
+      var dx = ball.x - p.x;
+      var dy = ball.y - p.y;
+      if (Math.sqrt(dx * dx + dy * dy) < ball.radius + p.r) {
+        applyPowerup(p.type);
+        powerups.splice(i, 1);
+      }
+    }
+
+    if (Date.now() - lastPowerupTime > 10000) {
+      spawnPowerup();
+    }
+
+    if (activePowerup && Date.now() > powerupEndTime) {
+      clearPowerup();
+    }
+  }
+
+ function render() {
+    if (backgroundColor === "disco") {
+      var r = Math.floor(Math.random() * 100 + 50);
+      var g = Math.floor(Math.random() * 100 + 50);
+      var b = Math.floor(Math.random() * 100 + 50);
+      drawRect(0, 0, canvas.width, canvas.height, "rgb(" + r + "," + g + "," + b + ")");
+    } else {
+      drawRect(0, 0, canvas.width, canvas.height, backgroundColor);
+    }
+
+    drawNet();
+    drawText(player.score, canvas.width / 4, 50);
+    drawText(ai.score, 3 * canvas.width / 4, 50);
+    var paddleColor = backgroundColor === "#eee" ? "black" : "white";
+    drawRect(player.x, player.y, paddleWidth, paddleHeight, paddleColor);
+    drawRect(ai.x, ai.y, paddleWidth, paddleHeight, paddleColor);
+    drawPlasmaBall(ball.x, ball.y, ball.radius * 2, ball.color, ball.ghost);
+
+    for (var i = 0; i < powerups.length; i++) {
+      var p = powerups[i];
+      ctx.fillStyle = p.type === "speed" ? "red" :
+                      p.type === "slow" ? "blue" :
+                      p.type === "invert" ? "green" :
+                      p.type === "disco" ? "yellow" :
+                      p.type === "ghost" ? "white" : "purple";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill(); // This fill() call was the last line of the original provided code block
+    }
+  } // <-- This closing brace for the render() function was missing.
+
+canvas.addEventListener("mousemove", function(evt) {
+  var rect = canvas.getBoundingClientRect();
+  player.y = evt.clientY - rect.top - paddleHeight / 2;
+});
+
+setInterval(function() {
+  update();
+  render();
+}, 1000 / 60);
+</script>
+</body>
+</html>
