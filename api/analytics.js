@@ -1,27 +1,15 @@
-var cors = require('./_cors');
+const { setCors } = require('./_cors');
+let searchCount = 0;
 
-module.exports = async function(req, res) {
-  cors.setCors(res);
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+module.exports = async (req, res) => {
+  setCors(res);
+
+  if (req.method === 'POST') {
+    searchCount++;
+    return res.status(200).json({ message: 'Search recorded', searchCount });
+  } else if (req.method === 'GET') {
+    return res.status(200).json({ searchCount });
   }
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
-    var body = req.body || {};
-    var url = body.url || '';
-    var query = body.query || '';
-    var ts = Date.now();
-
-    // In production, store to a database or logging service.
-    // For now, just acknowledge receipt.
-    res.status(200).json({ ok: true, received: { url: url, query: query, ts: ts } });
-  } catch (e) {
-    res.status(500).json({ error: 'Analytics failed', details: e.message });
-  }
+  res.status(405).json({ error: 'Method not allowed' });
 };
