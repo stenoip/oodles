@@ -1,54 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Oodles Index Generator</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 30px; background: #f5f6fa; }
-  img { width: 120px; display:block; margin: 0 auto 20px; }
-  h1 { text-align: center; margin-bottom: 30px; }
-  input, button { padding: 10px; font-size: 1rem; margin-bottom: 10px; width: 100%; max-width: 400px; display: block; margin-left:auto; margin-right:auto; }
-  button { background: #487eb0; color: white; border: none; cursor: pointer; }
-  button:hover { background: #40739e; }
-  pre { background: white; padding: 20px; border-radius: 5px; overflow-x: auto; max-width: 90%; margin: 20px auto; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oodles Search Index Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+    header img {
+      width: 150px;
+      display: block;
+      margin: 0 auto 10px;
+    }
+    main {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #333;
+    }
+    #output {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo">
+    <h1>Oodles Index Generator</h1>
+  </header>
 
-<img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo">
-<h1>Oodles Index Generator</h1>
+  <main>
+    <h2>Enter URLs to generate index.json</h2>
+    <textarea id="urlsInput" placeholder="Enter one URL per line"></textarea>
+    <button id="generateBtn">Generate Index</button>
 
-<input type="text" id="urlsInput" placeholder="Enter URLs separated by commas">
-<button id="generateBtn">Generate index.json</button>
+    <div id="output"></div>
+  </main>
 
-<h2>Results:</h2>
-<pre id="results"></pre>
-<p>Copyright Stenoip Company </p>
-<script>
-const generateBtn = document.getElementById('generateBtn');
-const urlsInput = document.getElementById('urlsInput');
-const resultsPre = document.getElementById('results');
+  <script>
+    var generateBtn = document.getElementById('generateBtn');
+    var urlsInput = document.getElementById('urlsInput');
+    var output = document.getElementById('output');
+    var API_URL = 'https://oodles-backend.vercel.app/generate';
 
-generateBtn.addEventListener('click', async () => {
-  const urls = urlsInput.value.split(',').map(u => u.trim()).filter(u => u);
-  if (!urls.length) return alert('Enter at least one URL');
+    generateBtn.addEventListener('click', function() {
+      var urls = urlsInput.value.split('\n').map(function(u) { return u.trim(); }).filter(function(u) { return u !== ''; });
 
-  resultsPre.textContent = 'Generating index.json...';
+      if (urls.length === 0) {
+        output.textContent = 'Please enter at least one URL.';
+        return;
+      }
 
-  try {
-    const response = await fetch('https://oodles-backend.vercel.app/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls })
+      output.textContent = 'Generating index.json...';
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: urls })
+      })
+      .then(function(res) {
+        if (!res.ok) throw new Error('Network response was not OK: ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        if (data.success) {
+          output.textContent = JSON.stringify(data.data, null, 2);
+        } else {
+          output.textContent = 'Error: ' + (data.error || 'Unknown error');
+        }
+      })
+      .catch(function(err) {
+        output.textContent = 'Error: ' + err.message;
+      });
     });
-    const data = await response.json();
-    resultsPre.textContent = JSON.stringify(data, null, 2);
-  } catch (err) {
-    resultsPre.textContent = 'Error: ' + err.message;
-  }
-});
-</script>
-
+  </script>
 </body>
 </html>
