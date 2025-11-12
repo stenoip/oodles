@@ -1,147 +1,41 @@
-var axios = require('axios');
-var cheerio = require('cheerio');
-var urlLib = require('url');
-var cors = require('./_cors'); // Consistent module require pattern
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
+const { setCors } = require('./_cors');
+const fs = require('fs');
 
-// Normalize and resolve absolute URLs
-function resolveUrl(base, href) {
-  try {
-    return new urlLib.URL(href, base).href;
-  } catch (e) {
-    return null;
-  }
-}
+module.exports = async (req, res) => {
+  setCors(res);
 
-// Crawl one URL and extract metadata, headings, body text, raw HTML, and links
-async function crawlOne(url) {
-  var response = await axios.get(url, { timeout: 15000 });
-  var html = response.data;
-  var $ = cheerio.load(html);
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-  var title = $('title').first().text() || url;
-  var description = $('meta[name="description"]').attr('content') || 'No description available';
-  var headings = [];
-  $('h1,h2,h3').each(function () { headings.push($(this).text()); });
+  const { urls } = req.body;
 
-  var bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+  if (!urls || !Array.isArray(urls)) {
+    return res.status(400).json({ error: 'Invalid URLs array' });
+  }
 
-  var links = [];
-  $('a[href]').each(function () {
-    var href = ($(this).attr('href') || '').trim();
-    if (!href || /^(javascript:|mailto:|tel:|#)/i.test(href)) return;
-    var abs = resolveUrl(url, href);
-    if (abs && /^https?:\/\//i.test(abs)) links.push(abs);
-  });
+  const indexData = [];
 
-  return {
-    title: title,
-    url: url,
-    description: description,
-    headings: headings,
-    content: bodyText,
-    html: html,
-    links: links
-  };
-}
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      const html = await response.text();
+      const $ = cheerio.load(html);
 
-// --- Main Handler ---
-module.exports = async function(req, res) { // Standard Vercel async function format
-  
-  // 1. CORS Preflight Handler (Fixing the Vercel crash)
-  cors.setCors(res); 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+      const title = $('title').text() || '';
+      const description = $('meta[name="description"]').attr('content') || '';
+      const keywords = $('meta[name="keywords"]').attr('content') || '';
 
-  try {
-    var urls = [];
-    var maxDepth = 1;
-    var maxPerPageLinks = 10;
-    var sameDomainOnly = false;
-    
-    // Safely access the body, relying on Vercel's built-in parser (like in analytics.js)
-    var body = req.body || {}; 
+      indexData.push({ url, title, description, keywords });
+    } catch (err) {
+      console.error(`Failed to fetch ${url}:`, err.message);
+      indexData.push({ url, error: 'Failed to fetch' });
+    }
+  }
 
-    if (req.method === 'GET') {
-      var singleUrl = req.query && req.query.url;
-      if (!singleUrl) {
-        res.status(400).json({ error: 'Missing ?url=' });
-        return;
-      }
-      urls = [singleUrl];
-      if (req.query.depth) maxDepth = Math.max(0, parseInt(req.query.depth || '1', 10));
-      if (req.query.links) maxPerPageLinks = Math.max(1, parseInt(req.query.links || '10', 10));
-      if (req.query.sameDomain) sameDomainOnly = String(req.query.sameDomain).toLowerCase() === 'true';
-    } else if (req.method === 'POST') {
-      if (Array.isArray(body.urls)) urls = body.urls;
-      else if (typeof body.url === 'string') urls = [body.url];
-      else {
-        res.status(400).json({ error: 'Provide url or urls in request body' });
-        return;
-      }
-      if (body.depth !== undefined) maxDepth = Math.max(0, parseInt(body.depth, 10) || 1);
-      if (body.links !== undefined) maxPerPageLinks = Math.max(1, parseInt(body.links, 10) || 10);
-      if (body.sameDomain !== undefined) sameDomainOnly = !!body.sameDomain;
-    } else {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
-    }
+  fs.writeFileSync('index.json', JSON.stringify(indexData, null, 2));
 
-    var seedDomains = urls.map(function (u) {
-      try { return new urlLib.URL(u).hostname; } catch (e) { return null; }
-    }).filter(Boolean);
-
-    var visited = {};
-    var queue = urls.map(function (u) { return { url: u, depth: 0 }; });
-    var index = [];
-
-    while (queue.length > 0) {
-      var node = queue.shift();
-      var current = node.url;
-      var depth = node.depth;
-
-      if (visited[current]) continue;
-      visited[current] = true;
-
-      try {
-        var item = await crawlOne(current);
-        index.push(item);
-
-        if (depth < maxDepth) {
-          var toAdd = item.links
-            .filter(function (l) {
-              if (!/^https?:\/\//i.test(l)) return false;
-              if (!sameDomainOnly) return true;
-              try {
-                var host = new urlLib.URL(l).hostname;
-                return seedDomains.indexOf(host) !== -1;
-              } catch (e) { return false; }
-            })
-            .slice(0, maxPerPageLinks);
-
-          toAdd.forEach(function (nextUrl) {
-            if (!visited[nextUrl]) queue.push({ url: nextUrl, depth: depth + 1 });
-          });
-        }
-      } catch (e) {
-        index.push({
-          title: current,
-          url: current,
-          description: 'Failed to crawl: ' + e.message,
-          headings: [],
-          content: '',
-          html: '',
-          links: []
-        });
-      }
-    }
-
-    res.status(200).json({ results: index, meta: { seeds: urls, depth: maxDepth } });
-  } catch (err) {
-    res.status(500).json({ error: 'Generate failed', details: err.message });
-  }
+  res.status(200).json({ success: true, data: indexData });
 };
-
-// Named export for reuse (optional, but good practice)
-module.exports.crawlOne = crawlOne;
