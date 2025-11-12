@@ -29,18 +29,28 @@ module.exports = async function (req, res) {
         var html = await response.text();
         var $ = cheerio.load(html);
 
+        // Try multiple ways to get description
+        var description = $('meta[name="description"]').attr('content') ||
+                          $('meta[name="Description"]').attr('content') ||
+                          $('meta[property="og:description"]').attr('content') ||
+                          '';
+
+        // Try multiple ways to get keywords
+        var keywords = $('meta[name="keywords"]').attr('content') ||
+                       $('meta[name="Keywords"]').attr('content') ||
+                       '';
+
         indexData.push({
           url: url,
           title: $('title').text() || '',
-          description: $('meta[name="description"]').attr('content') || '',
-          keywords: $('meta[name="keywords"]').attr('content') || ''
+          description: description,
+          keywords: keywords
         });
       } catch (err) {
         indexData.push({ url: url, error: 'Failed to fetch' });
       }
     }
 
-    // DO NOT write to disk — just return JSON
     res.status(200).json({ success: true, data: indexData });
 
   } catch (err) {
