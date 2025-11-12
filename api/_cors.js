@@ -8,4 +8,4 @@ function setCors(res) {
 
 module.exports = {
   setCors: setCors
-}; 
+};
