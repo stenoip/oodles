@@ -79,25 +79,30 @@
     <h2>Enter URLs to generate index.json</h2>
     <textarea id="urlsInput" placeholder="Enter one URL per line"></textarea>
     <button id="generateBtn">Generate Index</button>
+    <button id="downloadBtn" style="display:none;">Download index.json</button>
 
     <div id="output"></div>
   </main>
 
   <script>
     var generateBtn = document.getElementById('generateBtn');
+    var downloadBtn = document.getElementById('downloadBtn');
     var urlsInput = document.getElementById('urlsInput');
     var output = document.getElementById('output');
     var API_URL = 'https://oodles-backend.vercel.app/generate';
+    var latestData = null;
 
     generateBtn.addEventListener('click', function() {
       var urls = urlsInput.value.split('\n').map(function(u) { return u.trim(); }).filter(function(u) { return u !== ''; });
 
       if (urls.length === 0) {
         output.textContent = 'Please enter at least one URL.';
+        downloadBtn.style.display = 'none';
         return;
       }
 
       output.textContent = 'Generating index.json...';
+      downloadBtn.style.display = 'none';
 
       fetch(API_URL, {
         method: 'POST',
@@ -110,14 +115,32 @@
       })
       .then(function(data) {
         if (data.success) {
-          output.textContent = JSON.stringify(data.data, null, 2);
+          latestData = data.data;
+          output.textContent = JSON.stringify(latestData, null, 2);
+          downloadBtn.style.display = 'block';
         } else {
           output.textContent = 'Error: ' + (data.error || 'Unknown error');
+          downloadBtn.style.display = 'none';
         }
       })
       .catch(function(err) {
         output.textContent = 'Error: ' + err.message;
+        downloadBtn.style.display = 'none';
       });
+    });
+
+    downloadBtn.addEventListener('click', function() {
+      if (!latestData) return;
+
+      var blob = new Blob([JSON.stringify(latestData, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
