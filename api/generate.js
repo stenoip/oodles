@@ -1,12 +1,10 @@
 var fetch = require('node-fetch');
 var cheerio = require('cheerio');
-var fs = require('fs');
 var _cors = require('./_cors');
 
 module.exports = async function (req, res) {
   _cors.setCors(res);
 
-  // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -16,7 +14,6 @@ module.exports = async function (req, res) {
   }
 
   try {
-    // Use req.body directly (Vercel parses JSON automatically)
     var urls = req.body.urls;
 
     if (!urls || !Array.isArray(urls)) {
@@ -43,7 +40,7 @@ module.exports = async function (req, res) {
       }
     }
 
-    fs.writeFileSync('index.json', JSON.stringify(indexData, null, 2));
+    // DO NOT write to disk — just return JSON
     res.status(200).json({ success: true, data: indexData });
 
   } catch (err) {
