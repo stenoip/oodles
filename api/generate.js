@@ -1,3 +1,4 @@
+
 var fetch = require('node-fetch');
 var cheerio = require('cheerio');
 var _cors = require('./_cors');
@@ -14,47 +15,89 @@ module.exports = async function (req, res) {
   }
 
   try {
-    var urls = req.body.urls;
+    const body = req.body || {};
+    const urls = body.urls || [];
+    const recursiveLevel = body.recursiveLevel || 1;
+    const includeAllText = body.includeAllText || false;
 
-    if (!urls || !Array.isArray(urls)) {
-      return res.status(400).json({ error: 'Invalid URLs array' });
+    if (!Array.isArray(urls) || urls.length === 0) {
+      return res.status(400).json({ error: 'Invalid or empty URLs array' });
     }
 
-    var indexData = [];
+    // Helper function to fetch and extract metadata from a single URL
+    async function scrapePage(url, depth = 1, visited = new Set()) {
+      if (visited.has(url) || depth > recursiveLevel) return [];
+      visited.add(url);
 
-    for (var i = 0; i < urls.length; i++) {
-      var url = urls[i];
       try {
-        var response = await fetch(url);
-        var html = await response.text();
-        var $ = cheerio.load(html);
-
-        // Try multiple ways to get description
-        var description = $('meta[name="description"]').attr('content') ||
-                          $('meta[name="Description"]').attr('content') ||
-                          $('meta[property="og:description"]').attr('content') ||
-                          '';
-
-        // Try multiple ways to get keywords
-        var keywords = $('meta[name="keywords"]').attr('content') ||
-                       $('meta[name="Keywords"]').attr('content') ||
-                       '';
-
-        indexData.push({
-          url: url,
-          title: $('title').text() || '',
-          description: description,
-          keywords: keywords
+        const response = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MetaCrawler/1.0)' },
+          timeout: 10000
         });
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        const description =
+          $('meta[name="description"]').attr('content') ||
+          $('meta[name="Description"]').attr('content') ||
+          $('meta[property="og:description"]').attr('content') ||
+          '';
+
+        const keywords =
+          $('meta[name="keywords"]').attr('content') ||
+          $('meta[name="Keywords"]').attr('content') ||
+          '';
+
+        const allText = includeAllText
+          ? $('body').text().replace(/\s+/g, ' ').trim()
+          : '';
+
+        const siteData = {
+          url,
+          title: $('title').text() || '',
+          description,
+          keywords,
+          'all-text': allText
+        };
+
+        let results = [siteData];
+
+        // Recursive crawling if requested
+        if (depth < recursiveLevel) {
+          const links = $('a[href]')
+            .map((_, el) => $(el).attr('href'))
+            .get()
+            .filter(href => href && href.startsWith('http'));
+
+          const uniqueLinks = [...new Set(links)].slice(0, 5); // limit per page
+
+          const childResults = await Promise.allSettled(
+            uniqueLinks.map(link => scrapePage(link, depth + 1, visited))
+          );
+
+          for (const cr of childResults) {
+            if (cr.status === 'fulfilled') results = results.concat(cr.value);
+          }
+        }
+
+        return results;
       } catch (err) {
-        indexData.push({ url: url, error: 'Failed to fetch' });
+        return [{ url, error: 'Failed to fetch or parse' }];
       }
     }
 
-    res.status(200).json({ success: true, data: indexData });
+    // Fetch all URLs in parallel
+    const allResults = await Promise.allSettled(urls.map(url => scrapePage(url)));
+    const indexData = [];
 
+    for (const r of allResults) {
+      if (r.status === 'fulfilled') indexData.push(...r.value);
+      else indexData.push({ error: 'Failed to process URL' });
+    }
+
+    res.status(200).json({ success: true, data: indexData });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: 'Invalid JSON' });
+    res.status(400).json({ error: 'Invalid JSON or request format' });
   }
 };
