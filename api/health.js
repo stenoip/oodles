@@ -1,10 +1,6 @@
-var cors = require('./_cors');
+const { setCors } = require('./_cors');
 
-module.exports = function(req, res) {
-  cors.setCors(res);
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  res.status(200).json({ ok: true });
+module.exports = async (req, res) => {
+  setCors(res);
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
 };
