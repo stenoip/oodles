@@ -1,83 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png" />
   <title>Oodles Search Index Generator</title>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
+    html, body {
+      width: 100vw;
+      height: 100vh;
       margin: 0;
       padding: 0;
+      font-family: 'Frutiger', Arial, Helvetica, sans-serif;
     }
+
+    body.bg-warm {
+      background: linear-gradient(160deg, rgba(255,203,112,1) 0%, rgba(255,92,0,1) 100%);
+      color: #3a1f00;
+      animation: bg 15s infinite ease-in-out alternate;
+      transition: background-size 1s;
+      overflow-x: hidden;
+    }
+
+    @keyframes bg {
+      0% { background-size: 100%; }
+      100% { background-size: 600%; }
+    }
+
     header {
-      background-color: #1a1a1a;
+      background: linear-gradient(180deg, rgba(255,208,137,1) 0%, rgba(255,138,40,1) 76%);
       color: #fff;
-      padding: 20px;
+      padding: 25px 0;
       text-align: center;
+      border-bottom: 3px solid #d85b00;
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
     }
+
     header img {
       width: 150px;
       display: block;
       margin: 0 auto 10px;
+      user-select: none;
     }
+
     main {
-      max-width: 900px;
+      width: 920px;
+      max-width: 90%;
       margin: 30px auto;
-      padding: 20px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px 30px;
+      background: linear-gradient(180deg, rgba(255,237,215,0.8) 3%, rgba(255,244,230,0.9) 100%);
+      border-radius: 15px;
+      box-shadow: inset 0px -10px 30px 15px rgba(255,255,255,0.4),
+                  0px 0px 25px rgba(255,128,0,0.3);
     }
+
     h1, h2 {
       text-align: center;
+      user-select: none;
+      margin: 10px 0;
+      color: #6a2c00;
     }
-    textarea, input, select {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      margin-bottom: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
+
     label {
       font-weight: bold;
-      margin-top: 10px;
-      display: block;
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      color: #7a2a00;
+      gap: 8px;
     }
-    button {
-      display: block;
-      margin: 20px auto;
-      padding: 10px 20px;
+
+    label img.icon {
+      width: 22px;
+      height: 22px;
+      vertical-align: middle;
+      filter: drop-shadow(0px 0px 2px rgba(255,255,255,0.6));
+    }
+
+    textarea, input, select {
+      width: 100%;
+      padding: 12px;
       font-size: 16px;
-      background-color: #1a1a1a;
-      color: #fff;
+      border: 1px solid #f7b97a;
+      border-radius: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      background: rgba(255,255,255,0.9);
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+
+    textarea:focus, input:focus {
+      outline: none;
+      border-color: #ff8c00;
+      box-shadow: 0 0 10px rgba(255,138,40,0.4);
+    }
+
+    button {
+      display: inline-block;
+      margin: 15px 10px 0 0;
+      padding: 12px 24px;
+      font-size: 16px;
+      background: linear-gradient(180deg, rgba(255,167,38,1) 0%, rgba(230,81,0,1) 49%);
+      color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.4s, transform 0.1s;
     }
+
     button:hover {
-      background-color: #333;
+      background: linear-gradient(180deg, rgba(255,191,73,1) 0%, rgba(255,111,0,1) 49%);
     }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
     #output {
-      margin-top: 20px;
+      margin-top: 25px;
       white-space: pre-wrap;
-      background: #f0f0f0;
+      background: rgba(255,245,230,0.9);
       padding: 15px;
-      border-radius: 4px;
+      border-radius: 10px;
       max-height: 500px;
       overflow-y: auto;
       font-family: monospace;
+      border: 1px solid #ffcc80;
+      color: #5a2300;
     }
+
+    .warning {
+      color: #c0392b;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    .warning img.icon {
+      width: 22px;
+      height: 22px;
+    }
+
     .empty-description { color: red; }
-    .empty-keywords { color: orange; }
-    .warning { color: red; font-weight: bold; }
+    .empty-keywords { color: darkorange; }
+
+    footer {
+      text-align: center;
+      color: white;
+      font-size: 14px;
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255,111,0,0.7);
+      border-radius: 10px 10px 0 0;
+    }
   </style>
 </head>
-<body>
+
+<body class="bg-warm">
   <header>
     <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo">
     <h1>Oodles Index Generator</h1>
@@ -85,19 +167,38 @@
 
   <main>
     <h2>Enter URLs to generate index.json</h2>
+
+    <label for="urlsInput">
+      <img src="https://icons.iconarchive.com/icons/iconsmind/outline/512/URL-Window-icon.png" class="icon" alt="URL Icon">
+      URLs
+    </label>
     <textarea id="urlsInput" placeholder="Enter one URL per line"></textarea>
 
-    <label for="recursiveLevel">Recursive Crawl Level (1–10)</label>
+    <label for="recursiveLevel">
+      <img src="https://www.clipartmax.com/png/middle/119-1193149_hard-work-icon-png.png" class="icon" alt="Recursive Icon">
+      Recursive Crawl Level (1–10)
+    </label>
     <input type="number" id="recursiveLevel" min="1" max="10" value="1">
-    <p class="warning">Higher levels may take longer for big sites!</p>
 
-    <label><input type="checkbox" id="includeAllText"> Include all visible text from the site (optional)</label>
+    <p class="warning">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/1/17/Warning.svg" class="icon" alt="Warning Icon">
+      Higher levels may take longer for big sites!
+    </p>
 
-    <button id="generateBtn">Generate Index</button>
-    <button id="downloadBtn" style="display:none;">Download index.json</button>
+    <label>
+      <input type="checkbox" id="includeAllText">
+      Include all visible text from the site (optional)
+    </label>
+
+    <div style="text-align:center;">
+      <button id="generateBtn">Generate Index</button>
+      <button id="downloadBtn" style="display:none;">Download index.json</button>
+    </div>
 
     <div id="output"></div>
   </main>
+
+  <footer>© 2025 Stenoip Company</footer>
 
   <script>
     var generateBtn = document.getElementById('generateBtn');
@@ -116,32 +217,28 @@
         formatted += '{\n';
         formatted += '  "url": "' + item.url + '",\n';
         formatted += '  "title": "' + (item.title || '') + '",\n';
-
         if (!item.description) {
           formatted += '  "description": "<span class=\'empty-description\'></span>",\n';
         } else {
           formatted += '  "description": "' + item.description.replace(/"/g, '\\"') + '",\n';
         }
-
         if (!item.keywords) {
           formatted += '  "keywords": "<span class=\'empty-keywords\'></span>",\n';
         } else {
           formatted += '  "keywords": "' + item.keywords.replace(/"/g, '\\"') + '",\n';
         }
-
         if (item['all-text']) {
           formatted += '  "all-text": "' + item['all-text'].replace(/"/g, '\\"') + '"\n';
         } else {
           formatted += '  "all-text": ""\n';
         }
-
         formatted += '}\n\n';
       }
       return formatted;
     }
 
     generateBtn.addEventListener('click', function() {
-      var urls = urlsInput.value.split('\n').map(function(u) { return u.trim(); }).filter(function(u) { return u !== ''; });
+      var urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u !== '');
       var recursiveLevel = parseInt(recursiveLevelInput.value) || 1;
       var includeAllText = includeAllTextInput.checked;
 
@@ -157,27 +254,27 @@
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           urls: urls,
           recursiveLevel: recursiveLevel,
           includeAllText: includeAllText
         })
       })
-      .then(function(res) {
+      .then(res => {
         if (!res.ok) throw new Error('Network response was not OK: ' + res.status);
         return res.json();
       })
-      .then(function(data) {
+      .then(data => {
         if (data.success) {
           latestData = data.data;
           output.innerHTML = formatJSONWithColor(latestData);
-          downloadBtn.style.display = 'block';
+          downloadBtn.style.display = 'inline-block';
         } else {
           output.innerHTML = 'Error: ' + (data.error || 'Unknown error');
           downloadBtn.style.display = 'none';
         }
       })
-      .catch(function(err) {
+      .catch(err => {
         output.innerHTML = 'Error: ' + err.message;
         downloadBtn.style.display = 'none';
       });
@@ -185,7 +282,6 @@
 
     downloadBtn.addEventListener('click', function() {
       if (!latestData) return;
-
       var blob = new Blob([JSON.stringify(latestData, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
