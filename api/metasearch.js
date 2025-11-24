@@ -5,7 +5,6 @@ var generate = require('./generate');
 var crawlOne = generate.crawlOne;
 
 // --- Praterich AI Configuration ---
-// Note: This URL must be accessible by your Vercel serverless function environment
 const PRATERICH_API_URL = 'https://praterich.vercel.app/api/praterich';
 
 /**
@@ -22,7 +21,7 @@ async function getAiAugmentation(query, crawledResults) {
             text: `--- RESULT ${index + 1} from ${r.source} ---\nTITLE: ${r.title}\nURL: ${r.url}\nSNIPPET: ${r.description}\nCONTENT: ${r.content ? r.content.substring(0, 1000) + '...' : 'No content crawled.'}\n`,
         }));
         
-        // Add the primary user query as the last part
+        // Add the primary user query and task instructions as the last part
         const userQueryPart = {
             text: `Based ONLY on the provided search results, do the following tasks:
             1. Write a concise, objective, 2-3 sentence **AI Overview** summarizing the answer to the user query: "${query}".
@@ -80,16 +79,18 @@ module.exports = async function (req, res) {
     return;
   }
   
-  // NOTE: For compatibility with the frontend's executeSearch, 
-  // which uses a GET method with query parameters, 
-  // you might need to check req.query.q as well, 
-  // but for now, we stick to the provided POST structure.
+  // NOTE: For now, we only support POST method for web search augmentation
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
+  // --- Read all required parameters from the request body ---
   var q = req.body && req.body.q;
+  var page = parseInt(req.body.page) || 1; 
+  var pageSize = parseInt(req.body.pageSize) || 50; 
+  // --------------------------------------------------------
+
   if (!q) {
     res.status(400).json({ error: 'Missing query' });
     return;
@@ -97,9 +98,6 @@ module.exports = async function (req, res) {
 
   try {
     // --- 1. SEARCH SCRAPING (Bing, Yahoo, DDG) ---
-    // ... (Bing, Yahoo, DuckDuckGo scraping logic remains the same)
-    
-    // --- Bing scraping ---
     var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q));
     var $bing = cheerio.load(bingHtml.data);
     var bingResults = [];
@@ -111,7 +109,6 @@ module.exports = async function (req, res) {
         bingResults.push({ title, url, description: desc, source: 'Bing' });
       }
     });
-    console.log('Bing results found:', bingResults.length);
 
     // --- Yahoo scraping ---
     var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q));
@@ -125,7 +122,6 @@ module.exports = async function (req, res) {
         yahooResults.push({ title, url, description: desc, source: 'Yahoo' });
       }
     });
-    console.log('Yahoo results found:', yahooResults.length);
 
     // --- DuckDuckGo scraping ---
     var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q));
@@ -152,7 +148,6 @@ module.exports = async function (req, res) {
         ddgResults.push({ title, url, description: desc, source: 'DuckDuckGo' });
       }
     });
-    console.log('DuckDuckGo results found:', ddgResults.length);
 
     // --- 2. COMBINE AND CRAWL ---
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
@@ -160,7 +155,6 @@ module.exports = async function (req, res) {
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
-      console.log('Crawling', result.source, result.url);
       try {
         var crawled = await crawlOne(result.url);
         crawledResults.push({
@@ -185,15 +179,21 @@ module.exports = async function (req, res) {
       }
     }
 
-    // --- 3. AI AUGMENTATION STEP ---
+    // --- 3. AI AUGMENTATION STEP (Uses ALL crawled results) ---
     const { aiOverview, rankedLinks } = await getAiAugmentation(q, crawledResults);
     
-    // --- 4. RETURN FINAL RESPONSE ---
+    // --- 4. PAGINATION: Slice the results based on the parameters from the body ---
+    const totalResults = crawledResults.length;
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedResults = crawledResults.slice(startIndex, endIndex);
+
+    // --- 5. RETURN FINAL RESPONSE ---
     res.status(200).json({ 
-        items: crawledResults, // Renamed 'results' to 'items' for frontend compatibility
-        total: crawledResults.length,
-        aiOverview: aiOverview,
-        rankedLinks: rankedLinks
+        items: paginatedResults, 
+        total: totalResults,     
+        aiOverview: aiOverview,  // Included AI data
+        rankedLinks: rankedLinks // Included AI data
     });
 
   } catch (err) {
