@@ -74,22 +74,25 @@ async function executeSearch(query, type, page = 1) {
     if (type === 'web') {
         document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
         try {
-            // URL now only contains pagination parameters.
-            var url = BACKEND_BASE + '/metasearch?page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            // URL is simplified for POST request
+            var url = BACKEND_BASE + '/metasearch'; 
             
-            // CRITICAL UPDATE: Use POST method and send query in the request body (JSON)
+            // CRITICAL: Use POST method and send query, page, and pageSize in the request body
             var resp = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ q: query })
+                body: JSON.stringify({ 
+                    q: query,
+                    page: page,
+                    pageSize: MAX_PAGE_SIZE 
+                })
             });
 
             var data = await resp.json();
             
-            // The backend returns 'items' for regular results and 'total' for count.
-            // It also returns 'aiOverview' and 'rankedLinks'.
+            // Pass AI data fields (aiOverview and rankedLinks) to the renderer
             renderLinkResults(data.items, data.total, data.aiOverview, data.rankedLinks);
 
         } catch (error) {
@@ -171,7 +174,7 @@ function renderLinkResults(items, total, aiOverview, rankedLinks) {
     var resultsEl = document.getElementById('linkResults');
     const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
     
-    // Render the new AI content block first
+    // Render the new AI content block first (as requested)
     const overviewBlock = renderAiOverview(aiOverview, rankedLinks);
 
     if (!items || items.length === 0) {
