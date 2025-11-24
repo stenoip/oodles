@@ -1,6 +1,6 @@
 // --- AI Proxy and Search Backend Configuration ---
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-var PRATERICH_API_URL = 'https://praterich.vercel.app/api/praterich'; // Praterich Chat API URL added for reference
+var PRATERICH_API_URL = 'https://praterich.vercel.app/api/praterich'; // Actual AI Proxy URL
 var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
@@ -13,7 +13,7 @@ function escapeHtml(s) {
         .replace(/>/g, '&gt;');
 }
 
-// NEW FUNCTION: Renders the AI Overview and Ranked Links
+// Renders the AI Overview and Ranked Links
 function renderAiOverview(aiOverview, rankedLinks) {
     // Only render if we have at least an overview or a ranked link
     if (!aiOverview && (!rankedLinks || rankedLinks.length === 0)) return '';
@@ -23,13 +23,12 @@ function renderAiOverview(aiOverview, rankedLinks) {
 
     const linkHtml = (rankedLinks || []).map(function(r, index) {
         // Highlight the link marked as the best one (or the first one if none is explicitly marked)
-        // If the backend doesn't provide 'isBest', we default to highlighting the first one.
         const isBest = r.isBest || (index === 0 && !rankedLinks.some(link => link.isBest)); 
         const linkClass = isBest ? 'result-block ai-ranked-link ai-ranked-best' : 'result-block ai-ranked-link';
         const badge = isBest ? '<span class="ai-best-badge">⭐ Best Match</span>' : '';
         
         // Remove file-related terms from the snippet
-        const cleanSnippet = (r.snippet || '').replace(/\b(file|upload|storage)\b/gi, '').trim();
+        const cleanSnippet = (r.description || r.snippet || '').replace(/\b(file|upload|storage)\b/gi, '').trim();
 
         return `
             <div class="${linkClass}">
@@ -75,11 +74,22 @@ async function executeSearch(query, type, page = 1) {
     if (type === 'web') {
         document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
         try {
-            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
-            var resp = await fetch(url);
+            // URL now only contains pagination parameters.
+            var url = BACKEND_BASE + '/metasearch?page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            
+            // CRITICAL UPDATE: Use POST method and send query in the request body (JSON)
+            var resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ q: query })
+            });
+
             var data = await resp.json();
             
-            // Pass AI data fields (aiOverview and rankedLinks) to the renderer
+            // The backend returns 'items' for regular results and 'total' for count.
+            // It also returns 'aiOverview' and 'rankedLinks'.
             renderLinkResults(data.items, data.total, data.aiOverview, data.rankedLinks);
 
         } catch (error) {
@@ -87,11 +97,13 @@ async function executeSearch(query, type, page = 1) {
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
         }
     } else if (type === 'image') {
+        // Image search logic (assumes a standard GET request)
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
         try {
             
+            // Image search typically uses GET/URL-based query
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
-            var resp = await fetch(url);
+            var resp = await fetch(url); 
             var data = await resp.json();
             renderImageResults(data.items, data.total);
         } catch (error) {
@@ -175,7 +187,7 @@ function renderLinkResults(items, total, aiOverview, rankedLinks) {
                 <div class="result-block">
                     <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
                     <div class="small">${escapeHtml(r.url)}</div>
-                    <div>${escapeHtml(r.snippet || '')}</div>
+                    <div>${escapeHtml(r.description || r.snippet || '')}</div>
                 </div>
             `;
         }).join('') + renderPaginationControls(total); 
