@@ -1,15 +1,19 @@
 // --- AI OVERVIEW CONFIGURATION ---
-var AI_API_URL = "https://praterich.vercel.app/api/praterich"; // Placeholder for Praterich API
+var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
+
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search, an AI developed by Stenoip Company.
-Your mission is to provide an **A.I overview based exclusively on the provided search snippets** (the tool result). Do not reference the search tool or its output directly, but synthesize the information provided. You are an AI overview, not a chat bot. You are not for code generation.
+Your mission is to provide an **A.I overview based exclusively on the provided search snippets** (the tool result).
+
+***NEW TASK: Ranked Links Output***
+After your overview, you must provide a section titled '***Top Ranked Links:***'. In this section, you must select and re-order the 5 most relevant links from the original list provided in the search tool result. List them as a standard Markdown numbered list (1., 2., 3., etc.) using only the **Title** and **URL** of the links you select. Only include the 5 most relevant links.
+
+Do not reference the search tool or its output directly, but synthesize the information provided. You are an AI overview, not a chat bot. You are not for code generation.
 You prefer metric units and do not use Oxford commas. You never use Customary or Imperial systems.
 
 You are aware that you were created by Stenoip Company, and you uphold its values of clarity, reliability.
 
-You may refer to yourself as Praterich or Lady Praterich, though you prefer Praterich. You are female-presenting and speak in first person when appropriate.
-
-Your response must be a single, coherent, synthesized overview of the search query based only on the provided snippets. You must not use raw HTML tags in your responses. You should sound intelligent and confident. You do not use transactional phrases or greetings.
+Your response must be a single, coherent, synthesized overview of the search query based only on the provided snippets, followed immediately by the required 'Top Ranked Links:' section. You must not use raw HTML tags in your responses. You should sound intelligent and confident. You do not use transactional phrases or greetings.
 `;
 // --- END AI OVERVIEW CONFIGURATION ---
 
@@ -27,7 +31,7 @@ function escapeHtml(s) {
         .replace(/>/g, '&gt;');
 }
 
-// Helper function to render markdown (requires 'marked' library, assumed available)
+// Helper function to render markdown (requires 'marked' library, assumed available globally)
 function renderMarkdown(text) {
     if (typeof marked !== 'undefined' && marked.parse) {
         return marked.parse(text);
@@ -37,9 +41,10 @@ function renderMarkdown(text) {
 
 
 /**
+ * Creates structured text containing full snippets for the AI model to synthesize.
  * @param {string} query The search query.
  * @param {object[]} items The search results items from the Oodles backend.
- * @returns {string} Structured text containing snippets for the AI model.
+ * @returns {string} Structured text containing snippets.
  */
 function createRawSearchText(query, items) {
     if (!items || items.length === 0) {
@@ -54,14 +59,28 @@ function createRawSearchText(query, items) {
 }
 
 /**
+ * Creates a clean, numbered list of links for the AI to review and re-order.
+ * @param {object[]} items The search results items from the Oodles backend.
+ * @returns {string} A structured list of links.
+ */
+function createRawLinksList(items) {
+    if (!items || items.length === 0) {
+        return 'No links provided.';
+    }
+    
+    // Creates a list of (Index, Title, URL) for the AI to use in its response for ranking.
+    return items.map(function(r, index) {
+        return `[Link ${index + 1}] Title: ${r.title}. URL: ${r.url}`;
+    }).join('\n');
+}
+
+/**
  * Generates and displays the AI Overview based on search results.
- * This function is non-interactive and runs once per search.
  * @param {string} query The search query.
  * @param {object[]} searchItems The list of search result items (for snippets).
- * @param {string} linkMarkdown The formatted links to append to the overview.
  */
-async function generateAIOverview(query, searchItems, linkMarkdown) {
-    var overviewEl = document.getElementById('aiOverview'); // Assuming you have a <div id="aiOverview">
+async function generateAIOverview(query, searchItems) {
+    var overviewEl = document.getElementById('aiOverview'); 
     if (!overviewEl) {
         console.warn("AI Overview element not found (ID 'aiOverview').");
         return;
@@ -70,11 +89,21 @@ async function generateAIOverview(query, searchItems, linkMarkdown) {
     overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is synthesizing the AI Overview...</p>';
 
     var rawWebSearchText = createRawSearchText(query, searchItems);
+    var rawLinksList = createRawLinksList(searchItems);
+
+    // Combine Snippets and Link List into the tool result turn
+    var combinedToolResult = `
+[TOOL_RESULT_FOR_PREVIOUS_TURN]
+--- Search Snippets (for synthesis) ---
+${rawWebSearchText}
+--- Original Links (for ranking) ---
+${rawLinksList}
+`;
 
     // 1. Construct Stateless Prompt
     var conversationParts = [
-        // The tool result is injected as the model's first "turn"
-        { role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawWebSearchText}` }] },
+        // Inject combined search information
+        { role: "model", parts: [{ text: combinedToolResult }] },
         // The user's query is the final prompt
         { role: "user", parts: [{ text: query }] }
     ];
@@ -94,16 +123,14 @@ async function generateAIOverview(query, searchItems, linkMarkdown) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            var errorData = await response.json().catch(() => ({ error: 'Unknown API error' }));
+            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
         }
 
         var data = await response.json();
         var aiResponseText = data.text;
 
-        // 2. Append web links (if provided by the chat component logic)
-        aiResponseText += linkMarkdown;
-
-        // 3. Display the final overview
+        // 2. Display the final overview (which now contains the ranked links)
         overviewEl.innerHTML = renderMarkdown(aiResponseText);
 
     } catch (error) {
@@ -117,7 +144,6 @@ async function executeSearch(query, type, page = 1) {
     if (!query) {
         document.getElementById('linkResults').innerHTML = '<p class="small">No query to search.</p>';
         document.getElementById('imageResults').innerHTML = '<p class="small">No query to search.</p>';
-        // Clear the AI Overview if the query is empty
         var overviewEl = document.getElementById('aiOverview');
         if (overviewEl) overviewEl.innerHTML = '';
         return;
@@ -128,7 +154,6 @@ async function executeSearch(query, type, page = 1) {
     currentPage = page; // Store the current page
     document.getElementById('currentQuery').value = query; // Update the input field
 
-    // Clear AI Overview on every search start
     var overviewEl = document.getElementById('aiOverview');
     if (overviewEl) overviewEl.innerHTML = '';
 
@@ -143,14 +168,7 @@ async function executeSearch(query, type, page = 1) {
             // --- AI OVERVIEW INTEGRATION ---
             // Only generate the AI overview for the first page of web search results
             if (page === 1) {
-                // Format links for display below the AI response
-                var linkMarkdownForAI = data.items.map(function(r) {
-                    var snippet = r.snippet ? r.snippet.substring(0, 70).trim() + (r.snippet.length > 70 ? '...' : '') : '';
-                    return `- [${escapeHtml(r.title)}](${r.url}) - ${snippet}`;
-                }).join('\n');
-                var finalLinkMarkdown = data.items.length > 0 ? `\n\n***Links:***\n\n${linkMarkdownForAI}` : '\n\n***Links:***\n\n- *No web links found.*';
-
-                generateAIOverview(query, data.items, finalLinkMarkdown);
+                generateAIOverview(query, data.items);
             }
             // --- END AI OVERVIEW INTEGRATION ---
 
@@ -162,7 +180,6 @@ async function executeSearch(query, type, page = 1) {
         }
     } else if (type === 'image') {
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
-        // The AI Overview is typically only generated for 'web' search
         if (overviewEl) overviewEl.innerHTML = ''; 
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
@@ -302,7 +319,7 @@ function initializeFromSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let query = urlParams.get('q');
     let searchType = urlParams.get('type') || 'web';
-    let page = parseInt(urlParams.get('page')) || 1; // 💡 Get page from URL
+    let page = parseInt(urlParams.get('page')) || 1; 
 
     // 2. SECOND, check sessionStorage if no URL query is found (for initial redirect from index.html)
     if (!query) {
