@@ -24,6 +24,10 @@ var currentSearchType = 'web';
 var currentPage = 1; 
 var MAX_PAGE_SIZE = 50; 
 
+// --- GLOBAL STATE MODIFICATION ---
+// Default state is now FALSE (AI Overview is OFF by default)
+var isAIOverviewEnabled = false; 
+
 function escapeHtml(s) {
     return String(s)
         .replace(/&/g, '&amp;')
@@ -81,10 +85,17 @@ function createRawLinksList(items) {
  */
 async function generateAIOverview(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    if (!overviewEl) {
-        console.warn("AI Overview element not found (ID 'aiOverview').");
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+
+    // LOGIC: Check if the overview is disabled. This is where the switch state takes effect.
+    if (!isAIOverviewEnabled) {
+        if (overviewEl) overviewEl.innerHTML = '';
+        if (citizenMsgEl) citizenMsgEl.style.display = 'block';
         return;
     }
+    
+    // If enabled, hide the citizen message and proceed
+    if (citizenMsgEl) citizenMsgEl.style.display = 'none';
 
     overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is synthesizing the AI Overview...</p>';
 
@@ -130,7 +141,6 @@ ${rawLinksList}
         var data = await response.json();
         var aiResponseText = data.text;
 
-        // 2. Display the final overview (which now contains the ranked links)
         overviewEl.innerHTML = renderMarkdown(aiResponseText);
 
     } catch (error) {
@@ -155,6 +165,7 @@ async function executeSearch(query, type, page = 1) {
     document.getElementById('currentQuery').value = query; // Update the input field
 
     var overviewEl = document.getElementById('aiOverview');
+    // Clear AI Overview/message area before new search
     if (overviewEl) overviewEl.innerHTML = '';
 
 
@@ -165,9 +176,11 @@ async function executeSearch(query, type, page = 1) {
             var resp = await fetch(url);
             var data = await resp.json();
             
-            // --- AI OVERVIEW INTEGRATION ---
-            // Only generate the AI overview for the first page of web search results
+            // --- AI OVERVIEW INTEGRATION (Always called on page 1) ---
             if (page === 1) {
+                // This function internally checks the global 'isAIOverviewEnabled' state.
+                // Crucially, the AI ranking logic is built into the prompt that is sent,
+                // so the model will perform the ranking whether the final text output is displayed or not.
                 generateAIOverview(query, data.items);
             }
             // --- END AI OVERVIEW INTEGRATION ---
@@ -176,11 +189,19 @@ async function executeSearch(query, type, page = 1) {
         } catch (error) {
             console.error('Web search error:', error);
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
-            if (overviewEl) overviewEl.innerHTML = '<p class="ai-overview-error">Could not fetch web links to generate AI Overview.</p>';
+            
+            // Show error/clear if AI overview was enabled
+            var overviewEl = document.getElementById('aiOverview');
+            if (overviewEl && isAIOverviewEnabled) overviewEl.innerHTML = '<p class="ai-overview-error">Could not fetch web links to generate AI Overview.</p>';
+            else if (overviewEl && !isAIOverviewEnabled) overviewEl.innerHTML = '';
         }
     } else if (type === 'image') {
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images (this may take a few moments as pages are crawled)...</p>';
-        if (overviewEl) overviewEl.innerHTML = ''; 
+        // Clear AI Overview if switching to image search
+        var citizenMsgEl = document.getElementById('goodCitizenMessage');
+        if (overviewEl) overviewEl.innerHTML = '';
+        if (citizenMsgEl && !isAIOverviewEnabled) citizenMsgEl.style.display = 'block';
+
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
             var resp = await fetch(url);
@@ -229,9 +250,20 @@ function switchTab(tabName, executeNewSearch) {
     }
 
     // Clear AI Overview when switching to the image tab
+    var overviewEl = document.getElementById('aiOverview');
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+
     if (newSearchType === 'image') {
-        var overviewEl = document.getElementById('aiOverview');
         if (overviewEl) overviewEl.innerHTML = '';
+        // Only show citizen message if the user has AI disabled
+        if (citizenMsgEl && !isAIOverviewEnabled) {
+            citizenMsgEl.style.display = 'block';
+        } else if (citizenMsgEl) {
+            citizenMsgEl.style.display = 'none';
+        }
+    } else {
+        // If switching back to web, hide citizen message if AI is enabled
+        if (citizenMsgEl && isAIOverviewEnabled) citizenMsgEl.style.display = 'none';
     }
 
     if (executeNewSearch && currentQuery) {
@@ -314,6 +346,49 @@ function renderPaginationControls(totalResults) {
 }
 
 
+// --- TOGGLE INITIALIZATION AND LISTENER ---
+function setupAIOverviewToggle() {
+    var toggle = document.getElementById('aiOverviewToggle');
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+    
+    if (!toggle) return;
+
+    // Load state from session storage
+    var storedState = sessionStorage.getItem('aiOverviewState');
+    if (storedState !== null) {
+        isAIOverviewEnabled = (storedState === 'true');
+    } 
+    // If no stored state, it defaults to FALSE (off), as set globally.
+
+    // Set initial toggle check based on global state
+    toggle.checked = isAIOverviewEnabled;
+
+    // Set initial message state
+    if (!isAIOverviewEnabled && currentSearchType !== 'image') { 
+        if (citizenMsgEl) citizenMsgEl.style.display = 'block';
+    } else {
+         if (citizenMsgEl) citizenMsgEl.style.display = 'none';
+    }
+
+
+    toggle.addEventListener('change', function() {
+        isAIOverviewEnabled = this.checked;
+        sessionStorage.setItem('aiOverviewState', isAIOverviewEnabled);
+        
+        // Re-execute the current search to immediately show/hide the overview
+        if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
+            executeSearch(currentQuery, currentSearchType, currentPage);
+        } else if (!isAIOverviewEnabled && citizenMsgEl) {
+            // If turning off while on another tab/page
+            document.getElementById('aiOverview').innerHTML = '';
+            citizenMsgEl.style.display = 'block';
+        } else if (isAIOverviewEnabled && citizenMsgEl) {
+            citizenMsgEl.style.display = 'none';
+        }
+    });
+}
+// --- END TOGGLE LOGIC ---
+
 function initializeFromSession() {
     // 1. FIRST, check the URL query parameter for 'q' and 'page'
     const urlParams = new URLSearchParams(window.location.search);
@@ -330,6 +405,9 @@ function initializeFromSession() {
     // Clean up session storage regardless of source
     sessionStorage.removeItem('metaSearchQuery');
     sessionStorage.removeItem('searchType');
+
+    // 💡 Setup the toggle BEFORE executing the search
+    setupAIOverviewToggle();
 
     if (query) {
         // 1. Switch the tab (false means don't execute a *new* search, just set the UI state)
