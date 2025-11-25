@@ -6,8 +6,8 @@
 <link rel="icon" href="favicon.ico" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-   /* ------------------------------------------- */
-/* FRUTIGER AERO STYLES - OODLES SEARCH        */
+    /* ------------------------------------------- */
+/* FRUTIGER AERO STYLES - OODLES SEARCH         */
 /* ------------------------------------------- */
 
 /* Base Color System (Aero defaults to bright blue/green) */
@@ -39,7 +39,7 @@ body {
 }
 
 /* ------------------------------------------- */
-/* HEADER + TOP BAR                            */
+/* HEADER + TOP BAR                             */
 /* ------------------------------------------- */
 header {
   padding: 15px 20px;
@@ -169,7 +169,7 @@ hr.divider {
 }
 
 /* ------------------------------------------- */
-/* MAIN CONTENT CONTAINERS                     */
+/* MAIN CONTENT CONTAINERS                      */
 /* ------------------------------------------- */
 .container, .results-section {
   background-color: rgba(255, 255, 255, 0.75);
@@ -229,6 +229,20 @@ hr.divider {
   border-radius: 6px;
 }
 
+/* --- AI OVERVIEW STYLES (New) --- */
+/* Style for loading/error messages within the overview div */
+.ai-overview-loading, .ai-overview-error {
+    text-align: center;
+    font-style: italic;
+    color: #444;
+    padding: 10px 0;
+}
+/* Optional: Style the overview content slightly different */
+#aiOverview p, #aiOverview ul, #aiOverview ol {
+    line-height: 1.6;
+}
+
+
 /* ------------------------------------------- */
 /* FOOTER                                      */
 /* ------------------------------------------- */
@@ -260,7 +274,7 @@ footer {
 }
 
 /* ------------------------------------------- */
-/* RESPONSIVE TWEAKS                           */
+/* RESPONSIVE TWEAKS                            */
 /* ------------------------------------------- */
 @media (max-width: 600px) {
   .logo-area img {
@@ -282,6 +296,7 @@ footer {
 }
 
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
 </head>
 <body>
   <header>
@@ -306,6 +321,10 @@ footer {
   </header>
 
   <div class="container">
+    
+    <div class="results-section" id="aiOverview">
+        </div>
+
     <div class="results-section" id="linksSection">
       <h3>Links</h3>
       <div id="linkResults"><p class="small">Enter a search query.</p></div>
@@ -321,7 +340,7 @@ footer {
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
 
-<script src="frontend_javascript/search-logic.js"></script>
+<script src="https://stenoip.github.io/oodles/frontend_javascript/search-logic.js"></script>
 <script src="ant_walking.js"></script>
 </body>
 </html>
