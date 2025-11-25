@@ -406,7 +406,7 @@ function initializeFromSession() {
     sessionStorage.removeItem('metaSearchQuery');
     sessionStorage.removeItem('searchType');
 
-    // 💡 Setup the toggle BEFORE executing the search
+    //  Setup the toggle BEFORE executing the search
     setupAIOverviewToggle();
 
     if (query) {
