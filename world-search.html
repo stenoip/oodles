@@ -17,11 +17,12 @@
             }
         }
     </script>
+
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
         canvas { display: block; }
 
-        /* 3D World Controls (Movement & Look) */
+        /* 3D World Controls */
         .controls {
             position: fixed;
             bottom: 20px;
@@ -52,7 +53,7 @@
             z-index: 10;
         }
 
-        /* Search UI Overlay */
+        /* Search UI */
         .search-container {
             position: fixed;
             top: 20px;
@@ -69,7 +70,7 @@
             border: 1px solid #ccc;
         }
 
-        /* Results Pop-up (for mobile/debugging) - Hidden by default */
+        /* Results Overlay */
         #resultsOverlay {
             position: fixed;
             top: 60px;
@@ -85,6 +86,7 @@
             z-index: 9;
             display: none;
         }
+
         .result-block {
             margin-bottom: 10px;
             border-bottom: 1px dashed #eee;
@@ -101,7 +103,7 @@
             color: #555;
         }
 
-        /* Footer copyright */
+        /* Footer */
         .footer {
             position: fixed;
             bottom: 5px;
@@ -120,7 +122,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.7);
-            display: flex;
+            display: none; /* HIDDEN BY DEFAULT — FIX */
             justify-content: center;
             align-items: center;
             z-index: 100;
@@ -137,10 +139,6 @@
         .tutorial-content h2 {
             margin-top: 0;
         }
-        .tutorial-content p {
-            font-size: 1rem;
-            color: #333;
-        }
         .close-tutorial {
             background: #d9534f;
             color: white;
@@ -154,68 +152,63 @@
         .close-tutorial:hover {
             background: #c9302c;
         }
-        /* Tutorial Button Styling */
-#tutorialButton {
-    position: fixed;
-    bottom: 70px;  /* Position above the footer */
-    right: 20px;   /* Right alignment */
-    background-color: #007bff;  /* Blue background */
-    color: white;  /* White text */
-    font-size: 16px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);  /* Slight shadow for better visibility */
-    z-index: 10;  /* Make sure it's above other elements */
-    transition: background-color 0.3s ease, transform 0.3s ease;  /* Smooth hover effect */
-}
 
-/* Hover effect */
-#tutorialButton:hover {
-    background-color: #0056b3;  /* Darker blue */
-    transform: scale(1.05);  /* Slight scale-up effect */
-}
-
-/* Focused state for accessibility */
-#tutorialButton:focus {
-    outline: none;  /* Remove default focus outline */
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);  /* Add a custom focus shadow */
-}
-
+        /* Tutorial Button */
+        #tutorialButton {
+            position: fixed;
+            bottom: 70px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        #tutorialButton:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
     </style>
 </head>
+
 <body>
 
-    <!-- Interface for 3D World Search - © Stenoip Company -->
-
+    <!-- Search UI -->
     <div class="search-container">
-     
-
-       <input type="text" id="currentQuery" placeholder="Search the 3D world (e.g., Three.js, planets)" />
+        <input type="text" id="currentQuery" placeholder="Search the 3D world (e.g., Three.js, planets)" />
     </div>
-      <!-- Add a Tutorial button -->
-<button id="tutorialButton" style="position: fixed; bottom: 70px; right: 20px; z-index: 10;">Show Tutorial</button>
 
+    <!-- Tutorial Button -->
+    <button id="tutorialButton">Show Tutorial</button>
+
+    <!-- Movement Controls -->
     <div class="controls">
         <button id="left">◀</button>
         <button id="forward">▲</button>
         <button id="back">▼</button>
         <button id="right">▶</button>
     </div>
+
+    <!-- Look Controls -->
     <div class="look-controls">
         <button id="turnLeft">⤺</button>
         <button id="turnRight">⤻</button>
     </div>
 
+    <!-- Search Results -->
     <div id="resultsOverlay">
         <div id="linkResults"></div>
     </div>
 
+    <!-- Footer -->
     <div class="footer">
         © 2025 Stenoip Company. All rights reserved.
-   
-   </div>
+    </div>
 
     <!-- Tutorial Overlay -->
     <div id="tutorialOverlay" class="tutorial-overlay">
@@ -223,45 +216,42 @@
             <h2>Welcome to the Oodles World Search by Stenoip Company!</h2>
             <p>This interactive interface allows you to search and explore the world in 3D. Here's how to get started:</p>
             <ul>
-                <li><strong>Search:</strong> Type your query (e.g., "ice cream", "Walmart") in the search box at the top.</li>
+                <li><strong>Search:</strong> Type your query (e.g., "ice cream", "Walmart") at the top.</li>
                 <li><strong>Move:</strong> Use the arrow buttons to move around the 3D world.</li>
-                <li><strong>Look Around:</strong> Use the left and right turn buttons to look around in the world.</li>
-                <li><strong>View Results:</strong> After entering your query, the search results will on "buildings". Go to them, click on them to visit website!</li>
+                <li><strong>Look:</strong> Use the turn buttons on the right to rotate your view.</li>
+                <li><strong>Visit:</strong> Search results appear as buildings—walk to one and click to visit the website.</li>
             </ul>
-            <p>If you need more assistance, click the tutorial button again!</p>
             <button class="close-tutorial" onclick="closeTutorial()">Got it!</button>
         </div>
     </div>
 
-   <script type="module" src="world-search/world.js"></script> 
+    <!-- Modules -->
+    <script type="module" src="world-search/world.js"></script> 
     <script type="module" src="world-search/search.js"></script>
 
-  <script>
-    // Function to close the tutorial overlay
-    function closeTutorial() {
-        document.getElementById('tutorialOverlay').style.display = 'none';
-        // Set localStorage so the tutorial won't show again
-        localStorage.setItem('tutorialSeen', 'true');
-    }
-
-    // Function to show the tutorial manually
-    function showTutorial() {
-        document.getElementById('tutorialOverlay').style.display = 'flex';
-    }
-
-    // Check if the tutorial has been seen before
-    window.onload = function() {
-        // If tutorial has not been seen before, show it
-        if (!localStorage.getItem('tutorialSeen')) {
-            setTimeout(() => {
-                document.getElementById('tutorialOverlay').style.display = 'flex';
-            }, 500); // Delay to make it less abrupt
+    <!-- Tutorial Logic -->
+    <script>
+        // Close tutorial and save progress
+        function closeTutorial() {
+            document.getElementById("tutorialOverlay").style.display = "none";
+            localStorage.setItem("tutorialSeen", "true");
         }
-    };
 
-    // Add an event listener to the tutorial button to show the tutorial
-    document.getElementById('tutorialButton').addEventListener('click', showTutorial);
-</script>
+        // Show tutorial manually
+        function showTutorial() {
+            document.getElementById("tutorialOverlay").style.display = "flex";
+        }
+
+        // Show only if never seen before
+        window.onload = function() {
+            if (!localStorage.getItem("tutorialSeen")) {
+                document.getElementById("tutorialOverlay").style.display = "flex";
+            }
+        };
+
+        // Button listener
+        document.getElementById("tutorialButton").addEventListener("click", showTutorial);
+    </script>
 
 </body>
 </html>
