@@ -317,10 +317,21 @@ footer {
     <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">NEW! World Search</a>
     </nav>
 
+    <div class="ai-control-row">
+        <span class="ai-toggle-label">AI Overview</span>
+        <label class="switch" title="Toggle AI Overview On/Off">
+            <input type="checkbox" id="aiOverviewToggle"> 
+            <span class="slider"></span>
+        </label>
+    </div>
     <hr class="divider">
   </header>
 
   <div class="container">
+    
+    <div id="goodCitizenMessage" class="good-citizen-message">
+        Thank you for being a **good internet citizen** by choosing to conserve computational resources. <a href="#" onclick="alert('In a full deployment, this link would lead to a page explaining the environmental and cost benefits of reducing large language model use.'); return false;">Learn more</a>.
+    </div>
     
     <div class="results-section" id="aiOverview">
         </div>
@@ -339,8 +350,8 @@ footer {
   <footer>© Stenoip Company • Oodles Search</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
-
-<script src="https://stenoip.github.io/oodles/frontend_javascript/search-logic.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
+<script src="frontend_javascript/search-logic.js"></script>
 <script src="ant_walking.js"></script>
 </body>
 </html>
