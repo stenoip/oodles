@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Oodles Search</title>
+  <link rel="icon" href="2025_09_13_0vp_Kleki.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* Styling from both versions, prioritizing the retro look */
+    body { background-color: #c0c0c0; font-family: "Courier New", Courier, monospace; color: #000080; margin: 0; }
+    header { background-color: #000080; text-align: center; padding: 20px; border-bottom: 3px double #fff; }
+    header img { max-height: 120px; }
+    nav { background-color: #e0e0e0; padding: 10px; text-align: center; }
+    nav button { margin: 0 5px; padding: 5px 10px; font-size: 14px; background-color: #000080; color: white; border: 2px outset #fff; cursor: pointer; }
+    nav button:hover { background-color: #ffcc00; color: #000; }
+    .container { padding: 20px; max-width: 980px; margin: 0 auto; }
+    .panel { background-color: #fff; border: 2px groove #808080; padding: 15px; margin-bottom: 20px; }
+    .panel h3 { margin-top: 0; }
+    input[type="text"], textarea { width: 100%; padding: 8px; font-size: 16px; border: 2px inset #808080; background-color: #fff; }
+    textarea { min-height: 100px; }
+    .actions { margin-top: 10px; }
+    .actions button { padding: 8px 16px; font-size: 14px; background-color: #000080; color: white; border: 2px outset #fff; cursor: pointer; }
+    .actions button:hover { background-color: #ffcc00; color: #000; }
+    .results { margin-top: 10px; font-size: 14px; }
+    .result-block { margin-bottom: 12px; }
+    .result-block a { color: #000080; font-weight: bold; text-decoration: none; }
+    .result-block a:hover { text-decoration: underline; }
+    footer { text-align: center; margin-top: 40px; font-size: 12px; color: #333; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    .small { font-size: 12px; color: #333; }
+    .pagination { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .pagination button { padding: 4px 10px; }
+    .score { color: #555; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://stenoip.github.io/oodles/2025_09_13_0vp_Kleki.png" alt="Oodles Logo">
+  </header>
+
+  <nav>
+    <button onclick="switchTab('generate')">Generate</button>
+    <button onclick="switchTab('upload')">Upload</button>
+    <button onclick="switchTab('search')">Search</button>
+    <button onclick="switchTab('metasearch')">MetaSearch</button>
+    <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">Stenoip Wonder Computer(Web-Portal)</button>
+    <button onclick="window.location.href='https://stenoip.github.io/learn-centre'">News</button>
+    <button onclick="window.location.href='https://stenoip.github.io/maps'">Maps</button>
+    <hr>
+    <button onclick="switchTab('about')">About</button>
+  </nav>
+
+  <div class="container">
+    <div id="panel-generate" class="panel" style="display:none;">
+      <h3>Generate index.json from URLs</h3>
+      <p class="small">Enter one URL per line. We’ll crawl titles, descriptions, headings, body text and follow links (depth-limited).</p>
+      <textarea id="generateUrls" placeholder="example.com&#10;https://another.com"></textarea>
+      <div class="two-col">
+        <div>
+          <label class="small">Depth (0–2): <input type="text" id="generateDepth" value="1"></label><br>
+          <label class="small">Links per page (1–20): <input type="text" id="generateLinks" value="10"></label><br>
+          <label class="small"><input type="checkbox" id="sameDomainOnly"> Restrict to seed domains</label>
+        </div>
+        <div class="actions">
+          <button onclick="generateIndex()">Generate</button>
+          <button onclick="downloadCurrentIndex()">Download current index.json</button>
+        </div>
+      </div>
+      <div id="generateResults" class="results"></div>
+    </div>
+
+    <div id="panel-upload" class="panel" style="display:none;">
+      <h3>Upload an existing index.json</h3>
+      <input type="file" id="uploadInput" accept="application/json">
+      <div class="actions">
+        <button onclick="loadUploadedIndex()">Load</button>
+        <button onclick="downloadCurrentIndex()">Download current index.json</button>
+      </div>
+      <div id="uploadStatus" class="results"></div>
+    </div>
+    
+    <div id="panel-search" class="panel" style="display:none;">
+      <h3>Search active index.json</h3>
+      <div>
+        <input type="text" id="searchQuery" placeholder="Type your search...">
+        <div class="actions">
+          <button onclick="performSearch(1)">Search</button>
+        </div>
+        <div id="searchResults" class="results"></div>
+        <div id="pagination" class="pagination" style="display:none;">
+          <button onclick="prevPage()">Prev</button>
+          <span id="pageInfo"></span>
+          <button onclick="nextPage()">Next</button>
+          <label class="small">Per page:
+            <input type="text" id="perPage" value="10" style="width:40px;">
+          </label>
+        </div>
+      </div>
+
+      <hr>
+
+      <h4>Ad-hoc single URL search</h4>
+      <input type="text" id="adhocUrl" placeholder="example.com">
+      <div class="actions">
+        <button onclick="performAdhocSearch()">Search this URL</button>
+      </div>
+      <div id="adhocResults" class="results"></div>
+    </div>
+
+    <div id="panel-metasearch" class="panel" style="display:none;">
+        <h3>Oodlebot MetaSearch</h3>
+        <input type="text" id="metaQuery" placeholder="Search the web..." />
+        <div class="actions">
+            <button onclick="runMetaSearch(1)">Search</button>
+        </div>
+        <div class="results" id="metaResults"></div>
+        <div class="pagination" id="metaPager" style="display:none;">
+            <button onclick="metaPrevPage()">Prev</button>
+            <span id="metaPageInfo"></span>
+            <button onclick="metaNextPage()">Next</button>
+        </div>
+    </div>
+
+    <div id="panel-about" class="panel" style="display:none;">
+      <h3>About Us</h3>
+      <p>Oodles Search Engine is a fun and easy way to explore websites you care about.
+        It lets you create your own mini search engine—just pick a website and Oodles will scan it
+        and build a searchable list of pages. You can then search through that list using simple keywords,
+        like looking things up in a digital library you made yourself. No coding is needed and no setup is required.</p>
+      <p>The Oodlebot MetaSearch feature blends results from Brave, Bing, Yahoo and Ecosia with smart deduping and scoring.</p>
+      <p>For more infomation, visit out Github page at <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
+    </div>
+    
+  </div>
+
+  <footer>© Stenoip Company</footer>
+  <p>Officially launched on Sunday 19th October 2025.</p>
+
+ <script>
+    var BACKEND_BASE = 'https://oodles-backend.vercel.app';
+    var activeIndex = [];
+    var currentQuery = '';
+    var currentPage = 1;
+    var totalResults = 0;
+    var currentLimit = 10;
+    var metaState = { q: '', page: 1, pageSize: 10, total: 0 };
+
+
+    // Consolidated switchTab function to handle all panels
+    function switchTab(tab) {
+      // Hide all panels
+      document.getElementById('panel-generate').style.display = 'none';
+      document.getElementById('panel-upload').style.display = 'none';
+      document.getElementById('panel-search').style.display = 'none';
+      document.getElementById('panel-about').style.display = 'none';
+      document.getElementById('panel-metasearch').style.display = 'none';
+      
+      // Show the selected panel
+      var panelId = 'panel-' + tab;
+      var selectedPanel = document.getElementById(panelId);
+      if (selectedPanel) {
+        selectedPanel.style.display = 'block';
+      }
+    }
+    
+    // --- Utility Functions ---
+
+    function normalizeUrl(input) {
+      var trimmed = (input || '').trim();
+      if (!trimmed) return '';
+      if (!/^https?:\/\//i.test(trimmed)) {
+        return 'https://' + trimmed;
+      }
+      return trimmed;
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    
+    // Renders the index preview for local search results
+    function renderIndexPreview(elId, index, showScore) {
+      var el = document.getElementById(elId);
+      if (!index || index.length === 0) {
+        el.innerHTML = 'No items.';
+        return;
+      }
+      var html = '';
+      index.forEach(function(item) {
+        var title = item.title || item.url || 'Untitled';
+        var url = item.url || '#';
+        // Note: Backend 'description' is used for snippet
+        var desc = item.description || '';
+        var score = item._score;
+        html += '<div class="result-block">';
+        // Use escapeHtml for title to prevent XSS
+        html += '<a href="' + url + '" target="_blank" onclick="trackClick(\'' + encodeURIComponent(url) + '\')">' + escapeHtml(title) + '</a><br>';
+        html += '<div class="small">' + escapeHtml(url) + '</div>';
+        html += '<div>' + escapeHtml(desc) + '</div>';
+        if (showScore && typeof score === 'number') {
+          html += '<div class="score">Score: ' + score.toFixed(2) + '</div>';
+        }
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function downloadCurrentIndex() {
+      if (!activeIndex || activeIndex.length === 0) {
+        alert('No active index to download.');
+        return;
+      }
+      var blob = new Blob([JSON.stringify(activeIndex, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    }
+
+    // --- Generate Index Logic ---
+    function generateIndex() {
+      var raw = document.getElementById('generateUrls').value;
+      var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+      if (lines.length === 0) {
+        document.getElementById('generateResults').innerText = 'Please enter at least one URL.';
+        return;
+      }
+      var normalized = lines.map(normalizeUrl);
+      var depth = parseInt(document.getElementById('generateDepth').value || '1', 10);
+      var links = parseInt(document.getElementById('generateLinks').value || '10', 10);
+      var sameDomainOnly = document.getElementById('sameDomainOnly').checked;
+
+      document.getElementById('generateResults').innerText = 'Generating index...';
+
+      fetch(BACKEND_BASE + '/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          urls: normalized,
+          depth: depth,
+          links: links,
+          sameDomain: sameDomainOnly // Backend expects 'sameDomain'
+        })
+      })
+      .then(function(res) {
+        if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.error || 'HTTP Error: ' + res.status); });
+        }
+        return res.json();
+      })
+      .then(function(data) {
+        // Backend returns { results: index, ... }
+        if (!data || !Array.isArray(data.results)) {
+          document.getElementById('generateResults').innerText = 'Unexpected response structure from backend.';
+          return;
+        }
+        activeIndex = data.results;
+        document.getElementById('generateResults').innerText = `Index generated successfully: ${activeIndex.length} items.`;
+        // Render a small preview or confirmation
+        renderIndexPreview('generateResults', activeIndex.slice(0, 5), false);
+      })
+      .catch(function(err) {
+        document.getElementById('generateResults').innerText = 'Error generating: ' + err.message;
+      });
+    }
+
+    // --- Upload Index Logic ---
+    function loadUploadedIndex() {
+      var input = document.getElementById('uploadInput');
+      if (!input.files || input.files.length === 0) {
+        document.getElementById('uploadStatus').innerText = 'Please select a JSON file.';
+        return;
+      }
+      var file = input.files[0];
+      var reader = new FileReader();
+      reader.onload = function() {
+        try {
+          var json = JSON.parse(reader.result);
+          // The index is expected to be an array of documents
+          if (!Array.isArray(json)) {
+            document.getElementById('uploadStatus').innerText = 'File must be an array of items (index).';
+            return;
+          }
+          activeIndex = json;
+          document.getElementById('uploadStatus').innerText = 'Index loaded: ' + activeIndex.length + ' items.';
+        } catch (e) {
+          document.getElementById('uploadStatus').innerText = 'Invalid JSON file: ' + e.message;
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // --- Local Search Logic ---
+    function performSearch(page) {
+      if (!activeIndex || activeIndex.length === 0) {
+        document.getElementById('searchResults').innerText = 'No active index. Generate or upload first.';
+        return;
+      }
+      currentQuery = document.getElementById('searchQuery').value.trim();
+      if (!currentQuery) {
+        document.getElementById('searchResults').innerText = 'Please enter a search term.';
+        return;
+      }
+      currentPage = page || 1;
+      currentLimit = parseInt(document.getElementById('perPage').value || '10', 10);
+      
+      document.getElementById('searchResults').innerText = 'Searching active index...';
+
+      fetch(BACKEND_BASE + '/search', {
+        method: 'POST', // Local index search uses POST with index in body
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: currentQuery,
+          index: activeIndex, // Index data sent in body
+          page: currentPage,
+          limit: currentLimit
+        })
+      })
+      .then(function(res) {
+        if (!res.ok) {
+            return res.json().then(err => { throw new Error(err.error || 'HTTP Error: ' + res.status); });
+        }
+        return res.json();
+      })
+      .then(function(data) {
+        // Backend returns { results: paged, total: total, ... }
+        if (!data || !Array.isArray(data.results)) {
+          document.getElementById('searchResults').innerText = 'Unexpected response structure from backend.';
+          return;
+        }
+        totalResults = data.total || 0;
+        renderIndexPreview('searchResults', data.results, true);
+        updatePagination();
+      })
+      .catch(function(err) {
+        document.getElementById('searchResults').innerText = 'Error searching: ' + err.message;
+      });
+    }
+
+    function performAdhocSearch() {
+      var rawUrl = document.getElementById('adhocUrl').value.trim();
+      var url = normalizeUrl(rawUrl);
+      var q = document.getElementById('searchQuery').value.trim();
+      if (!url) {
+        document.getElementById('adhocResults').innerText = 'Please enter a URL.';
+        return;
+      }
+      if (!q) {
+        document.getElementById('adhocResults').innerText = 'Please enter a search term (above).';
+        return;
+      }
+      
+      document.getElementById('adhocResults').innerText = 'Ad-hoc searching single URL...';
+      // Ad-hoc search uses GET /search?q=...&url=...
+      var endpoint = BACKEND_BASE + '/search?q=' + encodeURIComponent(q) + '&url=' + encodeURIComponent(url);
+      
+      fetch(endpoint)
+        .then(function(res) {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'HTTP Error: ' + res.status); });
+            }
+            return res.json();
+        })
+        .then(function(data) {
+          // Backend returns { results: paged, total: total, ... }
+          if (!data || !Array.isArray(data.results)) {
+            document.getElementById('adhocResults').innerText = 'Unexpected response structure from backend.';
+            return;
+          }
+          // The ad-hoc search is a single page, so no need to update main pagination
+          renderIndexPreview('adhocResults', data.results, true);
+        })
+        .catch(function(err) {
+          document.getElementById('adhocResults').innerText = 'Error ad-hoc searching: ' + err.message;
+        });
+    }
+
+    function updatePagination() {
+      var pagEl = document.getElementById('pagination');
+      var pageInfo = document.getElementById('pageInfo');
+      if (totalResults <= currentLimit) {
+        pagEl.style.display = 'none';
+        return;
+      }
+      var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+      pagEl.style.display = 'flex';
+      pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + totalResults + ' results)';
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        performSearch(currentPage - 1);
+      }
+    }
+
+    function nextPage() {
+      var totalPages = Math.max(1, Math.ceil(totalResults / currentLimit));
+      if (currentPage < totalPages) {
+        performSearch(currentPage + 1);
+      }
+    }
+
+    function trackClick(encodedUrl) {
+      try {
+        var actualUrl = decodeURIComponent(encodedUrl);
+        fetch(BACKEND_BASE + '/analytics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: actualUrl, query: currentQuery })
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    // --- MetaSearch Logic (Kept for completeness) ---
+    async function runMetaSearch(toPage) {
+        var q = document.getElementById('metaQuery')?.value.trim();
+        if (!q) {
+            document.getElementById('metaResults').innerHTML = '<div class="small">Please enter a search query.</div>';
+            document.getElementById('metaPager').style.display = 'none';
+            return;
+        }
+        metaState.q = q;
+        metaState.page = toPage || 1;
+
+        var resultsEl = document.getElementById('metaResults');
+        resultsEl.innerHTML = '<div class="small">Searching…</div>';
+
+        try {
+            const url = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(metaState.q)}&page=${metaState.page}&pageSize=${metaState.pageSize}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('Search failed');
+            const data = await resp.json();
+            metaState.total = data.total;
+            renderMetaResults(data.items, data.page, data.pageSize, data.total);
+        } catch (e) {
+            resultsEl.innerHTML = '<div class="small">Something went wrong. Please try again.</div>';
+            document.getElementById('metaPager').style.display = 'none';
+        }
+    }
+
+    function renderMetaResults(items, page, pageSize, total) {
+        var resultsEl = document.getElementById('metaResults');
+        if (!items || items.length === 0) {
+            resultsEl.innerHTML = '<div class="small">No results found.</div>';
+            document.getElementById('metaPager').style.display = 'none';
+            return;
+        }
+
+        resultsEl.innerHTML = items.map(r => `
+            <div class="result-block">
+                <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+                <div class="small">${escapeHtml(r.url)}</div>
+                <div>${escapeHtml(r.snippet || '')}</div>
+                <div class="score">Source: ${r.source} • Score: ${r.score.toFixed(2)}</div>
+            </div>
+        `).join('');
+
+        var totalPages = Math.max(1, Math.ceil(total / pageSize));
+        var pager = document.getElementById('metaPager');
+        pager.style.display = 'flex';
+        document.getElementById('metaPageInfo').textContent = `Page ${page} of ${totalPages}`;
+    }
+
+    function metaPrevPage() {
+        if (metaState.page > 1) runMetaSearch(metaState.page - 1);
+    }
+    function metaNextPage() {
+        var totalPages = Math.max(1, Math.ceil(metaState.total / metaState.pageSize));
+        if (metaState.page < totalPages) runMetaSearch(metaState.page + 1);
+    }
+    // --- End MetaSearch Logic ---
+
+
+    // Initialize the default tab to 'generate'
+    switchTab('generate');
+
+    // Add event listener for Enter key on MetaSearch
+    document.getElementById('panel-metasearch')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('metaQuery') === document.activeElement) {
+            runMetaSearch(1);
+        }
+    });
+
+    // Add event listener for Enter key on Local Search
+    document.getElementById('panel-search')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('searchQuery') === document.activeElement) {
+            performSearch(1);
+        }
+    });
+
+    // Optional health check
+    (function pingHealth() {
+      fetch(BACKEND_BASE + '/health')
+        .then(function(res) { return res.json(); })
+        .then(function(data) { console.log('Backend health:', data); })
+        .catch(function() { console.warn('Backend health check failed'); });
+    })();
+</script>
+</body>
+</html>
