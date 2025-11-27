@@ -3,74 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/png">
     <title>Oodles Video Search</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for visual polish */
+        /* Custom styles for YouTube-like visual polish */
         :root {
-            --primary-color: #ef4444; /* Red 500 */
+            --youtube-red: #ff0000;
+            --youtube-dark-gray: #212121;
+            --youtube-light-gray: #f9f9f9;
+            --youtube-text-color: #030303;
+            --youtube-secondary-text: #606060;
         }
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: rgb(255,150,0);
+            font-family: 'Roboto', 'Arial', sans-serif; /* Closer to YouTube's font */
+            background-color: var(--youtube-light-gray);
+            color: var(--youtube-text-color);
+        }
+        .header {
+            background-color: #fff; /* White background for header */
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .search-input {
+            border: 1px solid #ccc;
+            border-right: none;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
         }
         .search-button {
+            background-color: #f8f8f8;
+            border: 1px solid #ccc;
+            color: var(--youtube-secondary-text);
             transition: all 0.2s ease-in-out;
-            background-image: linear-gradient(to right, #dc2626, #b91c1c);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
         .search-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            background-color: #f0f0f0;
+            box-shadow: 0 1px 0 rgba(0,0,0,.05);
         }
-        .result-card {
+        /* Video card specific styles */
+        .video-card {
+            background-color: #fff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer; /* Indicate it's clickable */
         }
-        .result-card:hover {
+        .video-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .video-thumbnail-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            overflow: hidden;
+            background-color: black;
+        }
+        .video-thumbnail-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .channel-info {
+            color: var(--youtube-secondary-text);
+        }
+        .video-title {
+            color: var(--youtube-text-color);
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8">
+<body class="min-h-screen">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Oodles Video Search</h1>
-           
-        </header>
+    
 
-        <!-- Search Input Section -->
-        <div class="flex flex-col sm:flex-row gap-4 mb-8 p-6 bg-white shadow-xl rounded-xl">
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Enter search query (e.g., 'gemini model update')"
-                class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
-                onkeydown="if(event.key === 'Enter') searchVideos()"
-            >
-            <button 
-                id="searchButton" 
-                onclick="searchVideos()"
-                class="search-button px-6 py-3 text-white font-semibold rounded-lg hover:bg-red-700 active:bg-red-800 transition duration-150 ease-in-out"
-            >
-                Search Videos
-            </button>
+<header class="header flex items-center justify-between p-4 mb-6 sticky top-0 z-10">
+        <div class="flex items-center space-x-4">
+            
+
+<svg class="w-6 h-6 text-gray-700 cursor-pointer hidden sm:block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg>
+            
+
+<a href="#" class="flex items-center">
+                <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo" class="h-8 w-auto">
+            </a>
+        </div>
+        
+        
+
+<div class="flex-grow max-w-xl mx-4">
+            <div class="flex">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search"
+                    class="search-input flex-grow p-2 rounded-l-full focus:outline-none focus:border-blue-500 text-gray-700 pl-4"
+                    onkeydown="if(event.key === 'Enter') searchVideos()"
+                >
+                <button 
+                    id="searchButton" 
+                    onclick="searchVideos()"
+                    class="search-button px-5 py-2 rounded-r-full text-sm hover:bg-gray-200"
+                >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Notification/Loading Area -->
-        <div id="statusMessage" class="text-center mb-6 p-3 rounded-lg font-medium hidden"></div>
+        <div class="flex items-center space-x-4">
+            
 
-        <!-- Results Area -->
-        <div id="resultsContainer" class="grid gap-6">
-            <!-- Results will be injected here -->
+<svg class="w-6 h-6 text-gray-700 cursor-pointer hidden sm:block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path></svg>
+            
+
+<svg class="w-6 h-6 text-gray-700 cursor-pointer hidden sm:block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 110-6 3 3 0 010 6z"></path></svg>
+            
+
+<div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-medium text-gray-700 cursor-pointer">J</div>
         </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+
+<div id="statusMessage" class="text-center mb-6 p-3 rounded-lg font-medium hidden"></div>
+
+        
+
+<div id="resultsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            
+
+</div>
 
     </div>
 
     <script>
-       
+        
         const API_BASE_URL = 'https://oodles-backend.vercel.app'; 
         const SEARCH_ENDPOINT = '/video-search';
 
@@ -84,7 +154,7 @@
          */
         function showStatus(message, type = 'info') {
             statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-blue-100', 'text-blue-700');
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-blue-100', 'text-blue-700', 'bg-yellow-100', 'text-yellow-700');
 
             if (type === 'error') {
                 statusMessage.classList.add('bg-red-100', 'text-red-700');
@@ -93,10 +163,11 @@
             } else { // info
                 statusMessage.classList.add('bg-blue-100', 'text-blue-700');
             }
+            statusMessage.classList.remove('hidden'); // Ensure it's visible
         }
 
         /**
-         * Renders the video results on the page.
+         * Renders the video results on the page, using iframes.
          * @param {Array} items - Array of video search result items.
          */
         function renderResults(items) {
@@ -112,48 +183,51 @@
             items.forEach(item => {
                 const snippet = item.snippet;
                 const videoId = item.id.videoId;
-                const thumbnailUrl = snippet.thumbnails.medium.url;
+                const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
                 
-                // Create the result card element
-                const card = document.createElement('a');
-                card.href = `https://www.youtube.com/watch?v=${videoId}`;
-                card.target = '_blank';
+                // Create the video card element
+                const card = document.createElement('div');
                 card.classList.add(
-                    'result-card', 'bg-white', 'rounded-xl', 'shadow-lg', 'overflow-hidden',
-                    'flex', 'flex-col', 'md:flex-row', 'transform', 'hover:shadow-2xl'
+                    'video-card', 'rounded-lg', 'overflow-hidden'
                 );
 
-                // Thumbnail container
-                const imgContainer = document.createElement('div');
-                imgContainer.classList.add('w-full', 'md:w-1/3', 'aspect-video', 'flex-shrink-0');
+                // Iframe container
+                const mediaContainer = document.createElement('div');
+                mediaContainer.classList.add('video-thumbnail-container'); // Apply 16:9 aspect ratio CSS
                 
-                const img = document.createElement('img');
-                img.src = thumbnailUrl;
-                img.alt = snippet.title;
-                img.classList.add('w-full', 'h-full', 'object-cover');
-                imgContainer.appendChild(img);
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                iframe.title = snippet.title;
+                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                iframe.allowFullscreen = true;
+                mediaContainer.appendChild(iframe);
 
                 // Text content container
                 const textContent = document.createElement('div');
-                textContent.classList.add('p-4', 'md:p-6', 'flex-grow');
+                textContent.classList.add('p-3'); // Smaller padding for card text
 
-                const title = document.createElement('h2');
-                title.textContent = snippet.title;
-                title.classList.add('text-lg', 'sm:text-xl', 'font-bold', 'text-gray-900', 'line-clamp-2', 'mb-2');
-                
+                // Title Link
+                const titleLink = document.createElement('a');
+                titleLink.href = videoUrl;
+                titleLink.target = '_blank';
+                titleLink.textContent = snippet.title;
+                titleLink.classList.add('video-title', 'block', 'text-base', 'font-medium', 'line-clamp-2', 'mb-1', 'hover:underline');
+
+                // Channel Title
                 const channel = document.createElement('p');
-                channel.textContent = `Channel: ${snippet.channelTitle}`;
-                channel.classList.add('text-sm', 'font-semibold', 'text-red-600', 'mb-2');
-
-                const description = document.createElement('p');
-                description.textContent = snippet.description;
-                description.classList.add('text-gray-600', 'text-sm', 'line-clamp-3');
-
-                textContent.appendChild(title);
-                textContent.appendChild(channel);
-                textContent.appendChild(description);
+                channel.textContent = snippet.channelTitle;
+                channel.classList.add('channel-info', 'text-sm', 'line-clamp-1');
                 
-                card.appendChild(imgContainer);
+                // You could add published date here if your API provides it
+                // const publishedDate = document.createElement('p');
+                // publishedDate.textContent = `• ${new Date(snippet.publishedAt).toLocaleDateString()}`;
+                // publishedDate.classList.add('channel-info', 'text-xs');
+
+                textContent.appendChild(titleLink);
+                textContent.appendChild(channel);
+                // textContent.appendChild(publishedDate); // Uncomment if adding published date
+                
+                card.appendChild(mediaContainer);
                 card.appendChild(textContent);
 
                 resultsContainer.appendChild(card);
@@ -171,17 +245,13 @@
                 return;
             }
 
-            // --- IMPORTANT NOTE ---
-            // You MUST replace 'YOUR_VERCEL_DEPLOYMENT_URL' with the actual URL
-            // of your deployed Vercel application for the fetch to work correctly.
             if (API_BASE_URL === 'YOUR_VERCEL_DEPLOYMENT_URL') {
                 showStatus('CRITICAL ERROR: Please update API_BASE_URL in the JavaScript code to your Vercel deployment URL or localhost:3000 if running locally.', 'error');
                 return;
             }
-            // ----------------------
 
             searchButton.disabled = true;
-            searchButton.textContent = 'Searching...';
+            searchButton.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12c0 2.21.894 4.205 2.342 5.656M16 12a8 8 0 01-8 8H3"></path></svg>'; // Spinner for searching
             showStatus(`Searching for "${query}"...`, 'loading');
             resultsContainer.innerHTML = ''; // Clear old results
             
@@ -196,7 +266,6 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // Handle errors returned by the serverless function
                     const errorMessage = data.error || 'An unknown error occurred on the server.';
                     showStatus(`Search Error: ${errorMessage}`, 'error');
                     console.error('API Error Details:', data.details || data);
@@ -210,7 +279,7 @@
                 showStatus(`Connection Error: Could not reach the API at ${API_BASE_URL}. Check console for details.`, 'error');
             } finally {
                 searchButton.disabled = false;
-                searchButton.textContent = 'Search Videos';
+                searchButton.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>'; // Reset search icon
             }
         }
     </script>
