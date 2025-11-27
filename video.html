@@ -38,7 +38,6 @@
     <div class="max-w-4xl mx-auto">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Oodles Video Search</h1>
-           
         </header>
 
         <!-- Search Input Section -->
@@ -67,10 +66,28 @@
             <!-- Results will be injected here -->
         </div>
 
+        <!-- Additional Sections -->
+        <div id="peopleAlsoWatch" class="mt-8">
+            <h2 class="text-2xl font-bold mb-4">People Also Watch</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="peopleAlsoWatchContainer">
+                <!-- Related video items will be injected here -->
+            </div>
+        </div>
+
+        <div id="whatsNext" class="mt-8">
+            <h2 class="text-2xl font-bold mb-4">What is Next</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="whatsNextContainer">
+                <!-- Next video items will be injected here -->
+            </div>
+        </div>
     </div>
 
+    <footer class="text-center py-6 bg-gray-900 text-white mt-8">
+    <p>&copy; 2025 Stenoip Company. All rights reserved.</p>
+</footer>
+
+    <!-- Copyright Stenoip Company-->
     <script>
-       
         const API_BASE_URL = 'https://oodles-backend.vercel.app'; 
         const SEARCH_ENDPOINT = '/video-search';
 
@@ -78,6 +95,8 @@
         const searchButton = document.getElementById('searchButton');
         const resultsContainer = document.getElementById('resultsContainer');
         const statusMessage = document.getElementById('statusMessage');
+        const peopleAlsoWatchContainer = document.getElementById('peopleAlsoWatchContainer');
+        const whatsNextContainer = document.getElementById('whatsNextContainer');
 
         /**
          * Utility function to show status messages
@@ -101,7 +120,9 @@
          */
         function renderResults(items) {
             resultsContainer.innerHTML = '';
-            
+            peopleAlsoWatchContainer.innerHTML = '';
+            whatsNextContainer.innerHTML = '';
+
             if (!items || items.length === 0) {
                 showStatus('No results found for your query.', 'info');
                 return;
@@ -113,25 +134,22 @@
                 const snippet = item.snippet;
                 const videoId = item.id.videoId;
                 const thumbnailUrl = snippet.thumbnails.medium.url;
-                
-                // Create the result card element
-                const card = document.createElement('a');
-                card.href = `https://www.youtube.com/watch?v=${videoId}`;
-                card.target = '_blank';
-                card.classList.add(
-                    'result-card', 'bg-white', 'rounded-xl', 'shadow-lg', 'overflow-hidden',
-                    'flex', 'flex-col', 'md:flex-row', 'transform', 'hover:shadow-2xl'
-                );
 
-                // Thumbnail container
-                const imgContainer = document.createElement('div');
-                imgContainer.classList.add('w-full', 'md:w-1/3', 'aspect-video', 'flex-shrink-0');
-                
-                const img = document.createElement('img');
-                img.src = thumbnailUrl;
-                img.alt = snippet.title;
-                img.classList.add('w-full', 'h-full', 'object-cover');
-                imgContainer.appendChild(img);
+                // Create the result card with iframe
+                const card = document.createElement('div');
+                card.classList.add('result-card', 'bg-white', 'rounded-xl', 'shadow-lg', 'overflow-hidden', 'flex', 'flex-col', 'md:flex-row', 'transform', 'hover:shadow-2xl');
+
+                // Embed video iframe
+                const iframeContainer = document.createElement('div');
+                iframeContainer.classList.add('w-full', 'md:w-1/3', 'aspect-video', 'flex-shrink-0');
+
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                iframe.frameborder = "0";
+                iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowfullscreen = true;
+                iframe.classList.add('w-full', 'h-full');
+                iframeContainer.appendChild(iframe);
 
                 // Text content container
                 const textContent = document.createElement('div');
@@ -140,7 +158,7 @@
                 const title = document.createElement('h2');
                 title.textContent = snippet.title;
                 title.classList.add('text-lg', 'sm:text-xl', 'font-bold', 'text-gray-900', 'line-clamp-2', 'mb-2');
-                
+
                 const channel = document.createElement('p');
                 channel.textContent = `Channel: ${snippet.channelTitle}`;
                 channel.classList.add('text-sm', 'font-semibold', 'text-red-600', 'mb-2');
@@ -152,14 +170,56 @@
                 textContent.appendChild(title);
                 textContent.appendChild(channel);
                 textContent.appendChild(description);
-                
-                card.appendChild(imgContainer);
+
+                card.appendChild(iframeContainer);
                 card.appendChild(textContent);
 
                 resultsContainer.appendChild(card);
+
+                // Optionally, add to "People Also Watch" or "What's Next"
+                if (peopleAlsoWatchContainer) {
+                    addRelatedVideo(snippet, peopleAlsoWatchContainer);
+                }
+                if (whatsNextContainer) {
+                    addRelatedVideo(snippet, whatsNextContainer);
+                }
             });
         }
 
+        function addRelatedVideo(snippet, container) {
+            const card = document.createElement('div');
+            card.classList.add('bg-white', 'rounded-xl', 'shadow-lg', 'overflow-hidden', 'flex', 'flex-col', 'md:flex-row');
+
+            const iframeContainer = document.createElement('div');
+            iframeContainer.classList.add('w-full', 'md:w-1/3', 'aspect-video', 'flex-shrink-0');
+
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube.com/embed/${snippet.resourceId.videoId}`;
+            iframe.frameborder = "0";
+            iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
+            iframe.allowfullscreen = true;
+            iframe.classList.add('w-full', 'h-full');
+            iframeContainer.appendChild(iframe);
+
+            const textContent = document.createElement('div');
+            textContent.classList.add('p-4', 'md:p-6', 'flex-grow');
+
+            const title = document.createElement('h2');
+            title.textContent = snippet.title;
+            title.classList.add('text-lg', 'sm:text-xl', 'font-bold', 'text-gray-900', 'line-clamp-2', 'mb-2');
+
+            const channel = document.createElement('p');
+            channel.textContent = `Channel: ${snippet.channelTitle}`;
+            channel.classList.add('text-sm', 'font-semibold', 'text-red-600', 'mb-2');
+
+            textContent.appendChild(title);
+            textContent.appendChild(channel);
+
+            card.appendChild(iframeContainer);
+            card.appendChild(textContent);
+
+            container.appendChild(card);
+        }
 
         /**
          * Main function to initiate the video search.
@@ -171,20 +231,18 @@
                 return;
             }
 
-            // --- IMPORTANT NOTE ---
-            // You MUST replace 'YOUR_VERCEL_DEPLOYMENT_URL' with the actual URL
-            // of your deployed Vercel application for the fetch to work correctly.
-            if (API_BASE_URL === 'YOUR_VERCEL_DEPLOYMENT_URL') {
-                showStatus('CRITICAL ERROR: Please update API_BASE_URL in the JavaScript code to your Vercel deployment URL or localhost:3000 if running locally.', 'error');
-                return;
+            // Get query from URL (e.g., video.html?q=)
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryFromURL = urlParams.get('q');
+            if (queryFromURL) {
+                searchInput.value = queryFromURL;
             }
-            // ----------------------
 
             searchButton.disabled = true;
             searchButton.textContent = 'Searching...';
             showStatus(`Searching for "${query}"...`, 'loading');
             resultsContainer.innerHTML = ''; // Clear old results
-            
+
             try {
                 const url = `${API_BASE_URL}${SEARCH_ENDPOINT}?query=${encodeURIComponent(query)}`;
                 
@@ -203,7 +261,7 @@
                     return;
                 }
 
-                renderResults(data);
+                renderResults(data.items);
 
             } catch (error) {
                 console.error('Fetch operation failed:', error);
