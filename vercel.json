@@ -6,7 +6,8 @@
     { "src": "api/search.js", "use": "@vercel/node" },
     { "src": "api/analytics.js", "use": "@vercel/node" },
     { "src": "api/health.js", "use": "@vercel/node" },
-    { "src": "api/not-found.js", "use": "@vercel/node" }
+    { "src": "api/not-found.js", "use": "@vercel/node" },
+    { "src": "api/video-search.js", "use": "@vercel/node" } 
   ],
   "routes": [
     { "src": "/metasearch", "dest": "/api/index.js" },
@@ -16,6 +17,5 @@
     { "src": "/health", "dest": "/api/health.js" },
     { "src": "/video-search", "dest": "/api/video-search.js" },
     { "src": "/(.*)", "dest": "/api/not-found.js" }
-    
   ]
 }
