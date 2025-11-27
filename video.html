@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oodles Video Search</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for visual polish */
+        :root {
+            --primary-color: #ef4444; /* Red 500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: rgb(255,150,0);
+        }
+        .search-button {
+            transition: all 0.2s ease-in-out;
+            background-image: linear-gradient(to right, #dc2626, #b91c1c);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .search-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .result-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Oodles Video Search</h1>
+           
+        </header>
+
+        <!-- Search Input Section -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-8 p-6 bg-white shadow-xl rounded-xl">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Enter search query (e.g., 'gemini model update')"
+                class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-700"
+                onkeydown="if(event.key === 'Enter') searchVideos()"
+            >
+            <button 
+                id="searchButton" 
+                onclick="searchVideos()"
+                class="search-button px-6 py-3 text-white font-semibold rounded-lg hover:bg-red-700 active:bg-red-800 transition duration-150 ease-in-out"
+            >
+                Search Videos
+            </button>
+        </div>
+
+        <!-- Notification/Loading Area -->
+        <div id="statusMessage" class="text-center mb-6 p-3 rounded-lg font-medium hidden"></div>
+
+        <!-- Results Area -->
+        <div id="resultsContainer" class="grid gap-6">
+            <!-- Results will be injected here -->
+        </div>
+
+    </div>
+
+    <script>
+       
+        const API_BASE_URL = 'https://oodles-backend.vercel.app'; 
+        const SEARCH_ENDPOINT = '/video-search';
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const statusMessage = document.getElementById('statusMessage');
+
+        /**
+         * Utility function to show status messages
+         */
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-blue-100', 'text-blue-700');
+
+            if (type === 'error') {
+                statusMessage.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'loading') {
+                statusMessage.classList.add('bg-yellow-100', 'text-yellow-700');
+            } else { // info
+                statusMessage.classList.add('bg-blue-100', 'text-blue-700');
+            }
+        }
+
+        /**
+         * Renders the video results on the page.
+         * @param {Array} items - Array of video search result items.
+         */
+        function renderResults(items) {
+            resultsContainer.innerHTML = '';
+            
+            if (!items || items.length === 0) {
+                showStatus('No results found for your query.', 'info');
+                return;
+            }
+
+            statusMessage.classList.add('hidden'); // Hide status on success
+
+            items.forEach(item => {
+                const snippet = item.snippet;
+                const videoId = item.id.videoId;
+                const thumbnailUrl = snippet.thumbnails.medium.url;
+                
+                // Create the result card element
+                const card = document.createElement('a');
+                card.href = `https://www.youtube.com/watch?v=${videoId}`;
+                card.target = '_blank';
+                card.classList.add(
+                    'result-card', 'bg-white', 'rounded-xl', 'shadow-lg', 'overflow-hidden',
+                    'flex', 'flex-col', 'md:flex-row', 'transform', 'hover:shadow-2xl'
+                );
+
+                // Thumbnail container
+                const imgContainer = document.createElement('div');
+                imgContainer.classList.add('w-full', 'md:w-1/3', 'aspect-video', 'flex-shrink-0');
+                
+                const img = document.createElement('img');
+                img.src = thumbnailUrl;
+                img.alt = snippet.title;
+                img.classList.add('w-full', 'h-full', 'object-cover');
+                imgContainer.appendChild(img);
+
+                // Text content container
+                const textContent = document.createElement('div');
+                textContent.classList.add('p-4', 'md:p-6', 'flex-grow');
+
+                const title = document.createElement('h2');
+                title.textContent = snippet.title;
+                title.classList.add('text-lg', 'sm:text-xl', 'font-bold', 'text-gray-900', 'line-clamp-2', 'mb-2');
+                
+                const channel = document.createElement('p');
+                channel.textContent = `Channel: ${snippet.channelTitle}`;
+                channel.classList.add('text-sm', 'font-semibold', 'text-red-600', 'mb-2');
+
+                const description = document.createElement('p');
+                description.textContent = snippet.description;
+                description.classList.add('text-gray-600', 'text-sm', 'line-clamp-3');
+
+                textContent.appendChild(title);
+                textContent.appendChild(channel);
+                textContent.appendChild(description);
+                
+                card.appendChild(imgContainer);
+                card.appendChild(textContent);
+
+                resultsContainer.appendChild(card);
+            });
+        }
+
+
+        /**
+         * Main function to initiate the video search.
+         */
+        async function searchVideos() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                showStatus('Please enter a search term.', 'info');
+                return;
+            }
+
+            // --- IMPORTANT NOTE ---
+            // You MUST replace 'YOUR_VERCEL_DEPLOYMENT_URL' with the actual URL
+            // of your deployed Vercel application for the fetch to work correctly.
+            if (API_BASE_URL === 'YOUR_VERCEL_DEPLOYMENT_URL') {
+                showStatus('CRITICAL ERROR: Please update API_BASE_URL in the JavaScript code to your Vercel deployment URL or localhost:3000 if running locally.', 'error');
+                return;
+            }
+            // ----------------------
+
+            searchButton.disabled = true;
+            searchButton.textContent = 'Searching...';
+            showStatus(`Searching for "${query}"...`, 'loading');
+            resultsContainer.innerHTML = ''; // Clear old results
+            
+            try {
+                const url = `${API_BASE_URL}${SEARCH_ENDPOINT}?query=${encodeURIComponent(query)}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Handle errors returned by the serverless function
+                    const errorMessage = data.error || 'An unknown error occurred on the server.';
+                    showStatus(`Search Error: ${errorMessage}`, 'error');
+                    console.error('API Error Details:', data.details || data);
+                    return;
+                }
+
+                renderResults(data);
+
+            } catch (error) {
+                console.error('Fetch operation failed:', error);
+                showStatus(`Connection Error: Could not reach the API at ${API_BASE_URL}. Check console for details.`, 'error');
+            } finally {
+                searchButton.disabled = false;
+                searchButton.textContent = 'Search Videos';
+            }
+        }
+    </script>
+</body>
+</html>
