@@ -14,6 +14,8 @@
     { "src": "/search", "dest": "/api/search.js" },
     { "src": "/analytics", "dest": "/api/analytics.js" },
     { "src": "/health", "dest": "/api/health.js" },
+    { "src": "/video-search", "dest": "/api/video-search.js" },
     { "src": "/(.*)", "dest": "/api/not-found.js" }
+    
   ]
 }
