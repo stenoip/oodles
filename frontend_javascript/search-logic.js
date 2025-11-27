@@ -1,3 +1,5 @@
+// search-logic.js
+
 // --- AI OVERVIEW CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
@@ -179,8 +181,6 @@ async function executeSearch(query, type, page = 1) {
             // --- AI OVERVIEW INTEGRATION (Always called on page 1) ---
             if (page === 1) {
                 // This function internally checks the global 'isAIOverviewEnabled' state.
-                // Crucially, the AI ranking logic is built into the prompt that is sent,
-                // so the model will perform the ranking whether the final text output is displayed or not.
                 generateAIOverview(query, data.items);
             }
             // --- END AI OVERVIEW INTEGRATION ---
@@ -280,27 +280,42 @@ function changePage(delta) {
     }
 }
 
+/**
+ * NEW Implementation of renderLinkResults
+ * Delegates HTML generation to the function defined in ad.js
+ * to correctly insert ad units.
+ */
 function renderLinkResults(items, total) {
     var resultsEl = document.getElementById('linkResults');
-    if (!items || items.length === 0) {
-        resultsEl.innerHTML = '<p class="small">No web links found.</p>' + renderPaginationControls(total);
-        return;
+    
+    // Check if the ad rendering function is available (from ad.js)
+    if (typeof window.renderLinkResultsWithAds === 'function') {
+        // Use the ad-integrated rendering function
+        const resultsHtml = window.renderLinkResultsWithAds(items, total, currentPage, MAX_PAGE_SIZE);
+        resultsEl.innerHTML = resultsHtml + renderPaginationControls(total);
+    } else {
+        // Fallback or original implementation if ad.js is not loaded/fails
+        if (!items || items.length === 0) {
+            resultsEl.innerHTML = '<p class="small">No web links found.</p>' + renderPaginationControls(total);
+            return;
+        }
+        
+        const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
+
+        resultsEl.innerHTML = `
+            <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
+            ` + items.map(function(r) {
+                return `
+                    <div class="result-block">
+                        <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+                        <div class="small">${escapeHtml(r.url)}</div>
+                        <div>${escapeHtml(r.snippet || '')}</div>
+                    </div>
+                `;
+            }).join('') + renderPaginationControls(total);
     }
-
-    const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
-
-    resultsEl.innerHTML = `
-        <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
-        ` + items.map(function(r) {
-            return `
-                <div class="result-block">
-                    <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-                    <div class="small">${escapeHtml(r.url)}</div>
-                    <div>${escapeHtml(r.snippet || '')}</div>
-                </div>
-            `;
-        }).join('') + renderPaginationControls(total); 
 }
+
 
 function renderImageResults(items, total) {
     var resultsEl = document.getElementById('imageResults');
@@ -367,7 +382,7 @@ function setupAIOverviewToggle() {
     if (!isAIOverviewEnabled && currentSearchType !== 'image') { 
         if (citizenMsgEl) citizenMsgEl.style.display = 'block';
     } else {
-         if (citizenMsgEl) citizenMsgEl.style.display = 'none';
+        if (citizenMsgEl) citizenMsgEl.style.display = 'none';
     }
 
 
