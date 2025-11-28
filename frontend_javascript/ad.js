@@ -10,7 +10,7 @@
 const ADSENSE_CLIENT_ID = 'ca-pub-4433722838067397'; 
 const ADSENSE_AD_SLOT_1 = '4169306721';             
 const ADSENSE_AD_SLOT_2 = '8891860801'; 
-const AD_INSERTION_POINTS = [5, 10]; // Insert ad after the 5th and 10th result
+const AD_INSERTION_POINTS = [5, 8]; // Insert ad after the 5th and 10th result
 const AD_PUSH_DELAY_MS = 200;        // Increased delay for more reliable ad loading
 // --- END CONFIGURATION ---
 
