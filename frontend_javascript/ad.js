@@ -1,23 +1,26 @@
 /**
- ad.js
-  Handles the loading of the Google AdSense script and the injection of ad units
-  into the search results page.
+ * ad.js
+ * Handles the loading of the Google AdSense script and the injection of ad units
+ * into the search results page, using the 'in-article' fluid format.
  */
 
 // --- CONFIGURATION ---
-// !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH ACTUAL GOOGLE ADSENSE IDs !!!
+// !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL GOOGLE ADSENSE IDs !!!
+// Note: These IDs must match the ones provided in your sample block
 const ADSENSE_CLIENT_ID = 'ca-pub-4433722838067397'; 
-const ADSENSE_AD_SLOT_1 = '4169306721';    
-const ADSENSE_AD_SLOT_2 = '4169306721';   
-const AD_INSERTION_POINTS = [5, 10];
+const ADSENSE_AD_SLOT_1 = '4169306721';             
+const ADSENSE_AD_SLOT_2 = '4169306721'; 
+const AD_INSERTION_POINTS = [5, 10]; // Insert ad after the 5th and 10th result
+const AD_PUSH_DELAY_MS = 200;        // Increased delay for more reliable ad loading
 // --- END CONFIGURATION ---
 
 
 /**
  * 1. Injects the Google AdSense script into the document head.
- * This is the standard asynchronous loading method for AdSense.
+ * This script loading must be done only once.
  */
 function loadAdSenseScript() {
+    // Prevent multiple script loads
     if (document.querySelector(`script[src*="pagead2.googlesyndication.com"]`)) {
         console.log('AdSense script already loaded.');
         return;
@@ -34,20 +37,22 @@ function loadAdSenseScript() {
 
 /**
  * 2. Creates the HTML structure for a single Google AdSense ad unit.
+ * Uses the requested 'in-article' fluid format.
  * @param {string} adSlotId The ad slot ID for the unit.
  * @returns {string} The raw HTML string for the ad unit.
  */
 function createAdUnitHtml(adSlotId) {
-    // Styling added to clearly separate the ad from the search results
+    // Styling added to clearly separate the ad from the search results.
+    // min-height is added to help fluid ads calculate initial size.
     const adHtml = `
-        <div class="result-block ad-unit-container" style="border: 1px dashed #cccccc; padding: 15px; margin: 15px 0; background-color: #f9f9f9; text-align: center;">
+        <div class="result-block ad-unit-container" style="border: 1px dashed #cccccc; padding: 15px 0; margin: 15px 0; background-color: #f9f9f9; text-align: center; min-height: 100px;">
             <div style="font-weight: bold; color: #666666; margin-bottom: 10px;">Advertisement</div>
             <ins class="adsbygoogle"
-                 style="display:block"
-                 data-ad-client="${ADSENSE_CLIENT_ID}"
-                 data-ad-slot="${adSlotId}"
-                 data-ad-format="auto"
-                 data-full-width-responsive="true"></ins>
+                style="display:block; text-align:center;"
+                data-ad-layout="in-article"
+                data-ad-format="fluid"
+                data-ad-client="${ADSENSE_CLIENT_ID}"
+                data-ad-slot="${adSlotId}"></ins>
         </div>
     `;
     return adHtml;
@@ -55,23 +60,15 @@ function createAdUnitHtml(adSlotId) {
 
 /**
  * 3. Modifies the global window object to initialize AdSense ad pushing.
- * This function should be called after search results are rendered.
+ * This is crucial for AdSense to recognize and load the ads after they are inserted.
  */
 function pushAds() {
     try {
-        if (window.adsbygoogle && window.adsbygoogle.length >= 0) {
-            // Push any new ads that have been inserted into the DOM since the last push
-            // This is crucial for AdSense to recognize and load the ads.
-            window.adsbygoogle.push({});
-            console.log('Pushed ads to adsbygoogle queue.');
-        } else {
-            // Initialize the adsbygoogle array if it doesn't exist
-            window.adsbygoogle = window.adsbygoogle || [];
-            if (window.adsbygoogle.length === 0) {
-                 window.adsbygoogle.push({});
-            }
-            console.warn('adsbygoogle not fully ready, initializing queue.');
-        }
+        // Ensure the adsbygoogle array is initialized and push the command.
+        // This is the core AdSense activation command.
+        window.adsbygoogle = window.adsbygoogle || [];
+        window.adsbygoogle.push({});
+        console.log('Pushed ads to adsbygoogle queue.');
     } catch (e) {
         console.error('Error pushing AdSense ads:', e);
     }
@@ -79,9 +76,7 @@ function pushAds() {
 
 /**
  * 4. Helper function to integrate ads into the search result rendering process.
- * NOTE: This function needs to be integrated into the existing search-logic.js
- * by replacing the original `renderLinkResults` function with a modified one
- * that uses this logic.
+ * This function will be called by search-logic.js's renderLinkResults.
  *
  * @param {object[]} items The search result items.
  * @param {number} total The total number of results.
@@ -94,12 +89,12 @@ function renderLinkResultsWithAds(items, total, currentPage, maxPageSize) {
 
     const maxPages = Math.ceil(total / maxPageSize);
     let htmlContent = `<p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>`;
-    
-    // Only insert ads on the first page
-    const shouldInsertAds = currentPage === 1; 
 
-    // Ad slot rotation (optional: ensures different ads are used)
-    const adSlots = [ADSENSE_AD_SLOT_1, ADSENSE_AD_SLOT_2, ADSENSE_AD_SLOT_1];
+    // Only insert ads on the first page
+    const shouldInsertAds = currentPage === 1;
+
+    // Ad slot rotation using both defined slots
+    const adSlots = [ADSENSE_AD_SLOT_1, ADSENSE_AD_SLOT_2];
     let adIndex = 0;
 
     items.forEach(function(r, index) {
@@ -113,19 +108,16 @@ function renderLinkResultsWithAds(items, total, currentPage, maxPageSize) {
         `;
 
         // Check for ad insertion points on page 1
-        // The index is 0-based, so for 5th result (index 4), the ad is inserted *after* it.
         if (shouldInsertAds && AD_INSERTION_POINTS.includes(index + 1)) {
-            // Get the ad slot for the current insertion point
+            // Use ad slot 1, then slot 2, then slot 1 again, etc.
             const adSlotToUse = adSlots[adIndex % adSlots.length];
             htmlContent += createAdUnitHtml(adSlotToUse);
             adIndex++;
         }
     });
-    
-    // This is the crucial step: Call the ad pushing logic after HTML is generated
-    // but before it's injected into the DOM (the `renderLinkResults` function will inject it).
-    // A slight delay ensures the main thread isn't blocked and AdSense has a chance to find the elements.
-    setTimeout(pushAds, 50);
+
+    // CRITICAL STEP: Call the ad pushing logic after HTML is generated and a short delay.
+    setTimeout(pushAds, AD_PUSH_DELAY_MS);
 
     return htmlContent;
 }
@@ -133,7 +125,5 @@ function renderLinkResultsWithAds(items, total, currentPage, maxPageSize) {
 // Attach the script loader to the initial page load
 document.addEventListener('DOMContentLoaded', loadAdSenseScript);
 
-// Export/expose the ad rendering function for use in search-logic.js (or globally)
-// In a real browser environment, all global functions are accessible,
-// but explicitly defining it here for clarity.
+// Expose the ad rendering function for use in search-logic.js
 window.renderLinkResultsWithAds = renderLinkResultsWithAds;
