@@ -5,7 +5,7 @@
  */
 
 // --- CONFIGURATION ---
-// !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL GOOGLE ADSENSE IDs !!!
+
 // Note: These IDs must match the ones provided in your sample block
 const ADSENSE_CLIENT_ID = 'ca-pub-4433722838067397'; 
 const ADSENSE_AD_SLOT_1 = '4169306721';             
