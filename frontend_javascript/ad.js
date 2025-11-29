@@ -69,7 +69,7 @@ function createAdUnitHtml2(adSlotId) {
         <div class="result-block ad-unit-container" style="border: 1px dashed #cccccc; padding: 15px 0; margin: 15px 0; background-color: #f9f9f9; text-align: center; min-height: 100px;">
             <div style="font-weight: bold; color: #666666; margin-bottom: 10px;">Advertisement</div>
             <ins class="adsbygoogle"
-                style="display:block; text-align:center;"
+                style="display:block"
                 data-ad-layout="in-article"
                 data-ad-format="fluid"
                 data-ad-client="${ADSENSE_CLIENT_ID}"
