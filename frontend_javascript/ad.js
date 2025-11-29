@@ -7,11 +7,11 @@
 // --- CONFIGURATION ---
 // !!! IMPORTANT: REPLACE THESE PLACEHOLDERS WITH YOUR ACTUAL GOOGLE ADSENSE IDs !!!
 // Note: These IDs must match the ones provided in your sample block
-const ADSENSE_CLIENT_ID = 'ca-pub-4433722838067397';
-const ADSENSE_AD_SLOT_1 = '4169306721';
-const ADSENSE_AD_SLOT_2 = '8891860801';
-const AD_INSERTION_POINTS = [5, 8]; // Insert ad after the 5th and 8th result
-const AD_PUSH_DELAY_MS = 200;       // Increased delay for more reliable ad loading
+const ADSENSE_CLIENT_ID = 'ca-pub-4433722838067397'; 
+const ADSENSE_AD_SLOT_1 = '4169306721';             
+const ADSENSE_AD_SLOT_2 = '8891860801'; 
+const AD_INSERTION_POINTS = [5, 8]; // Insert ad after the 5th and 10th result
+const AD_PUSH_DELAY_MS = 200;        // Increased delay for more reliable ad loading
 // --- END CONFIGURATION ---
 
 
@@ -36,12 +36,14 @@ function loadAdSenseScript() {
 }
 
 /**
- * 2a. Creates the HTML structure for the FIRST Google AdSense ad unit (ADSENSE_AD_SLOT_1).
+ * 2. Creates the HTML structure for a single Google AdSense ad unit.
+ * Uses the requested 'in-article' fluid format.
  * @param {string} adSlotId The ad slot ID for the unit.
  * @returns {string} The raw HTML string for the ad unit.
  */
 function createAdUnitHtml(adSlotId) {
     // Styling added to clearly separate the ad from the search results.
+    // min-height is added to help fluid ads calculate initial size.
     const adHtml = `
         <div class="result-block ad-unit-container" style="border: 1px dashed #cccccc; padding: 15px 0; margin: 15px 0; background-color: #f9f9f9; text-align: center; min-height: 100px;">
             <div style="font-weight: bold; color: #666666; margin-bottom: 10px;">Advertisement</div>
@@ -55,30 +57,6 @@ function createAdUnitHtml(adSlotId) {
     `;
     return adHtml;
 }
-
-/**
- * 2b. Creates the HTML structure for the SECOND Google AdSense ad unit (ADSENSE_AD_SLOT_2).
- * This function is duplicated from createAdUnitHtml to ensure structural uniqueness 
- * for AdSense processing, as requested.
- * @param {string} adSlotId The ad slot ID for the unit.
- * @returns {string} The raw HTML string for the ad unit.
- */
-function createAdUnitHtml2(adSlotId) {
-    // Note: The variable name `adHtml2` is used just to distinguish the const name internally.
-    const adHtml2 = `
-        <div class="result-block ad-unit-container" style="border: 1px dashed #cccccc; padding: 15px 0; margin: 15px 0; background-color: #f9f9f9; text-align: center; min-height: 100px;">
-            <div style="font-weight: bold; color: #666666; margin-bottom: 10px;">Advertisement</div>
-            <ins class="adsbygoogle"
-                style="display:block"
-                data-ad-layout-key="-dw+6p-12-gr+xq"
-                data-ad-format="fluid"
-                data-ad-client="${ADSENSE_CLIENT_ID}"
-                data-ad-slot="${adSlotId}"></ins>
-        </div>
-    `;
-    return adHtml2;
-}
-
 
 /**
  * 3. Modifies the global window object to initialize AdSense ad pushing.
@@ -131,19 +109,9 @@ function renderLinkResultsWithAds(items, total, currentPage, maxPageSize) {
 
         // Check for ad insertion points on page 1
         if (shouldInsertAds && AD_INSERTION_POINTS.includes(index + 1)) {
-            // Determine which slot to use (rotates between 1 and 2)
+            // Use ad slot 1, then slot 2, then slot 1 again, etc.
             const adSlotToUse = adSlots[adIndex % adSlots.length];
-            
-            // Use the corresponding distinct function for the selected slot
-            if (adSlotToUse === ADSENSE_AD_SLOT_1) {
-                 htmlContent += createAdUnitHtml(adSlotToUse);
-            } else if (adSlotToUse === ADSENSE_AD_SLOT_2) {
-                 htmlContent += createAdUnitHtml2(adSlotToUse);
-            } else {
-                 // Fallback: This case should not happen if adSlots is correctly defined
-                 htmlContent += createAdUnitHtml(adSlotToUse); 
-            }
-            
+            htmlContent += createAdUnitHtml(adSlotToUse);
             adIndex++;
         }
     });
