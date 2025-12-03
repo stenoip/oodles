@@ -12,14 +12,18 @@
    body {
   margin: 0;
   font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
-    color: #FFFFFF;
+  color: #FFFFFF;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-image: url('https://stenoip.github.io/oodles/new_new_wallpaper.png')
+  background-image: url('https://stenoip.github.io/oodles/bg/yule-log.jpeg');
   background-attachment: fixed;
   background-position: center;
+  /* Add these two lines to fix the repetition and sizing */
+  background-repeat: no-repeat;
+  background-size: cover; /* This scales the image to cover the whole body without distortion */
 }
+
 
     .container {
       flex: 1;
@@ -168,8 +172,8 @@
       width: 100%;
     }
     header img {
-      max-height: 300px;        /* keep height the same */
-      width: 100%;              /* make the image stretch across the header */
+      height: 200px;        /* keep height the same */
+      width: 500px;              /* make the image stretch across the header */
       object-fit: contain;      /* maintain aspect ratio (no distortion) */
     }
     nav {
@@ -339,7 +343,7 @@
     </div>
   </div>
 
-  <footer>© Stenoip Company • Founded since Sunday 19th October, 2025</footer>
+  <footer>© Stenoip Company • Launched 19th October, 2025</footer>
 
 <script src="frontend_javascript/main-page.js"></script>
 </body>
