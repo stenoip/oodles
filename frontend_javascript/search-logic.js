@@ -3,17 +3,28 @@
 // --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
+// Mapping of Widget Type to External URL for iframe src
+const WIDGET_URLS = {
+    'translate': 'https://stenoip.github.io/pratrich/translate/translate',
+    
+    'calculator': 'https://stenoip.github.io/calculator-desmos',
+    'clock': 'https://stenoip.github.io/clocker',
+    'timer': 'https://stenoip.github.io/clocker'
+};
+
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search, an AI developed by Stenoip Company.
 Your mission is to analyze search results to provide a synthesis, a relevance ranking, and potentially a widget.
 
 ***TASK 0: Widget Generation (NEW)***
-Analyze the user's query. If the query is a simple calculation (e.g., '5*4', '120 divided by 6'), a time query ('what time is it', 'current time'), or a simple definition, you must output a structured JSON widget block. If no widget is applicable, output an empty block: @@WIDGET_JSON:{}@@
+Analyze the user's query. If the query is a simple calculation (e.g., '5*4', '120 divided by 6'), a time query, a timer query, a translation query, or a simple definition, you must output a structured JSON widget block. If no widget is applicable, output an empty block: @@WIDGET_JSON:{}@@
 
 Widget Types:
 1. calculator: For math. Set 'type'='calculator' and 'value' as the numerical result.
-2. clock: For current time/date queries. Set 'type'='clock' and 'value' to the current date and time in the user's local timezone (e.g., "Wednesday, 3 December 2025 7:23 PM EST").
-3. definition: For simple definitions. Set 'type'='definition' and 'value' as the definition text.
+2. clock: For current time/date queries. Set 'type'='clock'. 'value' can be ignored.
+3. timer: For timer queries. Set 'type'='timer'. 'value' can be ignored.
+4. definition: For simple definitions. Set 'type'='definition' and 'value' as the definition text.
+5. translate: For translation queries. Set 'type'='translate'. 'value' can be ignored.
 
 Structure: @@WIDGET_JSON:{"type":"...", "value":"..."}@@
 
@@ -74,7 +85,7 @@ function createRawSearchText(items) {
 }
 
 /**
- * Renders the dedicated sidebar widget based on AI output.
+ * Renders the dedicated sidebar widget using external iframe URLs.
  */
 function renderWidget(widgetData, query) {
     var widgetEl = document.getElementById('widgetResults');
@@ -84,24 +95,47 @@ function renderWidget(widgetData, query) {
     }
 
     let title = '';
-    let contentHtml = '';
+    let widgetHtml = '';
+    let srcUrl = WIDGET_URLS[widgetData.type]; // Get the external URL
 
-    switch (widgetData.type) {
-        case 'calculator':
-            title = 'Calculation Result';
-            contentHtml = `<p style="font-size: 1.8em; font-weight: bold; margin: 5px 0;">${widgetData.value}</p>`;
-            break;
-        case 'clock':
-            title = 'Current Time & Date';
-            contentHtml = `<p style="font-size: 1.2em; margin: 5px 0;">${widgetData.value}</p>`;
-            break;
-        case 'definition':
-            title = `Definition for "${escapeHtml(query)}"`;
-            contentHtml = `<p>${widgetData.value}</p>`;
-            break;
-        default:
-            widgetEl.innerHTML = '';
-            return;
+    const iframeStyle = 'width: 100%; height: 120px; border: 1px solid #ccc; border-radius: 4px;';
+    const iframeId = `praterich-${widgetData.type}-widget`;
+
+    if (srcUrl) {
+        // Handle specific iframe logic and titles
+        switch (widgetData.type) {
+            case 'calculator': 
+                title = 'Calculator Result';
+                // Pass the AI's numerical result and original query to the external iframe
+                if (widgetData.value) {
+                    srcUrl += `?result=${encodeURIComponent(widgetData.value)}&query=${encodeURIComponent(query)}`;
+                }
+                break;
+            case 'clock': 
+                title = 'Current Time Widget';
+                // Optionally pass locale or specific time data if the widget supports it
+                break;
+            case 'timer': 
+                title = 'Timer Widget'; 
+                // Optionally pass duration/query to the widget
+                break;
+            case 'translate': 
+                title = 'Translation Widget'; 
+                // Optionally pass text to be translated
+                break;
+        }
+        
+        // Construct the iframe using the external source URL
+        widgetHtml = `<iframe src="${srcUrl}" style="${iframeStyle}" id="${iframeId}"></iframe>`;
+
+    } else if (widgetData.type === 'definition') {
+        // Definition remains static text and does not use an iframe
+        title = `Definition for "${escapeHtml(query)}"`;
+        widgetHtml = `<p style="padding: 10px 0;">${widgetData.value}</p>`;
+    } else {
+        // Unknown type or missing URL
+        widgetEl.innerHTML = '';
+        return;
     }
 
     widgetEl.innerHTML = `
@@ -110,8 +144,8 @@ function renderWidget(widgetData, query) {
                 <img src="${PRATERICH_ICON_URL}" alt="Praterich Icon" style="width: 24px; height: 24px; margin-right: 8px;">
                 <h3 style="margin: 0; font-size: 1.1em; color: #0056b3;">${title}</h3>
             </div>
-            <div style="border-top: 1px solid #ccc; padding-top: 10px;">
-                ${contentHtml}
+            <div style="border-top: 1px solid #ccc; padding-top: 5px;">
+                ${widgetHtml}
             </div>
         </div>
     `;
@@ -126,7 +160,7 @@ function renderWidget(widgetData, query) {
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    var widgetEl = document.getElementById('widgetResults'); // Clear widgets before starting
+    var widgetEl = document.getElementById('widgetResults'); 
     if (widgetEl) widgetEl.innerHTML = '';
 
     if (isAIOverviewEnabled && overviewEl) {
@@ -177,13 +211,12 @@ ${rawWebSearchText}
             }
         }
         
-        renderWidget(widgetData, query); // Always render widget if data is present
+        renderWidget(widgetData, query); 
 
         // --- 2. EXTRACT RANKING DATA & CLEAN TEXT ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var rankingMatch = aiRawText.match(rankingRegex);
         
-        // Remove both ranking and widget tags from display text
         var cleanDisplayText = aiRawText
             .replace(widgetRegex, '')
             .replace(rankingRegex, '')
@@ -258,7 +291,7 @@ async function executeSearch(query, type, page = 1) {
     if (overviewEl) overviewEl.innerHTML = '';
     
     var widgetEl = document.getElementById('widgetResults');
-    if (widgetEl) widgetEl.innerHTML = ''; // Clear widgets
+    if (widgetEl) widgetEl.innerHTML = ''; 
 
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
