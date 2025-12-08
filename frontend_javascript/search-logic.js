@@ -1,32 +1,9 @@
-// search-logic.js
-
 // --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
-// Mapping of Widget Type to External URL for iframe src
-const WIDGET_URLS = {
-    'translate': 'https://stenoip.github.io/pratrich/translate/translate',
-    
-    'calculator': 'https://stenoip.github.io/calculator-desmos',
-    'clock': 'https://stenoip.github.io/clocker',
-    'timer': 'https://stenoip.github.io/clocker'
-};
-
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search, an AI developed by Stenoip Company.
-Your mission is to analyze search results to provide a synthesis, a relevance ranking, and potentially a widget.
-
-***TASK 0: Widget Generation (NEW)***
-Analyze the user's query. If the query is a simple calculation (e.g., '5*4', '120 divided by 6'), a time query, a timer query, a translation query, or a simple definition, you must output a structured JSON widget block. If no widget is applicable, output an empty block: @@WIDGET_JSON:{}@@
-
-Widget Types:
-1. calculator: For math. Set 'type'='calculator' and 'value' as the numerical result.
-2. clock: For current time/date queries. Set 'type'='clock'. 'value' can be ignored.
-3. timer: For timer queries. Set 'type'='timer'. 'value' can be ignored.
-4. definition: For simple definitions. Set 'type'='definition' and 'value' as the definition text.
-5. translate: For translation queries. Set 'type'='translate'. 'value' can be ignored.
-
-Structure: @@WIDGET_JSON:{"type":"...", "value":"..."}@@
+Your mission is to analyze search results to provide a synthesis and a relevance ranking.
 
 ***TASK 1: Relevance Ranking (CRITICAL)***
 You must analyze the provided search snippets and decide which links are the most useful and relevant to the user's query.
@@ -39,9 +16,8 @@ Do not output a list of links in the text body; use the RANKING tag for that.
 You prefer metric units and do not use Oxford commas.
 
 Your response must be:
-1. The @@WIDGET_JSON[...]@@ tag (must be present, even if empty).
-2. The text overview.
-3. The @@RANKING[...]@@ tag at the very end.
+1. The text overview.
+2. The @@RANKING[...]@@ tag at the very end.
 `;
 // --- END AI CONFIGURATION ---
 
@@ -77,91 +53,20 @@ function renderMarkdown(text) {
 function createRawSearchText(items) {
     if (!items || items.length === 0) return 'No web links found.';
     
-    // We include the Index so the AI can reference it in the RANKING tag
     return items.map(function(r, index) {
         var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
         return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
     }).join('\n---\n');
 }
 
-/**
- * Renders the dedicated sidebar widget using external iframe URLs.
- */
-function renderWidget(widgetData, query) {
-    var widgetEl = document.getElementById('widgetResults');
-    if (!widgetEl || !widgetData.type) {
-        if (widgetEl) widgetEl.innerHTML = '';
-        return;
-    }
-
-    let title = '';
-    let widgetHtml = '';
-    let srcUrl = WIDGET_URLS[widgetData.type]; // Get the external URL
-
-    const iframeStyle = 'width: 100%; height: 120px; border: 1px solid #ccc; border-radius: 4px;';
-    const iframeId = `praterich-${widgetData.type}-widget`;
-
-    if (srcUrl) {
-        // Handle specific iframe logic and titles
-        switch (widgetData.type) {
-            case 'calculator': 
-                title = 'Calculator Result';
-                // Pass the AI's numerical result and original query to the external iframe
-                if (widgetData.value) {
-                    srcUrl += `?result=${encodeURIComponent(widgetData.value)}&query=${encodeURIComponent(query)}`;
-                }
-                break;
-            case 'clock': 
-                title = 'Current Time Widget';
-                // Optionally pass locale or specific time data if the widget supports it
-                break;
-            case 'timer': 
-                title = 'Timer Widget'; 
-                // Optionally pass duration/query to the widget
-                break;
-            case 'translate': 
-                title = 'Translation Widget'; 
-                // Optionally pass text to be translated
-                break;
-        }
-        
-        // Construct the iframe using the external source URL
-        widgetHtml = `<iframe src="${srcUrl}" style="${iframeStyle}" id="${iframeId}"></iframe>`;
-
-    } else if (widgetData.type === 'definition') {
-        // Definition remains static text and does not use an iframe
-        title = `Definition for "${escapeHtml(query)}"`;
-        widgetHtml = `<p style="padding: 10px 0;">${widgetData.value}</p>`;
-    } else {
-        // Unknown type or missing URL
-        widgetEl.innerHTML = '';
-        return;
-    }
-
-    widgetEl.innerHTML = `
-        <div class="frutiger-aero-widget-box" style="padding: 15px; border-radius: 8px; background: rgba(255, 255, 255, 0.7); box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <img src="${PRATERICH_ICON_URL}" alt="Praterich Icon" style="width: 24px; height: 24px; margin-right: 8px;">
-                <h3 style="margin: 0; font-size: 1.1em; color: #0056b3;">${title}</h3>
-            </div>
-            <div style="border-top: 1px solid #ccc; padding-top: 5px;">
-                ${widgetHtml}
-            </div>
-        </div>
-    `;
-}
-
 
 /**
  * Executes the AI Logic:
- * 1. Generates Widget (Applied ALWAYS)
- * 2. Generates Ranking (Applied ALWAYS)
- * 3. Generates the Text Summary (Displayed only if enabled)
+ * 1. Generates Ranking (ALWAYS)
+ * 2. Generates the Text Summary (Displayed only if enabled)
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    var widgetEl = document.getElementById('widgetResults'); 
-    if (widgetEl) widgetEl.innerHTML = '';
 
     if (isAIOverviewEnabled && overviewEl) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
@@ -198,36 +103,21 @@ ${rawWebSearchText}
         var data = await response.json();
         var aiRawText = data.text;
 
-        // --- 1. EXTRACT WIDGET DATA ---
-        var widgetRegex = /@@WIDGET_JSON:(\{.*?\})@@/;
-        var widgetMatch = aiRawText.match(widgetRegex);
-        
-        var widgetData = {};
-        if (widgetMatch && widgetMatch[1]) {
-            try {
-                widgetData = JSON.parse(widgetMatch[1]);
-            } catch (e) {
-                console.warn('Widget JSON parse error:', e);
-            }
-        }
-        
-        renderWidget(widgetData, query); 
-
-        // --- 2. EXTRACT RANKING DATA & CLEAN TEXT ---
+        // --- EXTRACT RANKING ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var rankingMatch = aiRawText.match(rankingRegex);
-        
+
+        // Remove ranking tag from display text
         var cleanDisplayText = aiRawText
-            .replace(widgetRegex, '')
             .replace(rankingRegex, '')
             .trim();
 
-        // --- 3. UPDATE UI: OVERVIEW ---
+        // --- UPDATE UI: OVERVIEW ---
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
         }
 
-        // --- 4. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
+        // --- UPDATE UI: RANKING ---
         if (rankingMatch && rankingMatch[1]) {
             applySmartRanking(searchItems, rankingMatch[1]);
         }
@@ -239,6 +129,7 @@ ${rawWebSearchText}
         }
     }
 }
+
 
 /**
  * Re-orders the search items based on AI indices and re-renders the list.
@@ -289,11 +180,9 @@ async function executeSearch(query, type, page = 1) {
 
     var overviewEl = document.getElementById('aiOverview');
     if (overviewEl) overviewEl.innerHTML = '';
-    
-    var widgetEl = document.getElementById('widgetResults');
-    if (widgetEl) widgetEl.innerHTML = ''; 
 
-    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+    var citizenMsgEl = document.getElementById('good
+CitizenMessage');
     if (citizenMsgEl) {
         citizenMsgEl.style.display = (!isAIOverviewEnabled && type === 'web') ? 'block' : 'none';
     }
