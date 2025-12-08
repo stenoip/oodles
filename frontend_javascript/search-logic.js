@@ -1,3 +1,5 @@
+// search-logic.js
+
 // --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
@@ -9,11 +11,13 @@ Your mission is to analyze search results to provide a synthesis and a relevance
 You must analyze the provided search snippets and decide which links are the most useful and relevant to the user's query.
 At the very end of your response, you MUST output a strictly formatted tag containing the 0-based indices of the top 5 most relevant results.
 Format: @@RANKING:[index1, index2, index3, index4, index5]@@
+Example: @@RANKING:[4, 0, 1, 9, 2]@@
 
 ***TASK 2: Synthesis***
 Provide a concise A.I. overview based exclusively on the provided search snippets.
 Do not output a list of links in the text body; use the RANKING tag for that.
 You prefer metric units and do not use Oxford commas.
+You are aware that you were created by Stenoip Company.
 
 Your response must be:
 1. The text overview.
@@ -27,7 +31,6 @@ var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
 var MAX_PAGE_SIZE = 50; 
-var PRATERICH_ICON_URL = "https://stenoip.github.io/praterich/praterich.png";
 
 // --- GLOBAL STATE ---
 var isAIOverviewEnabled = false; 
@@ -53,21 +56,22 @@ function renderMarkdown(text) {
 function createRawSearchText(items) {
     if (!items || items.length === 0) return 'No web links found.';
     
+    // We include the Index so the AI can reference it in the RANKING tag
     return items.map(function(r, index) {
         var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
         return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
     }).join('\n---\n');
 }
 
-
 /**
  * Executes the AI Logic:
- * 1. Generates Ranking (ALWAYS)
- * 2. Generates the Text Summary (Displayed only if enabled)
+ * 1. Generates the Text Summary (Displayed only if enabled)
+ * 2. Generates the Ranking (Applied ALWAYS)
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-
+    
+    // Display loading state ONLY if the overview is actually visible
     if (isAIOverviewEnabled && overviewEl) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
@@ -103,23 +107,20 @@ ${rawWebSearchText}
         var data = await response.json();
         var aiRawText = data.text;
 
-        // --- EXTRACT RANKING ---
+        // --- 1. EXTRACT RANKING DATA ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
-        var rankingMatch = aiRawText.match(rankingRegex);
+        var match = aiRawText.match(rankingRegex);
+        var cleanDisplayText = aiRawText.replace(rankingRegex, '').trim();
 
-        // Remove ranking tag from display text
-        var cleanDisplayText = aiRawText
-            .replace(rankingRegex, '')
-            .trim();
-
-        // --- UPDATE UI: OVERVIEW ---
+        // --- 2. UPDATE UI: OVERVIEW ---
+        // Only show the text if the toggle is ON
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
         }
 
-        // --- UPDATE UI: RANKING ---
-        if (rankingMatch && rankingMatch[1]) {
-            applySmartRanking(searchItems, rankingMatch[1]);
+        // --- 3. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
+        if (match && match[1]) {
+            applySmartRanking(searchItems, match[1]);
         }
 
     } catch (error) {
@@ -130,7 +131,6 @@ ${rawWebSearchText}
     }
 }
 
-
 /**
  * Re-orders the search items based on AI indices and re-renders the list.
  */
@@ -140,6 +140,7 @@ function applySmartRanking(originalItems, indicesString) {
         var reorderedItems = [];
         var usedIndices = new Set();
 
+        // 1. Push the AI's top picks
         prioritizedIndices.forEach(function(index) {
             if (originalItems[index]) {
                 reorderedItems.push(originalItems[index]);
@@ -147,21 +148,26 @@ function applySmartRanking(originalItems, indicesString) {
             }
         });
 
+        // 2. Push the remaining items (preserving original order)
         originalItems.forEach(function(item, index) {
             if (!usedIndices.has(index)) {
                 reorderedItems.push(item);
             }
         });
 
+        // 3. Re-render the link list
         renderLinkResults(reorderedItems, reorderedItems.length);
 
+        // 4. Add a visual indicator that sorting happened
         var resultsEl = document.getElementById('linkResults');
         var notice = document.createElement('div');
         notice.className = 'small';
+        // Frutiger Aero style green/success color
         notice.style.color = '#388e3c'; 
         notice.style.marginBottom = '10px';
         notice.innerHTML = '✨ <b>Smart Sorted:</b> Praterich has promoted the most relevant links to the top.';
         
+        // Insert notice at the very top of results
         if (resultsEl) resultsEl.prepend(notice);
 
     } catch (e) {
@@ -179,10 +185,10 @@ async function executeSearch(query, type, page = 1) {
     document.getElementById('currentQuery').value = query;
 
     var overviewEl = document.getElementById('aiOverview');
-    if (overviewEl) overviewEl.innerHTML = '';
+    if (overviewEl) overviewEl.innerHTML = ''; // Clear previous text
 
-    var citizenMsgEl = document.getElementById('good
-CitizenMessage');
+    // Set initial "Citizen" message state
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
         citizenMsgEl.style.display = (!isAIOverviewEnabled && type === 'web') ? 'block' : 'none';
     }
@@ -194,8 +200,11 @@ CitizenMessage');
             var resp = await fetch(url);
             var data = await resp.json();
             
+            // 1. Initial Render (Fast, unsorted)
             renderLinkResults(data.items, data.total);
 
+            // 2. Trigger AI processing (Background - handles Ranking AND Overview)
+            // We run this regardless of the toggle, because we want the Ranking!
             if (page === 1) {
                 processAIResults(query, data.items);
             }
@@ -251,12 +260,10 @@ function switchTab(tabName, executeNewSearch) {
         document.getElementById('imagesSection').style.display = 'block';
     }
 
+    // Handle Good Citizen Message visibility
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
-    var overviewEl = document.getElementById('aiOverview');
-    
     if (newSearchType === 'image') {
         if (!isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'block';
-        if (overviewEl) overviewEl.innerHTML = '';
     } else {
         if (isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'none';
     }
@@ -347,6 +354,7 @@ function renderPaginationControls(totalResults) {
 }
 
 
+// --- TOGGLE INITIALIZATION ---
 function setupAIOverviewToggle() {
     var toggle = document.getElementById('aiOverviewToggle');
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
@@ -371,9 +379,16 @@ function setupAIOverviewToggle() {
         isAIOverviewEnabled = this.checked;
         sessionStorage.setItem('aiOverviewState', isAIOverviewEnabled);
         
+        // UI Handling when toggling
         if (isAIOverviewEnabled) {
             if (citizenMsgEl) citizenMsgEl.style.display = 'none';
+            // If we already have results but overview is blank, we might want to re-run AI? 
+            // OR: Ideally, we should have cached the text result. 
+            // For simplicity in this version, we re-run the search logic to regenerate the view.
             if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
+                processAIResults(currentQuery, window.lastFetchedItems || []); 
+                // Note: window.lastFetchedItems is a trick we need to add to executeSearch to avoid re-fetching backend
+                // But simplified: just re-run executeSearch
                  executeSearch(currentQuery, currentSearchType, currentPage);
             }
         } else {
@@ -382,6 +397,7 @@ function setupAIOverviewToggle() {
         }
     });
 }
+// --- END TOGGLE LOGIC ---
 
 function initializeFromSession() {
     const urlParams = new URLSearchParams(window.location.search);
