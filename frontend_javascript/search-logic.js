@@ -1,4 +1,4 @@
- // search-logic.js
+// search-logic.js
 
 // --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
@@ -21,16 +21,17 @@ You are aware that you were created by Stenoip Company.
 
 ***TASK 3: Tool Detection (CRITICAL)***
 If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag.
-The detection should be based on mathematical expressions, unit conversions, color code lookups, or metronome requests.
+The detection should be based on mathematical expressions, unit conversions, color code lookups, metronome requests, or translation requests.
 The tag MUST be outputted immediately before the @@RANKING tag.
 Format: @@TOOL:[tool_name]@@
 Available tools (use the name exactly as listed):
 - calculator
 - unit_converter
-- color_picker
+- colour_picker
 - metronome
+- translate
 
-Example (Calculator needed): The user searched "what is 5+3". 
+Example (Calculator needed): The user searched "what is 5+3". 
 Output: (Synthesis text...) @@TOOL:[calculator]@@@@RANKING:[...]@@
 Example (No tool needed): The user searched "best new movies".
 Output: (Synthesis text...) @@RANKING:[...]@@
@@ -44,18 +45,21 @@ Your response must be:
 
 // --- BUILT-IN TOOL CONFIGURATION ---
 var BUILT_IN_TOOLS = {
-    'calculator': {
-        url: 'https://stenoip.github.io/kompmasine.html' 
-    },
-    'unit_converter': {
-        url: 'https://stenoip.github.io/kompmasine.html' 
-    },
-    'color_picker': {
-        url: 'https://tools.oodles.com/colorpicker' 
-    },
-    'metronome': {
-        url: 'https://tools.oodles.com/metronome' 
-    }
+    'calculator': {
+        url: 'https://stenoip.github.io/kompmasine.html' 
+    },
+    'unit_converter': {
+        url: 'https://stenoip.github.io/kompmasine.html' 
+    },
+    'colour_picker': {
+        url: 'https://tools.oodles.com/colourpicker' 
+    },
+    'metronome': {
+        url: 'https://stenoip.github.io/metronome' 
+    },
+    'translate': {
+        url: 'https://stenoip.github.io/praterich/translate/translate'
+    }
 };
 // --- END TOOL CONFIGURATION ---
 
@@ -98,45 +102,54 @@ function createRawSearchText(items) {
 }
 
 /**
- * Renders the built-in tool iframe based on the AI's detected tool name.
- */
+ * Renders the built-in tool iframe based on the AI's detected tool name.
+ */
 function renderBuiltInTool(toolName) {
-    var toolContainerEl = document.getElementById('toolContainer');
-    if (!toolContainerEl || !toolName) {
-        if (toolContainerEl) {
-            toolContainerEl.innerHTML = '';
-            toolContainerEl.style.display = 'none';
-        }
-        return;
-    }
+    var toolContainerEl = document.getElementById('toolContainer');
+    if (!toolContainerEl || !toolName) {
+        if (toolContainerEl) {
+            toolContainerEl.innerHTML = '';
+            toolContainerEl.style.display = 'none';
+        }
+        return;
+    }
 
-    const tool = BUILT_IN_TOOLS[toolName];
-    
-    if (tool) {
-        toolContainerEl.innerHTML = `
-            <div class="built-in-tool-frame">
-                <iframe src="${tool.url}" frameborder="0" loading="eager" style="width: 100%; height: 350px;"></iframe>
-            </div>
-        `;
-        toolContainerEl.style.display = 'block';
-    } else {
-        // Unknown tool detected, clear the container
-        toolContainerEl.innerHTML = '';
-        toolContainerEl.style.display = 'none';
-    }
+    const tool = BUILT_IN_TOOLS[toolName];
+    
+    if (tool) {
+        let finalUrl = tool.url;
+
+        // --- LOGIC TO APPEND QUERY FOR RELEVANT TOOLS ---
+        const toolsToPassQuery = ['calculator', 'unit_converter', 'translate'];
+        if (toolsToPassQuery.includes(toolName) && currentQuery) {
+            finalUrl += '?q=' + encodeURIComponent(currentQuery);
+        }
+        // --------------------------------------------------
+        
+        toolContainerEl.innerHTML = `
+            <div class="built-in-tool-frame">
+                <iframe src="${finalUrl}" frameborder="0" loading="eager" style="width: 100%; height: 350px;"></iframe>
+            </div>
+        `;
+        toolContainerEl.style.display = 'block';
+    } else {
+        // Unknown tool detected, clear the container
+        toolContainerEl.innerHTML = '';
+        toolContainerEl.style.display = 'none';
+    }
 }
 
 
 /**
  * Executes the AI Logic:
  * 1. Generates the Text Summary (Displayed only if enabled)
- * 2. Detects if a tool is needed (Displays tool)
+ * 2. Detects if a tool is needed (Displays tool)
  * 3. Generates the Ranking (Applied ALWAYS)
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    // Initialize tool display to be cleared/hidden before processing
-    renderBuiltInTool(null); 
+    // Initialize tool display to be cleared/hidden before processing
+    renderBuiltInTool(null); 
     
     // Display loading state ONLY if the overview is actually visible
     if (isAIOverviewEnabled && overviewEl) {
@@ -178,9 +191,9 @@ ${rawWebSearchText}
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
 
-        // Extract tool name first
-        var toolMatch = aiRawText.match(toolRegex);
-        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+        // Extract tool name first
+        var toolMatch = aiRawText.match(toolRegex);
+        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
 
         var match = aiRawText.match(rankingRegex);
         // Clean display text by removing BOTH tags
@@ -188,15 +201,15 @@ ${rawWebSearchText}
 
 
         // --- 2. UPDATE UI: TOOL DISPLAY ---
-        renderBuiltInTool(detectedTool);
+        renderBuiltInTool(detectedTool);
 
         // --- 3. UPDATE UI: OVERVIEW ---
         // Only show the text if the toggle is ON
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
         } else if (overviewEl) {
-            overviewEl.innerHTML = '';
-        }
+            overviewEl.innerHTML = '';
+        }
 
         // --- 4. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
         if (match && match[1]) {
@@ -208,7 +221,7 @@ ${rawWebSearchText}
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
         }
-        renderBuiltInTool(null); // Clear tool on error
+        renderBuiltInTool(null); // Clear tool on error
     }
 }
 
@@ -267,9 +280,9 @@ async function executeSearch(query, type, page = 1) {
 
     var overviewEl = document.getElementById('aiOverview');
     if (overviewEl) overviewEl.innerHTML = ''; // Clear previous AI text
-    
-    // Clear the built-in tool area before a new search
-    renderBuiltInTool(null); 
+    
+    // Clear the built-in tool area before a new search
+    renderBuiltInTool(null); 
 
     // Set initial "Citizen" message state
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
@@ -287,8 +300,8 @@ async function executeSearch(query, type, page = 1) {
             // 1. Initial Render (Fast, unsorted)
             renderLinkResults(data.items, data.total);
 
-            // Store items for re-running AI on toggle
-            window.lastFetchedItems = data.items;
+            // Store items for re-running AI on toggle
+            window.lastFetchedItems = data.items;
 
             // 2. Trigger AI processing (Background - handles Tool Detection, Ranking AND Overview)
             // We run this regardless of the toggle, because we want the Ranking and Tool Detection!
@@ -299,7 +312,7 @@ async function executeSearch(query, type, page = 1) {
         } catch (error) {
             console.error('Web search error:', error);
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
-            renderBuiltInTool(null); // Clear tool on backend error
+            renderBuiltInTool(null); // Clear tool on backend error
         }
     } else if (type === 'image') {
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
@@ -355,11 +368,11 @@ function switchTab(tabName, executeNewSearch) {
     } else {
         if (isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'none';
     }
-    
-    // Clear tool when switching tabs if not executing a new search
-    if (!executeNewSearch) {
-        renderBuiltInTool(null);
-    }
+    
+    // Clear tool when switching tabs if not executing a new search
+    if (!executeNewSearch) {
+        renderBuiltInTool(null);
+    }
 
     if (executeNewSearch && currentQuery) {
         executeSearch(currentQuery, newSearchType, 1);
