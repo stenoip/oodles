@@ -13,7 +13,9 @@ var customPronunciations = {
   "Stenoip": "Stick-no-ip"
 };
 
-// Praterich A.I. Core Personality Profile (Front-end System Instruction)
+// --- SYSTEM INSTRUCTIONS ---
+
+// 1. Praterich A.I. Core Personality Profile (Main Interaction)
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Search, an AI developed by Stenoip Company.
 Your mission is to provide an **A.I overview based on the provided search snippets** (the tool result) and Oodles Search links. If an image is attached, your primary task is to describe and analyze the image first, then answer the user's question, integrating web search results if necessary. Do not reference the search tool or its output directly, but synthesize the information provided. You are not for code generation (though you can provide code snippets, Regular Praterich at stenoip.github.io/praterich can provide code).
@@ -27,8 +29,19 @@ Your capabilities include generating text, answering questions, summarizing info
 
 You must never use raw HTML tags in your responses. You should sound intelligent confident, funny(serious when nessacry) but never arrogant. You are free to express nuance, insight, and personality in your replies. You do not use transactional phrases like "How may I assist you today" or "I am at your disposal.
 
-
 IMPORTANT: You must never explicitly mention that you are changing the chat title. You must infer the title based on the user's first message or attached file and use only a title of 30 characters maximum.
+`;
+
+// 2. Search Query Generator Profile (The "Thinker")
+var searchQuerySystemInstruction = `
+You are an advanced Search Query Optimizer for an AI assistant.
+Your goal is to analyze the User's Input and the Conversation History to generate the SINGLE BEST web search query to find the information they need.
+
+Rules:
+1. If the user is asking a question that requires external facts (e.g., "Who won the game?", "What are toys?", "Weather in Tokyo"), output a concise, optimized search term (e.g., "latest game results", "definition and types of toys", "current weather Tokyo").
+2. If the user is just saying "Hello", "How are you?", "Thanks", or engaging in casual chit-chat that requires NO external data, output exactly: SKIP_SEARCH
+3. If the user refers to previous context (e.g., "How old is he?"), use the history to resolve the entity and create a full query (e.g., "Obama age").
+4. Output ONLY the query string or the word SKIP_SEARCH. Do not add quotes, markdown, or explanations.
 `;
 
 // Initial casual greeting for the start of a new chat session
@@ -117,8 +130,8 @@ function addMessage(text, sender, isHistoryLoad) {
         }
     }
 
-    // 1. Update Chat History (Only save to history if session exists and it's not a history load/knowledge message)
-    if (!isHistoryLoad && currentChatId && sender !== 'knowledge' && chatSessions[currentChatId]) {
+    // 1. Update Chat History (Only save to history if session exists and it's not a history load/knowledge message/system-note)
+    if (!isHistoryLoad && currentChatId && sender !== 'knowledge' && sender !== 'system-note' && chatSessions[currentChatId]) {
         chatSessions[currentChatId].messages.push(message);
         saveToLocalStorage();
     }
@@ -126,12 +139,22 @@ function addMessage(text, sender, isHistoryLoad) {
     // 2. Display Message (Do not display 'knowledge' messages)
     if (sender !== 'knowledge') {
         var messageDiv = document.createElement('div');
-        messageDiv.className = 'message ' + (sender === 'user' ? 'user-message' : 'ai-message');
+        
+        if (sender === 'system-note') {
+            messageDiv.className = 'message system-message';
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.fontSize = '0.85em';
+            messageDiv.style.opacity = '0.7';
+            messageDiv.style.fontStyle = 'italic';
+            messageDiv.style.margin = '5px 0';
+        } else {
+            messageDiv.className = 'message ' + (sender === 'user' ? 'user-message' : 'ai-message');
+        }
 
         var contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
 
-        if (sender === 'user') {
+        if (sender === 'user' || sender === 'system-note') {
             contentDiv.innerHTML = renderMarkdown(text);
         } else {
             contentDiv.innerHTML = renderMarkdown(text);
@@ -179,6 +202,56 @@ function addMessage(text, sender, isHistoryLoad) {
     }
 }
 
+/**
+ * NEW: Generates an optimal search query using the AI Model.
+ * This separates the User's raw input from the actual search term.
+ */
+async function generateSearchQuery(userText, historyContext) {
+    // Construct a lightweight history payload for the query generator
+    // We only need the text parts to save tokens and avoid image processing here
+    var textOnlyHistory = historyContext.map(turn => {
+        return {
+            role: turn.role,
+            parts: [{ text: turn.parts[0].text }] // Simplified to just text
+        };
+    });
+
+    var requestBody = {
+        contents: textOnlyHistory,
+        system_instruction: {
+            parts: [{ text: searchQuerySystemInstruction }]
+        }
+    };
+
+    try {
+        var response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) return userText; // Fallback to raw input on error
+
+        var data = await response.json();
+        var generatedQuery = data.text.trim();
+
+        // Check for the "SKIP" signal
+        if (generatedQuery.includes("SKIP_SEARCH")) {
+            return null;
+        }
+
+        // Clean up any accidental markdown or quotes the model might add
+        generatedQuery = generatedQuery.replace(/^["']|["']$/g, '').trim();
+        
+        return generatedQuery;
+
+    } catch (e) {
+        console.warn("Search query generation failed, falling back to user text:", e);
+        return userText;
+    }
+}
+
+
 // Function to handle sending the message
 async function sendMessage() {
     if (window.speechSynthesis.speaking) {
@@ -197,22 +270,11 @@ async function sendMessage() {
     addMessage(userText + (attachedFile ? `\n\n[Image Attached: ${attachedFile.fileName}]` : ''), 'user');
 
     updateSendButtonState();
-
     typingIndicator.style.display = 'block';
     scrollToBottom();
 
-    // 2. Execute Web Search
-    var webSearchData = await executeSearchForLinks(userText);
-    var linkMarkdown = webSearchData.markdown;
-    var rawWebSearchText = webSearchData.rawText;
-
-    // 3. KNOWLEDGE BASE INJECTION: Add the structured search text to the history *before* fetching the AI response.
-    var knowledgeMessage = {
-        sender: 'knowledge',
-        text: rawWebSearchText
-    };
-
-    // 4. Reconstruct full conversation history
+    // --- CONTEXT PREPARATION ---
+    // Prepare history for both Query Generation and Final Response
     var conversationHistory = chatSessions[currentChatId].messages.map(function(msg) {
         if (msg.sender === 'user' || msg.sender === 'ai') {
             return {
@@ -229,10 +291,60 @@ async function sendMessage() {
         return null;
     }).filter(msg => msg !== null);
 
-    // Remove the user message added in step 1's history save
-    conversationHistory.pop();
+    // Remove the user message added in step 1 from this temporary history array
+    // because we will add it back with specific formatting (like images) below.
+    conversationHistory.pop(); 
+    
+    // Add the current user input temporarily to history for the Query Generator
+    conversationHistory.push({ role: "user", parts: [{ text: userText }] });
 
-    // --- Prepare Multimodal Parts (Text + Image) ---
+
+    // --- STEP 1: THINKING & SEARCHING ---
+    // Instead of searching for `userText`, we ask the AI what to search for.
+    
+    var finalSearchQuery = null;
+    var webSearchData = { markdown: '', rawText: '' };
+    var hasSearched = false;
+
+    if (userText.length > 0) {
+        try {
+            // "Praterich is thinking..."
+            finalSearchQuery = await generateSearchQuery(userText, conversationHistory);
+            
+            if (finalSearchQuery) {
+                // Show the user what is happening (UX improvement)
+                addMessage(`*Searching for: "${finalSearchQuery}"...*`, 'system-note');
+                
+                webSearchData = await executeSearchForLinks(finalSearchQuery);
+                hasSearched = true;
+            }
+        } catch (err) {
+            console.error("Search Step Error:", err);
+            // Fallback: don't search, just chat
+        }
+    }
+
+    var linkMarkdown = webSearchData.markdown;
+    var rawWebSearchText = webSearchData.rawText;
+
+
+    // --- STEP 2: GENERATING RESPONSE ---
+
+    // Clean up history again to prepare the final payload
+    conversationHistory.pop(); // Remove the text-only user input we added for the query generator
+
+    // Prepare Knowledge Injection
+    var knowledgeMessage = null;
+    if (hasSearched && rawWebSearchText) {
+        knowledgeMessage = {
+            sender: 'knowledge',
+            text: rawWebSearchText
+        };
+        // Inject tool result into history stream
+        conversationHistory.push({ role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawWebSearchText}` }] });
+    }
+
+    // Prepare Final User Part (Text + Image)
     var userParts = [];
     if (userText) {
         userParts.push({ text: userText });
@@ -245,9 +357,6 @@ async function sendMessage() {
             }
         });
     }
-
-    // Re-add the knowledge message and user message (with image) for the API call
-    conversationHistory.push({ role: "model", parts: [{ text: `[TOOL_RESULT_FOR_PREVIOUS_TURN] Search Snippets:\n${rawWebSearchText}` }] });
     conversationHistory.push({ role: "user", parts: userParts });
 
 
@@ -262,7 +371,7 @@ async function sendMessage() {
 
     try {
         // Clear the attached file state immediately before the call
-        clearAttachedFile(); // Calls function with fix
+        clearAttachedFile(); 
 
         var response = await fetch(API_URL, {
             method: 'POST',
@@ -282,19 +391,22 @@ async function sendMessage() {
         var data = await response.json();
         aiResponseText = data.text;
 
-        // Append web links for display
-        aiResponseText += linkMarkdown;
+        // Append web links for display if search occurred
+        if (hasSearched) {
+            aiResponseText += linkMarkdown;
+        }
 
-        // 5. Add knowledge message to history permanently
-        chatSessions[currentChatId].messages.push(knowledgeMessage);
+        // 3. Add knowledge message to history permanently (if it existed)
+        if (knowledgeMessage) {
+            chatSessions[currentChatId].messages.push(knowledgeMessage);
+        }
 
-        // 6. Add final AI message (updates history)
+        // 4. Add final AI message (updates history)
         addMessage(aiResponseText, 'ai');
 
     } catch (error) {
         typingIndicator.style.display = 'none';
         console.error('API Error:', error);
-        // Do NOT pop the knowledge message since it was never added to the history array permanently
         saveToLocalStorage();
         addMessage("An API error occurred. Praterich A.I. apologizes. Please check the console or try again later.", 'ai');
     }
