@@ -87,7 +87,8 @@ module.exports = async function (req, res) {
     var crawledResults = [];
     
     // Common filter terms for low-value images (social media icons, favicons, etc.)
-    const LOW_VALUE_FILTERS = ['favicon', 'icon', 'data:image', 'instagram', 'twitter', 'facebook', 'linkedin', 'ads', 'google'];
+    // We keep the filters to avoid capturing obvious garbage
+    const LOW_VALUE_FILTERS = ['favicon', 'icon', 'data:image', 'instagram', 'twitter', 'facebook', 'linkedin', 'google', 'wiki'];
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
@@ -97,10 +98,8 @@ module.exports = async function (req, res) {
         var pageResponse = await axios.get(result.url, AXIOS_CONFIG);
         var $page = cheerio.load(pageResponse.data);
 
-        // --- EXTRACT ALL IMAGES ---
-        var allImageUrls = new Set();
-        var logoUrls = new Set();
-        var contentUrls = new Set();
+        // --- EXTRACT ALL IMAGES WITHOUT RANKING ---
+        var finalImages = new Set();
         
         // 1. Crawl every <img> tag on the page
         $page('img').each(function() {
@@ -113,29 +112,15 @@ module.exports = async function (req, res) {
                     if (!absoluteUrl.startsWith('http')) return; 
 
                     let lowerUrl = absoluteUrl.toLowerCase();
-                    let isLowValue = LOW_VALUE_FILTERS.some(filter => lowerUrl.includes(filter));
-                    let isSVG = lowerUrl.includes('.svg');
                     let isBase64 = lowerUrl.startsWith('data:');
                     
                     if (isBase64) return; // Always skip base64
 
-                    // Determine if it's a logo candidate
-                    let isLogoCandidate = lowerUrl.includes('logo') || $page(this).attr('alt')?.toLowerCase().includes('logo');
+                    // Basic Filter: Skip if URL contains known low-value terms
+                    let isLowValue = LOW_VALUE_FILTERS.some(filter => lowerUrl.includes(filter));
                     
-                    // Add all unique, non-base64 URLs to a master set
-                    allImageUrls.add(absoluteUrl);
-
-                    // --- Filtering & Prioritization ---
-                    
-                    // a) Prioritize true logo candidates
-                    if (isLogoCandidate && !isLowValue) {
-                        logoUrls.add(absoluteUrl);
-                    }
-                    
-                    // b) Prioritize content images (non-low-value, non-SVG, and large candidates)
-                    let isLargeCandidate = $page(this).attr('width') > 100 || $page(this).attr('height') > 100 || lowerUrl.includes('photo');
-                    if (!isLowValue && !isSVG && isLargeCandidate) {
-                        contentUrls.add(absoluteUrl);
+                    if (!isLowValue) {
+                         finalImages.add(absoluteUrl);
                     }
 
                 } catch (err) { 
@@ -144,36 +129,8 @@ module.exports = async function (req, res) {
             }
         });
         
-        // --- ASSEMBLE FINAL IMAGE LIST ---
-        let finalImages = [];
-
-        // 1. Include the best logo candidates first
-        if (logoUrls.size > 0) {
-            finalImages = finalImages.concat(Array.from(logoUrls));
-        }
-
-        // 2. Include the best content image candidates next (avoiding duplicates)
-        Array.from(contentUrls).forEach(url => {
-            if (!finalImages.includes(url)) {
-                finalImages.push(url);
-            }
-        });
-        
-        // 3. Fallback: If still few images, include other unique, filtered images
-        if (finalImages.length < 5) {
-             Array.from(allImageUrls).forEach(url => {
-                 let lowerUrl = url.toLowerCase();
-                 let isLowValue = LOW_VALUE_FILTERS.some(filter => lowerUrl.includes(filter));
-                 
-                 // Include if it's not a known social media or favicon, and is not already present
-                 if (!isLowValue && !finalImages.includes(url)) {
-                     finalImages.push(url);
-                 }
-             });
-        }
-        
-        // Limit the final array size to something reasonable
-        finalImages = finalImages.slice(0, 20); 
+        // Convert Set to Array and limit the size
+        let finalImagesArray = Array.from(finalImages).slice(0, 20); 
 
 
         // --- EXTRACT HEADINGS & TEXT ---
@@ -193,7 +150,7 @@ module.exports = async function (req, res) {
           description: $page('meta[name="description"]').attr('content') || result.description,
           headings: headings,
           content: content,
-          images: finalImages, // Use the prioritized and filtered list
+          images: finalImagesArray, // Use the non-ranked list
           source: result.source,
           _score: 0
         });
