@@ -2,6 +2,9 @@ var axios = require('axios');
 var cheerio = require('cheerio');
 var cors = require('./_cors');
 
+// Helper function to create a delay
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 module.exports = async function (req, res) {
   cors.setCors(res);
   if (req.method === 'OPTIONS') {
@@ -21,24 +24,28 @@ module.exports = async function (req, res) {
 
   // Define pagination and request constants
   const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-  const MAX_PAGES_TO_SCRAPE = 5; 
+  const MAX_PAGES_TO_SCRAPE = 3; // Scrape first 3 pages (Page 1, 2, 3)
+  const PAUSE_BETWEEN_PAGES_MS = 2000; // 2 seconds delay
+  
   const BING_RESULTS_PER_PAGE = 10;
   const YAHOO_RESULTS_PER_PAGE = 10;
   const BRAVE_RESULTS_PER_PAGE = 10; 
 
   const AXIOS_CONFIG = {
     headers: { 'User-Agent': USER_AGENT },
-    timeout: 5000 // 5 second timeout for page fetching
+    timeout: 8000 // Increased timeout to 8s
   };
 
   try {
     let combined = [];
 
-    // --- 1. Brave scraping with Pagination ---
+    // --- 1. Brave scraping with Pagination and Delay ---
     console.log('Starting Brave scraping...');
     var braveResults = [];
 
     for (let page = 0; page < MAX_PAGES_TO_SCRAPE; page++) {
+        if (page > 0) await sleep(PAUSE_BETWEEN_PAGES_MS);
+        
         const offset = page * BRAVE_RESULTS_PER_PAGE;
         const braveUrl = `https://search.brave.com/search?q=${encodeURIComponent(q)}&offset=${offset}&spellcheck=0`;
 
@@ -46,13 +53,13 @@ module.exports = async function (req, res) {
             var braveHtml = await axios.get(braveUrl, AXIOS_CONFIG);
             var $brave = cheerio.load(braveHtml.data);
 
-            // Brave selector for organic results (may need adjustment if the site changes)
-            $brave('.snippet').each(function () {
-              var title = $brave(this).find('.snippet-title').text().trim();
-              var url = $brave(this).find('.snippet-url').attr('href');
-              var desc = $brave(this).find('.snippet-content').text().trim();
+            // Refined Brave selector to capture results more reliably
+            $brave('div.result').each(function () {
+              var title = $brave(this).find('a.title').text().trim();
+              var url = $brave(this).find('a.title').attr('href');
+              var desc = $brave(this).find('div.snippet-content').text().trim();
               
-              if (title && url) {
+              if (title && url && url.startsWith('http')) {
                 if (!braveResults.some(r => r.url === url)) {
                     braveResults.push({ title, url, description: desc, source: 'Brave' });
                 }
@@ -60,8 +67,7 @@ module.exports = async function (req, res) {
             });
             console.log(`Brave results found on page ${page + 1}: ${braveResults.length} total.`);
 
-            // Stop if the current page returned no results
-            if ($brave('.snippet').length === 0) break;
+            if ($brave('div.result').length === 0) break; 
 
         } catch (error) {
             console.error(`Error scraping Brave page ${page + 1}: ${error.message}`);
@@ -71,11 +77,13 @@ module.exports = async function (req, res) {
     combined = combined.concat(braveResults);
 
 
-    // --- 2. Bing scraping with Pagination ---
+    // --- 2. Bing scraping with Pagination and Delay ---
     console.log('Starting Bing scraping...');
     var bingResults = [];
     
     for (let page = 0; page < MAX_PAGES_TO_SCRAPE; page++) {
+        if (page > 0) await sleep(PAUSE_BETWEEN_PAGES_MS);
+        
         const firstParam = (page * BING_RESULTS_PER_PAGE) + 1;
         const bingUrl = `https://www.bing.com/search?q=${encodeURIComponent(q)}&first=${firstParam}`;
 
@@ -104,11 +112,13 @@ module.exports = async function (req, res) {
     }
     combined = combined.concat(bingResults);
 
-    // --- 3. Yahoo scraping with Pagination ---
+    // --- 3. Yahoo scraping with Pagination and Delay ---
     console.log('Starting Yahoo scraping...');
     var yahooResults = [];
 
     for (let page = 0; page < MAX_PAGES_TO_SCRAPE; page++) {
+        if (page > 0) await sleep(PAUSE_BETWEEN_PAGES_MS);
+        
         const bParam = (page * YAHOO_RESULTS_PER_PAGE) + 1;
         const yahooUrl = `https://search.yahoo.com/search?p=${encodeURIComponent(q)}&b=${bParam}`;
 
@@ -182,6 +192,9 @@ module.exports = async function (req, res) {
       if (!result.url.startsWith('http')) continue;
       
       console.log(`[${i + 1}/${combined.length}] Crawling destination: ${result.url}`);
+
+      // Adding a small delay here too, to be cautious
+      await sleep(500); 
 
       try {
         var pageResponse = await axios.get(result.url, AXIOS_CONFIG);
