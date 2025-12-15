@@ -1,4 +1,3 @@
-
 var fetch = require('node-fetch');
 var cheerio = require('cheerio');
 var _cors = require('./_cors');
@@ -52,12 +51,29 @@ module.exports = async function (req, res) {
           ? $('body').text().replace(/\s+/g, ' ').trim()
           : '';
 
+        // --- NEW: Image Extraction Logic ---
+        const images = [];
+        $('img').each((_, el) => {
+          const src = $(el).attr('src');
+          if (src) {
+            try {
+              // Convert relative paths to absolute URLs
+              const absoluteUrl = new URL(src, url).href;
+              images.push(absoluteUrl);
+            } catch (err) {
+              // Ignore invalid URLs
+            }
+          }
+        });
+        // -----------------------------------
+
         const siteData = {
           url,
           title: $('title').text() || '',
           description,
           keywords,
-          'all-text': allText
+          'all-text': allText,
+          images: images // Added images to response
         };
 
         let results = [siteData];
@@ -82,7 +98,7 @@ module.exports = async function (req, res) {
 
         return results;
       } catch (err) {
-        return [{ url, error: 'Failed to fetch or parse' }];
+        return [{ url, error: 'Failed to fetch or parse', details: err.message }];
       }
     }
 
