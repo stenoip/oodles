@@ -21,10 +21,10 @@ module.exports = async function (req, res) {
 
   // Define pagination and request constants
   const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
-  const MAX_PAGES_TO_SCRAPE = 3; // Scrape first 3 pages (Page 1, 2, 3)
+  const MAX_PAGES_TO_SCRAPE = 5; 
   const BING_RESULTS_PER_PAGE = 10;
   const YAHOO_RESULTS_PER_PAGE = 10;
-  const BRAVE_RESULTS_PER_PAGE = 10; // Brave defaults to 10 results per page
+  const BRAVE_RESULTS_PER_PAGE = 10; 
 
   const AXIOS_CONFIG = {
     headers: { 'User-Agent': USER_AGENT },
