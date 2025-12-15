@@ -19,11 +19,16 @@ module.exports = async function (req, res) {
     return;
   }
 
+  // Define a standard User-Agent for all requests
+  const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
+  const AXIOS_CONFIG = {
+    headers: { 'User-Agent': USER_AGENT },
+    timeout: 5000 // 5 second timeout for page fetching
+  };
+
   try {
     // --- 1. Bing scraping ---
-    var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q), {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
-    });
+    var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q), AXIOS_CONFIG);
     var $bing = cheerio.load(bingHtml.data);
     var bingResults = [];
     $bing('li.b_algo').each(function () {
@@ -37,9 +42,7 @@ module.exports = async function (req, res) {
     console.log('Bing results found:', bingResults.length);
 
     // --- 2. Yahoo scraping ---
-    var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q), {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
-    });
+    var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q), AXIOS_CONFIG);
     var $yahoo = cheerio.load(yahooHtml.data);
     var yahooResults = [];
     $yahoo('div.algo-sr').each(function () {
@@ -53,9 +56,7 @@ module.exports = async function (req, res) {
     console.log('Yahoo results found:', yahooResults.length);
 
     // --- 3. DuckDuckGo scraping ---
-    var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
-    });
+    var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), AXIOS_CONFIG);
     var $ddg = cheerio.load(ddgHtml.data);
     var ddgResults = [];
 
@@ -84,40 +85,60 @@ module.exports = async function (req, res) {
     // --- 4. Combine and Crawl Destination Pages ---
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
     var crawledResults = [];
-
-    // Optional: Limit combined results to speed up processing (e.g., top 10)
-    // combined = combined.slice(0, 10);
+    
+    // Selectors to help target large, non-icon images on gallery pages
+    const IMAGE_SELECTOR_HINTS = [
+        'img[data-srcset]',       // Often used for responsive, large images
+        'img[loading="lazy"]',    // Often used for large images in galleries
+        'figure img',             // Images within figure tags (common in articles/galleries)
+        '.image-container img',   // Placeholder for common gallery class names
+        'img[alt]',               // Images with alt text (typically content images)
+        'img'                     // Fallback: all images
+    ];
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
       console.log('Crawling destination:', result.url);
 
       try {
-        // Fetch the actual page content
-        var pageResponse = await axios.get(result.url, {
-          timeout: 5000, // 5s timeout to prevent hanging
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
-        });
-        
+        // Fetch the actual page content with timeout and user-agent
+        var pageResponse = await axios.get(result.url, AXIOS_CONFIG);
         var $page = cheerio.load(pageResponse.data);
 
         // --- EXTRACT IMAGES ---
-        var images = [];
-        $page('img').each(function() {
-            var src = $page(this).attr('src');
-            if (src) {
-                try {
-                    // Convert relative paths to absolute URLs using the page URL
-                    var absoluteUrl = new URL(src, result.url).href;
-                    if (absoluteUrl.startsWith('http')) {
-                        images.push(absoluteUrl);
+        var images = new Set();
+        
+        // Iterate through targeted selectors
+        for (const selector of IMAGE_SELECTOR_HINTS) {
+            $page(selector).each(function() {
+                // Check both 'src' and 'data-src' (for lazy loading)
+                var src = $page(this).attr('src') || $page(this).attr('data-src');
+                
+                if (src) {
+                    try {
+                        // 1. Convert relative paths to absolute URLs
+                        var absoluteUrl = new URL(src, result.url).href;
+                        
+                        // 2. Filter out low-value URLs
+                        if (absoluteUrl.startsWith('http') && 
+                            !absoluteUrl.includes('favicon') && 
+                            !absoluteUrl.includes('logo') && 
+                            !absoluteUrl.includes('.svg') &&
+                            !absoluteUrl.includes('data:image')) 
+                        {
+                            images.add(absoluteUrl);
+                        }
+                    } catch (err) {
+                        // Skip invalid URLs
                     }
-                } catch (err) {
-                    // Skip invalid URLs
                 }
+            });
+            // Heuristic: If we've found a good number of images, we can stop checking weaker selectors
+            if (images.size >= 10 && selector !== 'img') {
+                break;
             }
-        });
-
+        }
+        
         // --- EXTRACT HEADINGS & TEXT ---
         var headings = [];
         $page('h1, h2, h3').each(function() {
@@ -130,18 +151,18 @@ module.exports = async function (req, res) {
         var content = $page('body').text().replace(/\s+/g, ' ').trim().substring(0, 2000); // Limit text size
 
         crawledResults.push({
-          title: result.title,
+          title: $page('title').text().trim() || result.title, // Use page title if available
           url: result.url,
-          description: result.description,
+          description: $page('meta[name="description"]').attr('content') || result.description, // Use page description if available
           headings: headings,
           content: content,
-          images: images, // <--- New Image Array
+          images: Array.from(images), // Convert Set back to Array for the final response
           source: result.source,
           _score: 0
         });
 
       } catch (e) {
-        console.error('Failed to crawl', result.url);
+        console.error('Failed to crawl', result.url, e.message);
         crawledResults.push({
           title: result.title,
           url: result.url,
