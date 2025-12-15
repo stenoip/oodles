@@ -86,28 +86,8 @@ module.exports = async function (req, res) {
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
     var crawledResults = [];
     
-    // Selectors optimized for finding the brand logo (highest priority)
-    const LOGO_IMAGE_SELECTORS = [
-        'img[alt*="logo"]',
-        'img[alt*="Logo"]',
-        'img[src*="logo"]',
-        'img.header-logo',
-        'img#logo',
-        'img[itemprop="logo"]'
-    ];
-    
-    // Selectors optimized for finding content/gallery images (medium priority)
-    const CONTENT_IMAGE_SELECTORS = [
-        'img[data-srcset]',
-        'img[loading="lazy"]',
-        'figure img',
-        '.image-container img',
-        'img[alt]',
-        'img[itemprop="image"]'
-    ];
-
     // Common filter terms for low-value images (social media icons, favicons, etc.)
-    const LOW_VALUE_FILTERS = ['favicon', 'icon', '.svg', 'data:image', 'instagram', 'twitter', 'facebook', 'linkedin', 'ads'];
+    const LOW_VALUE_FILTERS = ['favicon', 'icon', 'data:image', 'instagram', 'twitter', 'facebook', 'linkedin', 'ads', 'google'];
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
@@ -117,67 +97,83 @@ module.exports = async function (req, res) {
         var pageResponse = await axios.get(result.url, AXIOS_CONFIG);
         var $page = cheerio.load(pageResponse.data);
 
-        // --- EXTRACT IMAGES ---
-        var images = new Set();
-        let foundLogo = false; 
+        // --- EXTRACT ALL IMAGES ---
+        var allImageUrls = new Set();
+        var logoUrls = new Set();
+        var contentUrls = new Set();
         
-        // Helper function to process and filter an image source
-        const processImageSource = (src, isLogoSearch = false) => {
-            if (!src) return;
-            try {
-                var absoluteUrl = new URL(src, result.url).href;
-                if (!absoluteUrl.startsWith('http')) return; // Must be absolute URL
+        // 1. Crawl every <img> tag on the page
+        $page('img').each(function() {
+            var src = $page(this).attr('src') || $page(this).attr('data-src');
+            
+            if (src) {
+                try {
+                    // Convert relative paths to absolute URLs
+                    var absoluteUrl = new URL(src, result.url).href;
+                    if (!absoluteUrl.startsWith('http')) return; 
 
-                let isLowValue = LOW_VALUE_FILTERS.some(filter => absoluteUrl.toLowerCase().includes(filter));
-                
-                // Allow some filtering leniency for logos, but keep core filters
-                if (isLogoSearch) {
-                    if (absoluteUrl.toLowerCase().includes('logo') && !absoluteUrl.includes('favicon')) {
-                        images.add(absoluteUrl);
-                        return true; // Found a strong candidate
+                    let lowerUrl = absoluteUrl.toLowerCase();
+                    let isLowValue = LOW_VALUE_FILTERS.some(filter => lowerUrl.includes(filter));
+                    let isSVG = lowerUrl.includes('.svg');
+                    let isBase64 = lowerUrl.startsWith('data:');
+                    
+                    if (isBase64) return; // Always skip base64
+
+                    // Determine if it's a logo candidate
+                    let isLogoCandidate = lowerUrl.includes('logo') || $page(this).attr('alt')?.toLowerCase().includes('logo');
+                    
+                    // Add all unique, non-base64 URLs to a master set
+                    allImageUrls.add(absoluteUrl);
+
+                    // --- Filtering & Prioritization ---
+                    
+                    // a) Prioritize true logo candidates
+                    if (isLogoCandidate && !isLowValue) {
+                        logoUrls.add(absoluteUrl);
                     }
-                } else {
-                    if (!isLowValue) {
-                        images.add(absoluteUrl);
+                    
+                    // b) Prioritize content images (non-low-value, non-SVG, and large candidates)
+                    let isLargeCandidate = $page(this).attr('width') > 100 || $page(this).attr('height') > 100 || lowerUrl.includes('photo');
+                    if (!isLowValue && !isSVG && isLargeCandidate) {
+                        contentUrls.add(absoluteUrl);
                     }
+
+                } catch (err) { 
+                    // Invalid URL
                 }
-            } catch (err) { 
-                // Invalid URL
             }
-            return false;
-        };
+        });
         
-        // 1. HIGH PRIORITY: Search for the Brand Logo
-        for (const selector of LOGO_IMAGE_SELECTORS) {
-            $page(selector).each(function() {
-                var src = $page(this).attr('src') || $page(this).attr('data-src');
-                if (processImageSource(src, true)) {
-                    foundLogo = true;
-                    return false; // Break cheerio loop
-                }
-            });
-            if (foundLogo) break; // Break JavaScript loop
-        }
-        
-        // 2. MEDIUM PRIORITY: Search for Content/Gallery Images
-        for (const selector of CONTENT_IMAGE_SELECTORS) {
-            $page(selector).each(function() {
-                var src = $page(this).attr('src') || $page(this).attr('data-src');
-                processImageSource(src, false);
-            });
-            // Stop after the first content selector finds a reasonable number of images
-            if (images.size >= 10) {
-                break;
-            }
+        // --- ASSEMBLE FINAL IMAGE LIST ---
+        let finalImages = [];
+
+        // 1. Include the best logo candidates first
+        if (logoUrls.size > 0) {
+            finalImages = finalImages.concat(Array.from(logoUrls));
         }
 
-        // 3. Fallback: Search all remaining img tags (low priority)
-        if (images.size < 5) {
-             $page('img').each(function() {
-                var src = $page(this).attr('src') || $page(this).attr('data-src');
-                processImageSource(src, false);
-            });
+        // 2. Include the best content image candidates next (avoiding duplicates)
+        Array.from(contentUrls).forEach(url => {
+            if (!finalImages.includes(url)) {
+                finalImages.push(url);
+            }
+        });
+        
+        // 3. Fallback: If still few images, include other unique, filtered images
+        if (finalImages.length < 5) {
+             Array.from(allImageUrls).forEach(url => {
+                 let lowerUrl = url.toLowerCase();
+                 let isLowValue = LOW_VALUE_FILTERS.some(filter => lowerUrl.includes(filter));
+                 
+                 // Include if it's not a known social media or favicon, and is not already present
+                 if (!isLowValue && !finalImages.includes(url)) {
+                     finalImages.push(url);
+                 }
+             });
         }
+        
+        // Limit the final array size to something reasonable
+        finalImages = finalImages.slice(0, 20); 
 
 
         // --- EXTRACT HEADINGS & TEXT ---
@@ -197,7 +193,7 @@ module.exports = async function (req, res) {
           description: $page('meta[name="description"]').attr('content') || result.description,
           headings: headings,
           content: content,
-          images: Array.from(images), // Convert Set back to Array
+          images: finalImages, // Use the prioritized and filtered list
           source: result.source,
           _score: 0
         });
