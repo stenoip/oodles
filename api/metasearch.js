@@ -1,8 +1,6 @@
 var axios = require('axios');
 var cheerio = require('cheerio');
 var cors = require('./_cors');
-var generate = require('./generate');
-var crawlOne = generate.crawlOne;
 
 module.exports = async function (req, res) {
   cors.setCors(res);
@@ -22,8 +20,10 @@ module.exports = async function (req, res) {
   }
 
   try {
-    // --- Bing scraping ---
-    var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q));
+    // --- 1. Bing scraping ---
+    var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+    });
     var $bing = cheerio.load(bingHtml.data);
     var bingResults = [];
     $bing('li.b_algo').each(function () {
@@ -36,8 +36,10 @@ module.exports = async function (req, res) {
     });
     console.log('Bing results found:', bingResults.length);
 
-    // --- Yahoo scraping ---
-    var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q));
+    // --- 2. Yahoo scraping ---
+    var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+    });
     var $yahoo = cheerio.load(yahooHtml.data);
     var yahooResults = [];
     $yahoo('div.algo-sr').each(function () {
@@ -50,8 +52,10 @@ module.exports = async function (req, res) {
     });
     console.log('Yahoo results found:', yahooResults.length);
 
-    // --- DuckDuckGo scraping ---
-    var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q));
+    // --- 3. DuckDuckGo scraping ---
+    var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+    });
     var $ddg = cheerio.load(ddgHtml.data);
     var ddgResults = [];
 
@@ -77,31 +81,74 @@ module.exports = async function (req, res) {
     });
     console.log('DuckDuckGo results found:', ddgResults.length);
 
-    // --- Combine and crawl ---
+    // --- 4. Combine and Crawl Destination Pages ---
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
     var crawledResults = [];
 
+    // Optional: Limit combined results to speed up processing (e.g., top 10)
+    // combined = combined.slice(0, 10);
+
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
-      console.log('Crawling', result.source, result.url);
+      console.log('Crawling destination:', result.url);
+
       try {
-        var crawled = await crawlOne(result.url);
+        // Fetch the actual page content
+        var pageResponse = await axios.get(result.url, {
+          timeout: 5000, // 5s timeout to prevent hanging
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+        });
+        
+        var $page = cheerio.load(pageResponse.data);
+
+        // --- EXTRACT IMAGES ---
+        var images = [];
+        $page('img').each(function() {
+            var src = $page(this).attr('src');
+            if (src) {
+                try {
+                    // Convert relative paths to absolute URLs using the page URL
+                    var absoluteUrl = new URL(src, result.url).href;
+                    if (absoluteUrl.startsWith('http')) {
+                        images.push(absoluteUrl);
+                    }
+                } catch (err) {
+                    // Skip invalid URLs
+                }
+            }
+        });
+
+        // --- EXTRACT HEADINGS & TEXT ---
+        var headings = [];
+        $page('h1, h2, h3').each(function() {
+            headings.push($page(this).text().trim());
+        });
+
+        // Clean up scripts/styles for clean text extraction
+        $page('script').remove();
+        $page('style').remove();
+        var content = $page('body').text().replace(/\s+/g, ' ').trim().substring(0, 2000); // Limit text size
+
         crawledResults.push({
-          title: crawled.title,
-          url: crawled.url,
-          description: crawled.description,
-          headings: crawled.headings,
-          content: crawled.content,
+          title: result.title,
+          url: result.url,
+          description: result.description,
+          headings: headings,
+          content: content,
+          images: images, // <--- New Image Array
           source: result.source,
           _score: 0
         });
+
       } catch (e) {
+        console.error('Failed to crawl', result.url);
         crawledResults.push({
           title: result.title,
           url: result.url,
           description: result.description || 'Failed to crawl',
           headings: [],
           content: '',
+          images: [],
           source: result.source,
           _score: 0
         });
@@ -110,6 +157,7 @@ module.exports = async function (req, res) {
 
     res.status(200).json({ results: crawledResults });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'MetaSearch failed', details: err.message });
   }
 };
