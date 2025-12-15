@@ -86,59 +86,100 @@ module.exports = async function (req, res) {
     var combined = bingResults.concat(yahooResults).concat(ddgResults);
     var crawledResults = [];
     
-    // Selectors to help target large, non-icon images on gallery pages
-    const IMAGE_SELECTOR_HINTS = [
-        'img[data-srcset]',       // Often used for responsive, large images
-        'img[loading="lazy"]',    // Often used for large images in galleries
-        'figure img',             // Images within figure tags (common in articles/galleries)
-        '.image-container img',   // Placeholder for common gallery class names
-        'img[alt]',               // Images with alt text (typically content images)
-        'img'                     // Fallback: all images
+    // Selectors optimized for finding the brand logo (highest priority)
+    const LOGO_IMAGE_SELECTORS = [
+        'img[alt*="logo"]',
+        'img[alt*="Logo"]',
+        'img[src*="logo"]',
+        'img.header-logo',
+        'img#logo',
+        'img[itemprop="logo"]'
     ];
+    
+    // Selectors optimized for finding content/gallery images (medium priority)
+    const CONTENT_IMAGE_SELECTORS = [
+        'img[data-srcset]',
+        'img[loading="lazy"]',
+        'figure img',
+        '.image-container img',
+        'img[alt]',
+        'img[itemprop="image"]'
+    ];
+
+    // Common filter terms for low-value images (social media icons, favicons, etc.)
+    const LOW_VALUE_FILTERS = ['favicon', 'icon', '.svg', 'data:image', 'instagram', 'twitter', 'facebook', 'linkedin', 'ads'];
 
     for (var i = 0; i < combined.length; i++) {
       var result = combined[i];
       console.log('Crawling destination:', result.url);
 
       try {
-        // Fetch the actual page content with timeout and user-agent
         var pageResponse = await axios.get(result.url, AXIOS_CONFIG);
         var $page = cheerio.load(pageResponse.data);
 
         // --- EXTRACT IMAGES ---
         var images = new Set();
+        let foundLogo = false; 
         
-        // Iterate through targeted selectors
-        for (const selector of IMAGE_SELECTOR_HINTS) {
-            $page(selector).each(function() {
-                // Check both 'src' and 'data-src' (for lazy loading)
-                var src = $page(this).attr('src') || $page(this).attr('data-src');
+        // Helper function to process and filter an image source
+        const processImageSource = (src, isLogoSearch = false) => {
+            if (!src) return;
+            try {
+                var absoluteUrl = new URL(src, result.url).href;
+                if (!absoluteUrl.startsWith('http')) return; // Must be absolute URL
+
+                let isLowValue = LOW_VALUE_FILTERS.some(filter => absoluteUrl.toLowerCase().includes(filter));
                 
-                if (src) {
-                    try {
-                        // 1. Convert relative paths to absolute URLs
-                        var absoluteUrl = new URL(src, result.url).href;
-                        
-                        // 2. Filter out low-value URLs
-                        if (absoluteUrl.startsWith('http') && 
-                            !absoluteUrl.includes('favicon') && 
-                            !absoluteUrl.includes('logo') && 
-                            !absoluteUrl.includes('.svg') &&
-                            !absoluteUrl.includes('data:image')) 
-                        {
-                            images.add(absoluteUrl);
-                        }
-                    } catch (err) {
-                        // Skip invalid URLs
+                // Allow some filtering leniency for logos, but keep core filters
+                if (isLogoSearch) {
+                    if (absoluteUrl.toLowerCase().includes('logo') && !absoluteUrl.includes('favicon')) {
+                        images.add(absoluteUrl);
+                        return true; // Found a strong candidate
+                    }
+                } else {
+                    if (!isLowValue) {
+                        images.add(absoluteUrl);
                     }
                 }
+            } catch (err) { 
+                // Invalid URL
+            }
+            return false;
+        };
+        
+        // 1. HIGH PRIORITY: Search for the Brand Logo
+        for (const selector of LOGO_IMAGE_SELECTORS) {
+            $page(selector).each(function() {
+                var src = $page(this).attr('src') || $page(this).attr('data-src');
+                if (processImageSource(src, true)) {
+                    foundLogo = true;
+                    return false; // Break cheerio loop
+                }
             });
-            // Heuristic: If we've found a good number of images, we can stop checking weaker selectors
-            if (images.size >= 10 && selector !== 'img') {
+            if (foundLogo) break; // Break JavaScript loop
+        }
+        
+        // 2. MEDIUM PRIORITY: Search for Content/Gallery Images
+        for (const selector of CONTENT_IMAGE_SELECTORS) {
+            $page(selector).each(function() {
+                var src = $page(this).attr('src') || $page(this).attr('data-src');
+                processImageSource(src, false);
+            });
+            // Stop after the first content selector finds a reasonable number of images
+            if (images.size >= 10) {
                 break;
             }
         }
-        
+
+        // 3. Fallback: Search all remaining img tags (low priority)
+        if (images.size < 5) {
+             $page('img').each(function() {
+                var src = $page(this).attr('src') || $page(this).attr('data-src');
+                processImageSource(src, false);
+            });
+        }
+
+
         // --- EXTRACT HEADINGS & TEXT ---
         var headings = [];
         $page('h1, h2, h3').each(function() {
@@ -148,15 +189,15 @@ module.exports = async function (req, res) {
         // Clean up scripts/styles for clean text extraction
         $page('script').remove();
         $page('style').remove();
-        var content = $page('body').text().replace(/\s+/g, ' ').trim().substring(0, 2000); // Limit text size
+        var content = $page('body').text().replace(/\s+/g, ' ').trim().substring(0, 2000);
 
         crawledResults.push({
-          title: $page('title').text().trim() || result.title, // Use page title if available
+          title: $page('title').text().trim() || result.title,
           url: result.url,
-          description: $page('meta[name="description"]').attr('content') || result.description, // Use page description if available
+          description: $page('meta[name="description"]').attr('content') || result.description,
           headings: headings,
           content: content,
-          images: Array.from(images), // Convert Set back to Array for the final response
+          images: Array.from(images), // Convert Set back to Array
           source: result.source,
           _score: 0
         });
