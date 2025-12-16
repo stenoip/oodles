@@ -663,7 +663,7 @@ function updateSendButtonState() {
 // --- Chat Management and Storage (Simplified to single session) ---
 
 function saveToLocalStorage() {
-    localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(chatSessions));
+    // Disabled: no conversation persistence
 }
 
 function getQueryFromUrl() {
@@ -679,11 +679,10 @@ function getQueryFromUrl() {
 }
 
 function loadFromLocalStorage() {
-    var sessionsData = localStorage.getItem(STORAGE_KEY_SESSIONS);
-
-    if (sessionsData) {
-        chatSessions = JSON.parse(sessionsData);
-    }
+    // Disabled: no conversation persistence. Always start a fresh session
+    chatSessions = {};
+    startNewChat();
+}
 
     if (!chatSessions[currentChatId]) {
         startNewChat();
