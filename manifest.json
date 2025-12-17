@@ -2,7 +2,7 @@
   "name": "Oodles Metasearch",
   "short_name": "Oodles",
   "description": "AI-driven metasearch engine",
-  "start_url": "/oodles/",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0078D4",
