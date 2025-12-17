@@ -1,6 +1,7 @@
 {
   "name": "Oodles Metasearch",
   "short_name": "Oodles",
+  "description": "AI-driven metasearch engine",
   "start_url": "/oodles/",
   "display": "standalone",
   "background_color": "#ffffff",
