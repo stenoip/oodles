@@ -16,105 +16,102 @@ module.exports = async function (req, res) {
   }
 
   var q = req.body && req.body.q;
-  var type = req.body && req.body.type; // Check for 'images'
-  
+  var type = req.body && req.body.type; // 'images' or 'web'
+
   if (!q) {
     res.status(400).json({ error: 'Missing query' });
     return;
   }
 
-  // Common headers to mimic a real browser (prevents 403 blocks)
+  // User-Agent is CRITICAL. Without it, Bing/Yahoo return a "Mobile/Basic" version 
+  // with completely different HTML classes, often breaking the scraper.
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
   };
 
   try {
-    // ==========================================
-    // IMAGE SEARCH MODE
-    // ==========================================
+    // ==================================================================
+    // 🖼️ IMAGE SEARCH (Fixes the "Logo/Icon" issue)
+    // ==================================================================
     if (type === 'images') {
-      console.log('Starting Image Search for:', q);
+      console.log('Fetching images for:', q);
+
+      // We skip Brave for images because it is a Single Page App (React) 
+      // and requires a real browser (Puppeteer) to render the image grid.
+      // Axios will only see the "loading" skeleton or noscript icons.
       
-      const [bingImg, yahooImg, braveImg] = await Promise.allSettled([
-        // Bing Images
+      const [bingImg, yahooImg] = await Promise.allSettled([
         axios.get(`https://www.bing.com/images/search?q=${encodeURIComponent(q)}&qs=ds&form=QBID&first=1`, { headers }),
-        // Yahoo Images
-        axios.get(`https://images.search.yahoo.com/search/images?q=${encodeURIComponent(q)}`, { headers }),
-        // Brave Images
-        axios.get(`https://search.brave.com/images?q=${encodeURIComponent(q)}&source=web`, { headers })
+        axios.get(`https://images.search.yahoo.com/search/images?q=${encodeURIComponent(q)}`, { headers })
       ]);
 
       let imageResults = [];
 
-      // --- Bing Image Processing ---
+      // --- 1. Bing Images (Strict Mode) ---
       if (bingImg.status === 'fulfilled') {
         const $b = cheerio.load(bingImg.value.data);
+        // Selector: 'a.iusc' is the specific class for Bing Image Grid Items
         $b('a.iusc').each((i, el) => {
           try {
-            const m = JSON.parse($b(el).attr('m')); // Bing stores metadata in 'm' attribute
-            if (m.murl) {
+            // Bing hides the high-res URL in a JSON string inside the 'm' attribute
+            const m = JSON.parse($b(el).attr('m')); 
+            if (m.murl && m.turl) {
               imageResults.push({
-                title: m.desc || m.t,
-                url: m.murl, // Full size image
-                thumbnail: m.turl,
-                source: 'Bing Images'
+                title: m.desc || m.t || 'Image',
+                url: m.murl,       // The high-res image
+                thumbnail: m.turl, // The preview thumbnail
+                source: 'Bing'
               });
             }
-          } catch (e) { /* ignore parse errors */ }
+          } catch (e) { /* ignore parse error */ }
         });
-        console.log('Bing Images found:', imageResults.filter(r => r.source === 'Bing Images').length);
       }
 
-      // --- Yahoo Image Processing ---
+      // --- 2. Yahoo Images (Strict Mode) ---
       if (yahooImg.status === 'fulfilled') {
         const $y = cheerio.load(yahooImg.value.data);
-        // Yahoo is often tricky; looking for list items or standard anchors
-        $y('li a').each((i, el) => {
-            const href = $y(el).attr('href');
-            const img = $y(el).find('img').attr('src');
-            // Yahoo sometimes uses a redirect URL; we try to grab it
-            if (href && img && href.includes('imgurl=')) {
-                // Try to extract real URL from query param if possible
-                const match = href.match(/imgurl=([^&]+)/);
-                const realUrl = match ? decodeURIComponent(match[1]) : href;
-                imageResults.push({
-                    title: $y(el).attr('aria-label') || 'Yahoo Image',
-                    url: realUrl,
-                    thumbnail: img,
-                    source: 'Yahoo Images'
-                });
+        // Selector: '#sres' is the Search Results container. 
+        // We only look for 'li' items strictly inside this container to avoid footer icons.
+        $y('#sres li').each((i, el) => {
+          try {
+            // Yahoo usually puts the link in an anchor tag with class 'ld' or direct 'a'
+            const anchor = $y(el).find('a').first();
+            const imgTag = $y(el).find('img').first();
+            const href = anchor.attr('href');
+            
+            // We verify it looks like a Yahoo image redirect
+            if (href && imgTag.attr('src')) {
+               // Attempt to find high-res URL in query params (imgurl=...)
+               let realUrl = href;
+               const match = href.match(/imgurl=([^&]+)/);
+               if (match) {
+                 realUrl = decodeURIComponent(match[1]);
+               }
+
+               // Filter out tiny icons (sometimes 'sp.yimg.com' tracking pixels sneak in)
+               if (realUrl.length > 20) { 
+                 imageResults.push({
+                   title: anchor.attr('aria-label') || 'Yahoo Image',
+                   url: realUrl,
+                   thumbnail: imgTag.attr('src'),
+                   source: 'Yahoo'
+                 });
+               }
             }
+          } catch (e) { }
         });
-        console.log('Yahoo Images processed.');
       }
 
-      // --- Brave Image Processing ---
-      if (braveImg.status === 'fulfilled') {
-         // Brave is heavily JS/React. Axios might only get the shell. 
-         // We look for a <script> tag or fallback to basic parsing if they serve static.
-         const $br = cheerio.load(braveImg.value.data);
-         // Attempt to find images in standard tags just in case
-         $br('img.image-result').each((i, el) => {
-             imageResults.push({
-                 title: $br(el).attr('alt') || 'Brave Image',
-                 url: $br(el).attr('src'),
-                 thumbnail: $br(el).attr('src'),
-                 source: 'Brave Images'
-             });
-         });
-         // If Brave returned a script with data (common in SPAs), parsing would go here.
-         console.log('Brave Images processed.');
-      }
-
+      console.log(`Found ${imageResults.length} images.`);
       res.status(200).json({ results: imageResults });
       return;
     }
 
-    // ==========================================
-    // TEXT SEARCH MODE (Original Logic)
-    // ==========================================
+    // ==================================================================
+    //  WEB SEARCH 
+    // ==================================================================
     
-    // --- Bing scraping ---
+    // --- Bing Web ---
     var bingHtml = await axios.get('https://www.bing.com/search?q=' + encodeURIComponent(q), { headers });
     var $bing = cheerio.load(bingHtml.data);
     var bingResults = [];
@@ -126,9 +123,8 @@ module.exports = async function (req, res) {
         bingResults.push({ title, url, description: desc, source: 'Bing' });
       }
     });
-    console.log('Bing results found:', bingResults.length);
 
-    // --- Yahoo scraping ---
+    // --- Yahoo Web ---
     var yahooHtml = await axios.get('https://search.yahoo.com/search?p=' + encodeURIComponent(q), { headers });
     var $yahoo = cheerio.load(yahooHtml.data);
     var yahooResults = [];
@@ -140,66 +136,41 @@ module.exports = async function (req, res) {
         yahooResults.push({ title, url, description: desc, source: 'Yahoo' });
       }
     });
-    console.log('Yahoo results found:', yahooResults.length);
 
-    // --- DuckDuckGo scraping ---
+    // --- DuckDuckGo Web ---
     var ddgHtml = await axios.get('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), { headers });
     var $ddg = cheerio.load(ddgHtml.data);
     var ddgResults = [];
-
-    $ddg('div.result.results_links.results_links_deep.web-result').each(function () {
-      var title = $ddg(this).find('h2.result__title a.result__a').text().trim();
-      var url = $ddg(this).find('h2.result__title a.result__a').attr('href');
+    $ddg('div.result').each(function () {
+      var title = $ddg(this).find('h2.result__title a').text().trim();
+      var url = $ddg(this).find('h2.result__title a').attr('href');
       var desc = $ddg(this).find('a.result__snippet').text().trim();
-
+      
+      // Decode DDG redirect
       if (url && url.startsWith('//duckduckgo.com/l/?uddg=')) {
-        try {
-          const parsed = new URL(url, 'https://duckduckgo.com');
-          const target = parsed.searchParams.get('uddg');
-          if (target) url = decodeURIComponent(target);
-        } catch (e) { }
+        try { url = decodeURIComponent(new URL(url, 'https://duckduckgo.com').searchParams.get('uddg')); } catch(e){}
       }
 
       if (title && url) {
         ddgResults.push({ title, url, description: desc, source: 'DuckDuckGo' });
       }
     });
-    console.log('DuckDuckGo results found:', ddgResults.length);
 
-    // --- Combine and crawl ---
-    var combined = bingResults.concat(yahooResults).concat(ddgResults);
-    var crawledResults = [];
-
-    // Parallel crawling for better performance
-    const crawlPromises = combined.map(async (result) => {
-      console.log('Crawling', result.source, result.url);
+    // Combine
+    var combined = [...bingResults, ...yahooResults, ...ddgResults];
+    
+    // Parallel Crawl for Content
+    const crawledResults = await Promise.all(combined.map(async (result) => {
       try {
         var crawled = await crawlOne(result.url);
-        return {
-          title: crawled.title,
-          url: crawled.url,
-          description: crawled.description,
-          headings: crawled.headings,
-          content: crawled.content,
-          source: result.source,
-          _score: 0
-        };
+        return { ...result, ...crawled, _score: 0 };
       } catch (e) {
-        return {
-          title: result.title,
-          url: result.url,
-          description: result.description || 'Failed to crawl',
-          headings: [],
-          content: '',
-          source: result.source,
-          _score: 0
-        };
+        return { ...result, headings: [], content: '', _score: 0 };
       }
-    });
-
-    crawledResults = await Promise.all(crawlPromises);
+    }));
 
     res.status(200).json({ results: crawledResults });
+
   } catch (err) {
     res.status(500).json({ error: 'MetaSearch failed', details: err.message });
   }
