@@ -3,14 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "main": "api/index.js",
-  "scripts": {
-    "dev": "vercel dev",
-    "start": "node api/index.js"
-  },
   "dependencies": {
     "@sparticuz/chromium": "^123.0.0",
-    "axios": "^1.4.0",
+    "axios": "^1.6.0",
     "cheerio": "^1.0.0",
+    "node-fetch": "^2.6.7",
     "puppeteer-core": "^22.6.0"
   }
 }
