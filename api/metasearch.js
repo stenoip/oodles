@@ -2,72 +2,144 @@ var chromium = require('@sparticuz/chromium');
 var puppeteer = require('puppeteer-core');
 var axios = require('axios');
 var cheerio = require('cheerio');
+var cors = require('./_cors');
 
 function isValidImage(url) {
   if (!url) return false;
   var lower = url.toLowerCase();
   if (lower.includes('logo') || lower.includes('favicon') || lower.includes('icon') || lower.includes('sprite')) return false;
+  if (lower.includes('transparent.png') || lower.includes('blank.gif')) return false;
   return true;
 }
 
 module.exports = async function (req, res) {
-  var q = req.body.q;
-  var type = req.body.type || 'web';
+  cors.setCors(res);
+  
+  // Accept q and type from body (passed by index.js)
+  var q = req.body && req.body.q;
+  var type = req.body && req.body.type; 
 
-  if (!q) return res.status(400).json({ error: 'Missing query' });
+  if (!q) {
+    res.status(400).json({ error: 'Missing query' });
+    return;
+  }
 
-  var headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
+  var headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+  };
 
   try {
-    // --- IMAGE SEARCH (HEADLESS MODE) ---
+    // ==========================================
+    // 🖼️ IMAGE SEARCH (Restored originalUrl)
+    // ==========================================
     if (type === 'image') {
-      var browser = await puppeteer.launch({
-        args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-      });
+      var browser = null;
+      try {
+        browser = await puppeteer.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        });
 
-      var page = await browser.newPage();
-      await page.goto(`https://www.bing.com/images/search?q=${encodeURIComponent(q)}`, { waitUntil: 'networkidle2' });
+        var page = await browser.newPage();
+        await page.setUserAgent(headers['User-Agent']);
+        
+        await page.goto(`https://www.bing.com/images/search?q=${encodeURIComponent(q)}&form=QBID`, { 
+          waitUntil: 'networkidle2',
+          timeout: 15000 
+        });
 
-      var images = await page.evaluate(function() {
-        return Array.from(document.querySelectorAll('a.iusc')).map(function(node) {
-          try {
-            var m = JSON.parse(node.getAttribute('m'));
-            return { title: m.desc, thumbnail: m.turl, originalUrl: m.murl, pageUrl: m.purl, source: 'Bing' };
-          } catch (e) { return null; }
-        }).filter(Boolean);
-      });
+        var images = await page.evaluate(function() {
+          var results = [];
+          var nodes = document.querySelectorAll('a.iusc');
+          nodes.forEach(function(node) {
+            try {
+              var m = JSON.parse(node.getAttribute('m'));
+              if (m.murl) {
+                results.push({
+                  title: m.desc || "Image",
+                  thumbnail: m.turl,
+                  originalUrl: m.murl, // Correct property for frontend
+                  pageUrl: m.purl,
+                  source: "Bing"
+                });
+              }
+            } catch (e) {}
+          });
+          return results;
+        });
 
-      await browser.close();
-      return res.status(200).json({ items: images.filter(img => isValidImage(img.originalUrl)).slice(0, 50), total: images.length });
+        await browser.close();
+        
+        var filteredImages = images.filter(function(img) {
+            return isValidImage(img.originalUrl);
+        }).slice(0, 40);
+
+        return res.status(200).json({ items: filteredImages, total: filteredImages.length });
+
+      } catch (browserError) {
+        if (browser) await browser.close();
+        throw browserError;
+      }
     }
 
-    // --- WEB SEARCH (AXIOS MODE - LOW RAM) ---
-    var urls = [
-      `https://search.brave.com/search?q=${encodeURIComponent(q)}`,
-      `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
-      `https://search.yahoo.com/search?p=${encodeURIComponent(q)}`
+    // ==========================================
+    // 📄 WEB SEARCH (Standard - Including Brave)
+    // ==========================================
+    var requests = [
+        axios.get(`https://www.bing.com/search?q=${encodeURIComponent(q)}`, { headers }),
+        axios.get(`https://search.yahoo.com/search?p=${encodeURIComponent(q)}`, { headers }),
+        axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, { headers }),
+        axios.get(`https://search.brave.com/search?q=${encodeURIComponent(q)}`, { headers })
     ];
 
-    var responses = await Promise.allSettled(urls.map(u => axios.get(u, { headers, timeout: 5000 })));
+    var responses = await Promise.allSettled(requests);
     var combined = [];
 
-    responses.forEach(function(res, idx) {
-      if (res.status === 'fulfilled') {
-        var $ = cheerio.load(res.value.data);
-        if (idx === 0) { // Brave
-          $('.snippet').each(function() {
-            combined.push({ title: $(this).find('.snippet-title').text(), url: $(this).find('a').attr('href'), snippet: $(this).find('.snippet-description').text(), source: 'Brave' });
-          });
-        } else if (idx === 1) { // Bing
-          $('li.b_algo').each(function() {
-            combined.push({ title: $(this).find('h2').text(), url: $(this).find('a').attr('href'), snippet: $(this).find('p').text(), source: 'Bing' });
-          });
-        }
-      }
-    });
+    if (responses[0].status === 'fulfilled') {
+        var $bing = cheerio.load(responses[0].value.data);
+        $bing('li.b_algo').each(function() {
+            var title = $bing(this).find('h2').text();
+            var url = $bing(this).find('a').attr('href');
+            var desc = $bing(this).find('p').text();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Bing' });
+        });
+    }
+
+    if (responses[1].status === 'fulfilled') {
+        var $yahoo = cheerio.load(responses[1].value.data);
+        $yahoo('div.algo-sr').each(function() {
+            var title = $yahoo(this).find('h3.title a').text();
+            var url = $yahoo(this).find('h3.title a').attr('href');
+            var desc = $yahoo(this).find('.compText').text();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Yahoo' });
+        });
+    }
+
+    if (responses[2].status === 'fulfilled') {
+        var $ddg = cheerio.load(responses[2].value.data);
+        $ddg('div.result').each(function() {
+            var title = $ddg(this).find('h2.result__title a').text().trim();
+            var url = $ddg(this).find('h2.result__title a').attr('href');
+            var desc = $ddg(this).find('a.result__snippet').text().trim();
+            if (url && url.startsWith('//duckduckgo.com/l/?uddg=')) {
+                try { url = decodeURIComponent(new URL(url, 'https://duckduckgo.com').searchParams.get('uddg')); } catch(e){}
+            }
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'DuckDuckGo' });
+        });
+    }
+
+    if (responses[3].status === 'fulfilled') {
+        var $brave = cheerio.load(responses[3].value.data);
+        $brave('.snippet').each(function() {
+            var title = $brave(this).find('.snippet-title').text().trim();
+            var url = $brave(this).find('a').attr('href');
+            var desc = $brave(this).find('.snippet-description').text().trim();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Brave' });
+        });
+    }
 
     res.status(200).json({ items: combined, total: combined.length });
 
