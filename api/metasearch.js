@@ -1,14 +1,13 @@
+var chromium = require('@sparticuz/chromium');
+var puppeteer = require('puppeteer-core');
 var axios = require('axios');
 var cheerio = require('cheerio');
 var cors = require('./_cors');
-var generate = require('./generate');
-var crawlOne = generate.crawlOne;
 
 // Helper to filter out logos, icons, and junk
 function isValidImage(url) {
   if (!url) return false;
-  const lower = url.toLowerCase();
-  // Filter out common junk filenames found in sidebars/footers
+  var lower = url.toLowerCase();
   if (lower.includes('logo') || lower.includes('favicon') || lower.includes('icon') || lower.includes('sprite')) return false;
   if (lower.includes('transparent.png') || lower.includes('blank.gif')) return false;
   return true;
@@ -33,132 +32,130 @@ module.exports = async function (req, res) {
     return;
   }
 
-  // Mimic a real desktop browser to get the correct HTML layout
-  const headers = {
+  var headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
   };
 
   try {
     // ==========================================
-    // IMAGE SEARCH
+    // 🖼️ IMAGE SEARCH (Using Headless for Depth)
     // ==========================================
-    if (type === 'image') { // Matches what your frontend sends ('image')
-      console.log('Searching images for:', q);
-
-      const [bingImg, yahooImg] = await Promise.allSettled([
-        axios.get(`https://www.bing.com/images/search?q=${encodeURIComponent(q)}&qs=ds&form=QBID`, { headers }),
-        axios.get(`https://images.search.yahoo.com/search/images?p=${encodeURIComponent(q)}`, { headers })
-      ]);
-
-      let imageResults = [];
-
-      // --- 1. Bing Images (High Precision) ---
-      if (bingImg.status === 'fulfilled') {
-        const $b = cheerio.load(bingImg.value.data);
-        // Only target the specific class 'iusc' which Bing uses for result tiles
-        $b('a.iusc').each((i, el) => {
-          try {
-            const m = JSON.parse($b(el).attr('m')); 
-            if (m.murl && m.turl && isValidImage(m.murl)) {
-              imageResults.push({
-                title: m.desc || m.t || 'Image',
-                pageUrl: m.purl,      // The webpage hosting the image
-                thumbnail: m.turl,    // The actual image source
-                source: 'Bing'
-              });
-            }
-          } catch (e) { }
+    if (type === 'image') {
+      var browser = null;
+      try {
+        browser = await puppeteer.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
         });
-      }
 
-      // --- 2. Yahoo Images (Strict Container) ---
-      if (yahooImg.status === 'fulfilled') {
-        const $y = cheerio.load(yahooImg.value.data);
-        // ONLY look inside '#sres' (Search Results). Ignore header/footer.
-        $y('#sres li').each((i, el) => {
-          try {
-             // Yahoo puts the metadata in an anchor tag
-             const a = $y(el).find('a').first();
-             const img = $y(el).find('img').first();
-             
-             let imgUrl = img.attr('src');
-             let pageUrl = a.attr('href');
-
-             // Sometimes high-res is hidden in href params
-             if (pageUrl && pageUrl.includes('imgurl=')) {
-                const match = pageUrl.match(/imgurl=([^&]+)/);
-                if (match) imgUrl = decodeURIComponent(match[1]);
-             }
-
-             if (imgUrl && isValidImage(imgUrl)) {
-               imageResults.push({
-                 title: a.attr('aria-label') || 'Yahoo Image',
-                 pageUrl: pageUrl,
-                 thumbnail: imgUrl,
-                 source: 'Yahoo'
-               });
-             }
-          } catch(e) {}
+        var page = await browser.newPage();
+        await page.setUserAgent(headers['User-Agent']);
+        
+        // We target Bing as the primary high-res source for headless
+        await page.goto(`https://www.bing.com/images/search?q=${encodeURIComponent(q)}&form=QBID`, { 
+          waitUntil: 'networkidle2',
+          timeout: 15000 
         });
-      }
 
-      console.log(`Found ${imageResults.length} clean images.`);
-      res.status(200).json({ items: imageResults, total: imageResults.length });
-      return;
+        var images = await page.evaluate(function() {
+          var results = [];
+          var nodes = document.querySelectorAll('a.iusc');
+          nodes.forEach(function(node) {
+            try {
+              var m = JSON.parse(node.getAttribute('m'));
+              if (m.murl) {
+                results.push({
+                  title: m.desc || "Image",
+                  thumbnail: m.turl,
+                  url: m.murl,
+                  pageUrl: m.purl,
+                  source: "Bing"
+                });
+              }
+            } catch (e) {}
+          });
+          return results;
+        });
+
+        await browser.close();
+        
+        // Filter out junk from the final array
+        var filteredImages = images.filter(function(img) {
+            return isValidImage(img.url);
+        }).slice(0, 40);
+
+        return res.status(200).json({ items: filteredImages, total: filteredImages.length });
+
+      } catch (browserError) {
+        if (browser) await browser.close();
+        throw browserError;
+      }
     }
 
     // ==========================================
-    //  WEB SEARCH (Standard)
+    // 📄 WEB SEARCH (Standard - Including Brave)
     // ==========================================
     
-    // 1. Fetch Pages
-    const [bingHtml, yahooHtml, ddgHtml] = await Promise.allSettled([
+    var requests = [
         axios.get(`https://www.bing.com/search?q=${encodeURIComponent(q)}`, { headers }),
         axios.get(`https://search.yahoo.com/search?p=${encodeURIComponent(q)}`, { headers }),
-        axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, { headers })
-    ]);
+        axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, { headers }),
+        axios.get(`https://search.brave.com/search?q=${encodeURIComponent(q)}`, { headers })
+    ];
 
+    var responses = await Promise.allSettled(requests);
     var combined = [];
 
-    // Bing Web Parsing
-    if (bingHtml.status === 'fulfilled') {
-        const $ = cheerio.load(bingHtml.value.data);
-        $('li.b_algo').each((i, el) => {
-            const title = $(el).find('h2').text();
-            const url = $(el).find('a').attr('href');
-            const desc = $(el).find('p').text();
-            if (title && url) combined.push({ title, url, snippet: desc, source: 'Bing' });
+    // 1. Bing Parsing
+    if (responses[0].status === 'fulfilled') {
+        var $bing = cheerio.load(responses[0].value.data);
+        $bing('li.b_algo').each(function() {
+            var title = $bing(this).find('h2').text();
+            var url = $bing(this).find('a').attr('href');
+            var desc = $bing(this).find('p').text();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Bing' });
         });
     }
 
-    // Yahoo Web Parsing
-    if (yahooHtml.status === 'fulfilled') {
-        const $ = cheerio.load(yahooHtml.value.data);
-        $('div.algo-sr').each((i, el) => {
-            const title = $(el).find('h3.title a').text();
-            const url = $(el).find('h3.title a').attr('href');
-            const desc = $(el).find('.compText').text();
-            if (title && url) combined.push({ title, url, snippet: desc, source: 'Yahoo' });
+    // 2. Yahoo Parsing
+    if (responses[1].status === 'fulfilled') {
+        var $yahoo = cheerio.load(responses[1].value.data);
+        $yahoo('div.algo-sr').each(function() {
+            var title = $yahoo(this).find('h3.title a').text();
+            var url = $yahoo(this).find('h3.title a').attr('href');
+            var desc = $yahoo(this).find('.compText').text();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Yahoo' });
         });
     }
 
-    // DuckDuckGo Web Parsing
-    if (ddgHtml.status === 'fulfilled') {
-        const $ = cheerio.load(ddgHtml.value.data);
-        $('div.result').each((i, el) => {
-            const title = $(el).find('h2.result__title a').text().trim();
-            let url = $(el).find('h2.result__title a').attr('href');
-            const desc = $(el).find('a.result__snippet').text().trim();
-            
+    // 3. DuckDuckGo Parsing
+    if (responses[2].status === 'fulfilled') {
+        var $ddg = cheerio.load(responses[2].value.data);
+        $ddg('div.result').each(function() {
+            var title = $ddg(this).find('h2.result__title a').text().trim();
+            var url = $ddg(this).find('h2.result__title a').attr('href');
+            var desc = $ddg(this).find('a.result__snippet').text().trim();
             if (url && url.startsWith('//duckduckgo.com/l/?uddg=')) {
                 try { url = decodeURIComponent(new URL(url, 'https://duckduckgo.com').searchParams.get('uddg')); } catch(e){}
             }
-            if (title && url) combined.push({ title, url, snippet: desc, source: 'DuckDuckGo' });
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'DuckDuckGo' });
         });
     }
 
-    // Respond immediately with search snippets (Fast)
-    // We do NOT deep crawl here to keep it fast.
+    // 4. Brave Parsing
+    if (responses[3].status === 'fulfilled') {
+        var $brave = cheerio.load(responses[3].value.data);
+        $brave('.snippet').each(function() {
+            var title = $brave(this).find('.snippet-title').text().trim();
+            var url = $brave(this).find('a').attr('href');
+            var desc = $brave(this).find('.snippet-description').text().trim();
+            if (title && url) combined.push({ title: title, url: url, snippet: desc, source: 'Brave' });
+        });
+    }
+
     res.status(200).json({ items: combined, total: combined.length });
 
   } catch (err) {
