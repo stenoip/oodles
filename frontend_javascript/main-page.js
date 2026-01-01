@@ -1,11 +1,12 @@
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 var micCircle = document.getElementById('mic-icon-circle');
-var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+var audioContext = null; // Initialized on user interaction to comply with browser policies
 var deferredPrompt;
 
+// --- Service Worker & Install Logic ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('/sw.js').catch(err => console.log("SW failed", err));
   });
 }
 
@@ -14,7 +15,15 @@ window.addEventListener('beforeinstallprompt', function(e) {
   deferredPrompt = e;
 });
 
+// --- Audio Feedback Logic ---
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
 function playTone(frequency, duration, volume, delay, endFrequency) {
+  initAudio();
   var d = delay || 0;
   var ef = endFrequency || null;
   var startTime = audioContext.currentTime + d;
@@ -33,21 +42,23 @@ function playTone(frequency, duration, volume, delay, endFrequency) {
   gainNode.gain.setValueAtTime(volume, startTime);
   gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
   oscillator.start(startTime);
-  oscillator.stop(audioContext.currentTime + duration);
+  oscillator.stop(startTime + duration);
 }
 
+// --- Tab Navigation ---
 function switchTab(tab) {
   document.getElementById('panel-metasearch').style.display = tab === 'metasearch' ? 'block' : 'none';
   document.getElementById('panel-about').style.display = tab === 'about' ? 'block' : 'none';
 }
 
+// --- CORE SEARCH REDIRECTION FIX ---
 function runMetaSearch() {
   var q = document.getElementById('metaQuery').value.trim();
   var type = document.getElementById('searchTypeSelector').value;
   if (!q) return;
-  sessionStorage.setItem('metaSearchQuery', q);
-  sessionStorage.setItem('searchType', type);
-  window.open('search.html', '_blank');
+
+  // Redirect to search.html with parameters (matches your new search-logic.js)
+  window.location.href = `search.html?q=${encodeURIComponent(q)}&type=${type}`;
 }
 
 function runAIAnalysis() {
@@ -56,15 +67,17 @@ function runAIAnalysis() {
     alert('Please enter a query before running AI Analysis.');
     return; 
   }
-  window.open('ai_analysation.html?q=' + encodeURIComponent(q), '_blank');
+  window.location.href = 'ai_analysation.html?q=' + encodeURIComponent(q);
 }
 
+// --- Voice Search Logic ---
 function startVoiceSearch() {
   if (!('webkitSpeechRecognition' in window)) {
     alert('Your browser does not support speech recognition.');
     return;
   }
 
+  initAudio();
   var recognition = new webkitSpeechRecognition();
   recognition.lang = 'en-US';
   recognition.continuous = false;
@@ -87,7 +100,7 @@ function startVoiceSearch() {
     if (query) {
       playTone(800, 0.1, 0.6); 
       playTone(1200, 0.1, 0.6, 0.15); 
-      runMetaSearch();
+      setTimeout(runMetaSearch, 400); // Small delay to let sounds finish
     } else {
       playTone(150, 0.4, 0.6, 0, 100);
     }
@@ -96,10 +109,13 @@ function startVoiceSearch() {
   recognition.onerror = function(event) {
     micCircle.classList.remove('mic-recording');
     playTone(150, 0.4, 0.6, 0, 100); 
-    alert('Voice recognition failed: ' + event.error);
+    console.error('Voice recognition error:', event.error);
   };
 }
 
+// --- Event Listeners ---
 document.getElementById('metaQuery').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') runMetaSearch();
+  if (e.key === 'Enter') {
+      runMetaSearch();
+  }
 });
