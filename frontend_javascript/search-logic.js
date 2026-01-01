@@ -12,10 +12,10 @@ No intro/outro. Use 1-3 detailed sentences only. Reference to websites from sear
 do not just say "apples are fruits".
 Summarize search results with technical detail. 
 STRICT RULES:
-1. Max 45 words (expanded slightly for detail).
-2. You MUST cite sources by name (e.g., "According to Wikipedia...").
-3. Provide specific facts (variety, origin, or use) rather than generic definitions.
-4. Output: [Summary] + @@RANKING:[indices]@@ + @@TOOL:[tool]@@.
+
+1. You MUST cite sources by name (e.g., "According to Wikipedia...").
+2. Provide specific facts (variety, origin, or use) rather than generic definitions.
+3. Output: [Summary] + @@RANKING:[indices]@@ + @@TOOL:[tool]@@.
 
 Include @@RANKING:[indices]@@ and @@TOOL:[tool]@@.`;
 
