@@ -107,7 +107,7 @@
       border: none;
       background: transparent;
       cursor: pointer;
-      color: #666;
+      color: #663;
       font-size: 24px; /* ai icon size */
       margin-left: 10px;
       transition: color 0.3s;
@@ -313,9 +313,10 @@
         </button>
         <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
        
-        <button class="world-search-btn" onclick="window.location.href='https://stenoip.github.io/oodles/world-search?q='">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/8-cell-simple.gif/250px-8-cell-simple.gif" alt="World Search" height="30px">
-        </button>
+        <button class="world-search-btn" onclick="window.location.href='https://stenoip.github.io/oodles/world-search?q=' + encodeURIComponent(document.getElementById('metaQuery').value)">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/8-cell-simple.gif/250px-8-cell-simple.gif" alt="World Search" height="30px">
+</button>
+
       </div>
       <div class="actions">
         <select id="searchTypeSelector" class="frutiger-aero-button">
