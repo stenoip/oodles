@@ -1,21 +1,15 @@
-/* Copyright Stenoip Company. All rights reserved.
-   Oodles Search Frontend - Optimized for Groq Token Limits & Pagination
-*/
+/* Copyright Stenoip Company. All rights reserved. */
 
-// --- CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-var TOKEN_SAFE_CHAR_LIMIT = 250; // Truncate snippets to save Groq tokens
-var MAX_AI_CONTEXT_ITEMS = 6;    // Only send top 6 results to AI
-var MAX_PAGE_SIZE = 20;         // Results per page
+var TOKEN_SAFE_CHAR_LIMIT = 200; 
+var MAX_AI_CONTEXT_ITEMS = 5;    
+var MAX_PAGE_SIZE = 20;         
 
-var ladyPraterichSystemInstruction = `You are Praterich for Oodles Search, an AI developed by 
-Stenoip Company.
-STRICT RULES: 
-1. Maximum 2 sentences. 
-2. Use bullet points if listing facts. 
-3. No introductory phrases like "Based on the results..." 
-Analyze search snippets, provide a synthesis, and a relevance ranking. RANKING TAG: @@RANKING:[index1, index2, index3...]@@ TOOL TAG: @@TOOL:[tool_name]@@ (calculator, unit_converter, colour_picker, metronome, translate). IMPORTANT: Be extremely concise to save tokens.`;
+// STRICT TOKEN SAVING: Forced the AI to 1-2 sentence maximums
+var ladyPraterichSystemInstruction = `You are Praterich A.I, an AI overview for Oodles Metasearch. Summarize results. STRICT RULE: Max 30 words. 
+No intro/outro. Use 1-2 short sentences only. 
+Include @@RANKING:[indices]@@ and @@TOOL:[tool]@@.`;
 
 var BUILT_IN_TOOLS = {
     'calculator': { url: 'https://stenoip.github.io/kompmasine.html' },
@@ -25,7 +19,6 @@ var BUILT_IN_TOOLS = {
     'translate': { url: 'https://stenoip.github.io/praterich/translate/translate' }
 };
 
-// --- STATE MANAGEMENT ---
 var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
@@ -35,12 +28,11 @@ var lastFetchedItems = null;
 var aiTimeout = null;           
 var lastResultFingerprint = "";
 
-// --- CACHING & UTILS ---
 function setPersistentCache(query, data) {
     try {
         const cacheObj = { payload: data, timestamp: Date.now() };
         localStorage.setItem(`oodles_cache_${query.toLowerCase().trim()}`, JSON.stringify(cacheObj));
-    } catch (e) { console.warn("Cache full."); }
+    } catch (e) {}
 }
 
 function getPersistentCache(query) {
@@ -84,7 +76,6 @@ function renderBuiltInTool(toolName) {
     }
 }
 
-// --- CORE AI LOGIC (TOKEN OPTIMIZED) ---
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
     const currentFingerprint = getFingerprint(searchItems);
@@ -103,10 +94,9 @@ async function processAIResults(query, searchItems) {
     }
 
     if (!isAIOverviewEnabled || !overviewEl) return;
-    overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing...</p>';
+    overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich analyzing...</p>';
 
     try {
-        // TOKEN SAVING: Truncate snippets and limit result count
         var tokenSafeText = searchItems.slice(0, MAX_AI_CONTEXT_ITEMS).map((r, i) => {
             let snippet = (r.snippet || "").substring(0, TOKEN_SAFE_CHAR_LIMIT);
             return `[${i}] ${r.title}: ${snippet}`;
@@ -122,20 +112,17 @@ async function processAIResults(query, searchItems) {
         });
 
         if (response.status === 429) {
-            overviewEl.innerHTML = '<p class="ai-overview-error">AI Token limit reached for today. Try again later!</p>';
+            overviewEl.innerHTML = '<p class="ai-overview-error">Token limit reached.</p>';
             return;
         }
 
-        if (!response.ok) throw new Error("API Offline");
         var data = await response.json();
         var aiRawText = data.text;
-        
         setPersistentCache(query, aiRawText);
         lastAIRawText = aiRawText;
         applyAIResultsFromCache(aiRawText, searchItems);
 
     } catch (e) { 
-        console.error(e);
         overviewEl.innerHTML = '';
         renderBuiltInTool(detectToolLocally(query));
     }
@@ -164,11 +151,20 @@ function applySmartRanking(originalItems, indicesString) {
         var usedIndices = new Set();
         prioritizedIndices.forEach(idx => { if (originalItems[idx]) { reorderedItems.push(originalItems[idx]); usedIndices.add(idx); } });
         originalItems.forEach((item, idx) => { if (!usedIndices.has(idx)) reorderedItems.push(item); });
-        renderLinkResults(reorderedItems, originalItems.length, false); // false = don't re-render pagination
-    } catch (e) { console.warn(e); }
+        
+        renderLinkResults(reorderedItems, originalItems.length, true); 
+        
+        var resultsEl = document.getElementById('linkResults');
+        if (resultsEl && currentSearchType === 'web') {
+            var notice = document.createElement('div');
+            notice.style = 'color: #388e3c; margin-bottom: 12px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center; gap: 6px;';
+            // FIXED: Using your Praterich image as a small icon
+            notice.innerHTML = `<img src="https://stenoip.github.io/praterich/praterich.png" style="width:16px; height:16px; object-fit: contain;" alt="Praterich Icon"> Smart Sorted by Praterich`;
+            resultsEl.prepend(notice);
+        }
+    } catch (e) {}
 }
 
-// --- SEARCH EXECUTION ---
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
     currentQuery = query;
@@ -191,21 +187,20 @@ async function executeSearch(query, type, page = 1) {
                 if (localTool) renderBuiltInTool(localTool);
                 aiTimeout = setTimeout(() => processAIResults(query, data.items), 800); 
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     } else {
         document.getElementById('imageResults').innerHTML = '<p>Searching images...</p>';
         try {
             var resp = await fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=${page}`);
             var data = await resp.json();
             renderImageResults(data.items, data.total);
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     }
 }
 
-// --- UI RENDERING ---
-function renderLinkResults(items, total, includePagination = true) {
+function renderLinkResults(items, total, isSmartSort = false) {
     var resultsEl = document.getElementById('linkResults');
-    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No results found.</p>'; return; }
+    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No results.</p>'; return; }
     
     let html = items.map(r => `
         <div class="result-block">
@@ -215,35 +210,27 @@ function renderLinkResults(items, total, includePagination = true) {
         </div>
     `).join('');
 
-    if (includePagination) html += renderPagination(total);
+    if (!isSmartSort) html += renderPagination(total);
     resultsEl.innerHTML = html;
 }
 
 function renderImageResults(items, total) {
     var resultsEl = document.getElementById('imageResults');
-    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No images found.</p>'; return; }
-    
+    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No images.</p>'; return; }
     let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">';
     html += items.map(r => `<a href="${r.pageUrl}" target="_blank"><img src="${r.thumbnail}" style="width:100%; border-radius:8px;"/></a>`).join('');
-    html += '</div>';
-    html += renderPagination(total);
+    html += '</div>' + renderPagination(total);
     resultsEl.innerHTML = html;
 }
 
 function renderPagination(total) {
-    const maxPages = Math.min(10, Math.ceil(total / MAX_PAGE_SIZE)); // Limit to 10 pages for token/server safety
+    const maxPages = Math.min(10, Math.ceil(total / MAX_PAGE_SIZE));
     if (maxPages <= 1) return '';
-
-    let nav = `<div style="text-align:center; margin-top:30px; padding-bottom:20px;">`;
-    if (currentPage > 1) {
-        nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage - 1})">Prev</button>`;
-    }
+    let nav = `<div style="text-align:center; margin-top:30px;">`;
+    if (currentPage > 1) nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage - 1})">Prev</button>`;
     nav += `<span style="margin: 0 15px; font-weight:bold;">Page ${currentPage} of ${maxPages}</span>`;
-    if (currentPage < maxPages) {
-        nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage + 1})">Next</button>`;
-    }
-    nav += `</div>`;
-    return nav;
+    if (currentPage < maxPages) nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage + 1})">Next</button>`;
+    return nav + `</div>`;
 }
 
 function changePage(newPage) {
@@ -272,7 +259,6 @@ function setupAIOverviewToggle() {
     var toggle = document.getElementById('aiOverviewToggle');
     var goodCitizen = document.getElementById('goodCitizenMessage');
     if (!toggle) return;
-    
     isAIOverviewEnabled = sessionStorage.getItem('aiOverviewState') === 'true';
     toggle.checked = isAIOverviewEnabled;
     if (goodCitizen) goodCitizen.style.display = isAIOverviewEnabled ? 'none' : 'block';
@@ -286,22 +272,18 @@ function setupAIOverviewToggle() {
     });
 }
 
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     const type = params.get('type') || 'web';
     const page = parseInt(params.get('page')) || 1;
     const searchInput = document.getElementById('currentQuery');
-
     setupAIOverviewToggle();
-
     if (q) {
         searchInput.value = q;
         if (type === 'image') switchTab('images', false);
         executeSearch(q, type, page);
     }
-
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             const newQuery = searchInput.value.trim();
