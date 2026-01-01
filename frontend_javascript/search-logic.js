@@ -8,7 +8,9 @@ var MAX_PAGE_SIZE = 20;
 
 // STRICT TOKEN SAVING: Forced the AI to 1-2 sentence maximums
 var ladyPraterichSystemInstruction = `You are Praterich A.I, an AI overview for Oodles Metasearch. Summarize results. STRICT RULE: Max 30 words. 
-No intro/outro. Use 1-3 detailed or short sentences only(based on question). Reference to websites!
+No intro/outro. Use 1-3 detailed sentences only. Reference to websites from search results! If a person askes what are apples,
+do not just say "apples are fruits".
+
 Include @@RANKING:[indices]@@ and @@TOOL:[tool]@@.`;
 
 var BUILT_IN_TOOLS = {
