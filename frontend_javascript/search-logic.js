@@ -8,7 +8,7 @@ var MAX_PAGE_SIZE = 20;
 
 // STRICT TOKEN SAVING: Forced the AI to 1-2 sentence maximums
 var ladyPraterichSystemInstruction = `You are Praterich A.I, an AI overview for Oodles Metasearch. Summarize results.
-No intro/outro. Use 3-5 detailed sentences only. Reference to websites from search results! If a person askes what are apples,
+No intro/outro. Use one paragraph only. Reference to websites from search results! If a person askes what are apples,
 do not just say "apples are fruits".
 Summarize search results with technical detail. 
 STRICT RULES:
