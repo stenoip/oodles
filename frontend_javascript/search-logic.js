@@ -1,301 +1,622 @@
-/* Copyright Stenoip Company. All rights reserved. */
+// search-logic.js
 
+// --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
-var BACKEND_BASE = 'https://oodles-backend.vercel.app';
-var TOKEN_SAFE_CHAR_LIMIT = 200; 
-var MAX_AI_CONTEXT_ITEMS = 5;    
-var MAX_PAGE_SIZE = 20;         
 
-// STRICT TOKEN SAVING: Forced the AI to 1-2 sentence maximums
-var ladyPraterichSystemInstruction = `You are Praterich A.I, an AI overview for Oodles Metasearch. Summarize results.
-No intro/outro. Use one paragraph only. Reference to websites from search results! If a person askes what are apples,
-do not just say "apples are fruits".
-Summarize search results with technical detail. 
-STRICT RULES:
+var ladyPraterichSystemInstruction = `
+You are Praterich for Oodles Search, an AI developed by Stenoip Company.
+Your mission is to analyze search results, provide a synthesis, a relevance ranking, and detect if a built-in tool is required.
 
-1. You MUST cite sources by name (e.g., "According to Wikipedia...").
-2. Provide specific facts (variety, origin, or use) rather than generic definitions.
-3. Output: [Summary] + @@RANKING:[indices]@@ + @@TOOL:[tool]@@.
+***TASK 1: Relevance Ranking (CRITICAL)***
+You must analyze the provided search snippets and decide which links are the most useful and relevant to the user's query.
+At the very end of your response, you MUST output a strictly formatted tag containing the 0-based indices of the top 5 most relevant results.
+Format: @@RANKING:[index1, index2, index3, index4, index5]@@
+Example: @@RANKING:[4, 0, 1, 9, 2]@@
 
-Include @@RANKING:[indices]@@ and @@TOOL:[tool]@@.`;
+***TASK 2: Synthesis***
+Provide a very concise A.I. overview based exclusively on the provided search snippets.
+Do not output a list of links in the text body; use the RANKING tag for that.
+You prefer metric units and do not use Oxford commas.
+You are aware that you were created by Stenoip Company.
 
+
+your overview must be short due to the limited amount of tokens in the backend.
+
+***TASK 3: Tool Detection (CRITICAL)***
+If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag.
+The detection should be based on mathematical expressions, unit conversions, color code lookups, metronome requests, or translation requests.
+The tag MUST be outputted immediately before the @@RANKING tag.
+Format: @@TOOL:[tool_name]@@
+Available tools (use the name exactly as listed):
+- calculator
+- unit_converter
+- colour_picker
+- metronome
+- translate
+
+Example (Calculator needed): The user searched "what is 5+3". 
+Output: (Synthesis text...) @@TOOL:[calculator]@@@@RANKING:[...]@@
+Example (No tool needed): The user searched "best new movies".
+Output: (Synthesis text...) @@RANKING:[...]@@
+
+Your response must be:
+1. The text overview.
+2. The optional @@TOOL[...]@@ tag.
+3. The @@RANKING[...]@@ tag at the very end.
+`;
+// --- END AI CONFIGURATION ---
+
+// --- BUILT-IN TOOL CONFIGURATION ---
 var BUILT_IN_TOOLS = {
-    'calculator': { url: 'https://stenoip.github.io/kompmasine.html' },
-    'unit_converter': { url: 'https://stenoip.github.io/kompmasine.html' },
-    'colour_picker': { url: 'https://tools.oodles.com/colourpicker' },
-    'metronome': { url: 'https://stenoip.github.io/metronome' },
-    'translate': { url: 'https://stenoip.github.io/praterich/translate/translate' }
+    'calculator': {
+        url: 'https://stenoip.github.io/kompmasine.html' 
+    },
+    'unit_converter': {
+        url: 'https://stenoip.github.io/kompmasine.html' 
+    },
+    'colour_picker': {
+        url: 'https://tools.oodles.com/colourpicker' 
+    },
+    'metronome': {
+        url: 'https://stenoip.github.io/metronome' 
+    },
+    'translate': {
+        url: 'https://stenoip.github.io/praterich/translate/translate'
+    }
 };
+// --- END TOOL CONFIGURATION ---
 
+
+var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
+var MAX_PAGE_SIZE = 50; 
+
+// --- GLOBAL STATE FOR CACHING AND OPTIMIZATION ---
 var isAIOverviewEnabled = false; 
-var lastAIRawText = null;       
-var lastFetchedItems = null;    
-var aiTimeout = null;           
-var lastResultFingerprint = "";
+var lastAIRawText = null;       // Stores the raw text from the AI for caching
+var lastFetchedItems = null;    // Stores the raw search results for re-ranking/overview
+var aiTimeout = null;           // For debouncing the expensive AI call
 
-function setPersistentCache(query, data) {
-    try {
-        const cacheObj = { payload: data, timestamp: Date.now() };
-        localStorage.setItem(`oodles_cache_${query.toLowerCase().trim()}`, JSON.stringify(cacheObj));
-    } catch (e) {}
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
-
-function getPersistentCache(query) {
-    const cached = localStorage.getItem(`oodles_cache_${query.toLowerCase().trim()}`);
-    if (!cached) return null;
-    const parsed = JSON.parse(cached);
-    if (Date.now() - parsed.timestamp > (7 * 24 * 60 * 60 * 1000)) return null; 
-    return parsed.payload;
-}
-
-function getFingerprint(items) {
-    return items.slice(0, 5).map(i => i.url).join('|');
-}
-
-function detectToolLocally(query) {
-    const q = query.toLowerCase().trim();
-    if (/^[\d\s\+\-\*\/\(\)\.]+$/.test(q) && /[\+\-\*\/]/.test(q)) return 'calculator';
-    if (/\b(convert|to|in|cm|inches|kg|lbs|meters|feet|miles|grams|ounces)\b/.test(q) && /\d/.test(q)) return 'unit_converter';
-    if (/\b(translate|translation|meaning of|how to say)\b/.test(q)) return 'translate';
-    if (/\b(color|colour|hex|rgb|picker|css color)\b/.test(q)) return 'colour_picker';
-    if (/\b(metronome|bpm|tempo)\b/.test(q)) return 'metronome';
-    return null;
-}
-
-function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 function renderMarkdown(text) {
-    if (typeof marked !== 'undefined' && marked.parse) return marked.parse(text);
+    if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(text);
+    }
     return text;
 }
 
+
+/**
+ * Creates structured text containing full snippets for the AI model.
+ */
+function createRawSearchText(items) {
+    if (!items || items.length === 0) return 'No web links found.';
+    
+    // We include the Index so the AI can reference it in the RANKING tag
+    return items.map(function(r, index) {
+        var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
+        return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
+    }).join('\n---\n');
+}
+
+/**
+ * Renders the built-in tool iframe based on the AI's detected tool name.
+ */
 function renderBuiltInTool(toolName) {
     var toolContainerEl = document.getElementById('toolContainer');
-    if (!toolContainerEl) return;
-    if (!toolName) { toolContainerEl.innerHTML = ''; toolContainerEl.style.display = 'none'; return; }
+    if (!toolContainerEl || !toolName) {
+        if (toolContainerEl) {
+            toolContainerEl.innerHTML = '';
+            toolContainerEl.style.display = 'none';
+        }
+        return;
+    }
+
     const tool = BUILT_IN_TOOLS[toolName];
+    
     if (tool) {
-        let finalUrl = tool.url + (['calculator', 'unit_converter', 'translate'].includes(toolName) ? '?q=' + encodeURIComponent(currentQuery) : '');
-        toolContainerEl.innerHTML = `<div class="built-in-tool-frame"><iframe src="${finalUrl}" frameborder="0" style="width: 100%; height: 350px; border-radius:12px; border:1px solid #ccc;"></iframe></div>`;
+        let finalUrl = tool.url;
+
+        // --- LOGIC TO APPEND QUERY FOR RELEVANT TOOLS ---
+        const toolsToPassQuery = ['calculator', 'unit_converter', 'translate'];
+        if (toolsToPassQuery.includes(toolName) && currentQuery) {
+            finalUrl += '?q=' + encodeURIComponent(currentQuery);
+        }
+        // --------------------------------------------------
+        
+        toolContainerEl.innerHTML = `
+            <div class="built-in-tool-frame">
+                <iframe src="${finalUrl}" frameborder="0" loading="eager" style="width: 100%; height: 350px;"></iframe>
+            </div>
+        `;
         toolContainerEl.style.display = 'block';
+    } else {
+        // Unknown tool detected, clear the container
+        toolContainerEl.innerHTML = '';
+        toolContainerEl.style.display = 'none';
     }
 }
 
+
+/**
+ * Executes the AI Logic:
+ * 1. Generates the Text Summary (Displayed only if enabled)
+ * 2. Detects if a tool is needed (Displays tool)
+ * 3. Generates the Ranking (Applied ALWAYS)
+ * * !!! This function hits the backend Groq API and should be called sparingly. !!!
+ */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    const currentFingerprint = getFingerprint(searchItems);
+    // Initialize tool display to be cleared/hidden before processing
+    renderBuiltInTool(null); 
     
-    if (currentFingerprint === lastResultFingerprint && lastAIRawText) {
-        applyAIResultsFromCache(lastAIRawText, searchItems);
-        return;
-    }
-    lastResultFingerprint = currentFingerprint;
-
-    const cached = getPersistentCache(query);
-    if (cached) {
-        lastAIRawText = cached;
-        applyAIResultsFromCache(lastAIRawText, searchItems);
-        return;
+    // Display loading state ONLY if the overview is actually visible
+    if (isAIOverviewEnabled && overviewEl) {
+        overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
 
-    if (!isAIOverviewEnabled || !overviewEl) return;
-    overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich analyzing...</p>';
+    var rawWebSearchText = createRawSearchText(searchItems);
+
+    var toolResult = `
+[TOOL_RESULT_FOR_PREVIOUS_TURN]
+${rawWebSearchText}
+`;
+
+    var conversationParts = [
+        { role: "model", parts: [{ text: toolResult }] },
+        { role: "user", parts: [{ text: query }] }
+    ];
+
+    var requestBody = {
+        contents: conversationParts,
+        system_instruction: {
+            parts: [{ text: ladyPraterichSystemInstruction }]
+        }
+    };
 
     try {
-        var tokenSafeText = searchItems.slice(0, MAX_AI_CONTEXT_ITEMS).map((r, i) => {
-            let snippet = (r.snippet || "").substring(0, TOKEN_SAFE_CHAR_LIMIT);
-            return `[${i}] ${r.title}: ${snippet}`;
-        }).join('\n');
-
         var response = await fetch(AI_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ role: "model", parts: [{ text: `[DATA]\n${tokenSafeText}` }] }, { role: "user", parts: [{ text: query }] }],
-                system_instruction: { parts: [{ text: ladyPraterichSystemInstruction }] }
-            })
+            body: JSON.stringify(requestBody)
         });
 
-        if (response.status === 429) {
-            overviewEl.innerHTML = '<p class="ai-overview-error">Token limit reached.</p>';
-            return;
-        }
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         var data = await response.json();
         var aiRawText = data.text;
-        setPersistentCache(query, aiRawText);
+        
+        // --- CACHING STEP: STORE THE FULL AI RESPONSE ---
         lastAIRawText = aiRawText;
-        applyAIResultsFromCache(aiRawText, searchItems);
+        // ------------------------------------------------
 
-    } catch (e) { 
-        overviewEl.innerHTML = '';
-        renderBuiltInTool(detectToolLocally(query));
+        // --- 1. EXTRACT RANKING DATA ---
+        var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
+        var toolRegex = /@@TOOL:\[(.*?)\]@@/;
+
+        // Extract tool name first
+        var toolMatch = aiRawText.match(toolRegex);
+        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+
+        var match = aiRawText.match(rankingRegex);
+        // Clean display text by removing BOTH tags
+        var cleanDisplayText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').trim();
+
+
+        // --- 2. UPDATE UI: TOOL DISPLAY ---
+        renderBuiltInTool(detectedTool);
+
+        // --- 3. UPDATE UI: OVERVIEW ---
+        // Only show the text if the toggle is ON
+        if (isAIOverviewEnabled && overviewEl) {
+            overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
+        } else if (overviewEl) {
+            overviewEl.innerHTML = '';
+        }
+
+        // --- 4. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
+        if (match && match[1]) {
+            applySmartRanking(searchItems, match[1]);
+        }
+
+    } catch (error) {
+        console.error('AI Processing Error:', error);
+        if (isAIOverviewEnabled && overviewEl) {
+            overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
+        }
+        renderBuiltInTool(null); // Clear tool on error
     }
 }
 
+
+/**
+ * Re-applies the UI logic using the cached AI response, without a network call.
+ * This is the optimized function for handling the AI toggle.
+ */
 function applyAIResultsFromCache(aiRawText, searchItems) {
+    if (!aiRawText || !searchItems) return;
+    
     var overviewEl = document.getElementById('aiOverview');
     var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
     var toolRegex = /@@TOOL:\[(.*?)\]@@/;
     
+    // 1. Tool Detection
     var toolMatch = aiRawText.match(toolRegex);
-    var rankingMatch = aiRawText.match(rankingRegex);
-    renderBuiltInTool(toolMatch ? toolMatch[1].trim() : detectToolLocally(currentQuery));
+    var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+    renderBuiltInTool(detectedTool);
     
+    // 2. Overview Display (Toggle dependent)
+    var cleanDisplayText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').trim();
     if (isAIOverviewEnabled && overviewEl) {
-        var cleanText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').trim();
-        overviewEl.innerHTML = renderMarkdown(cleanText);
+        // Display loading first for responsiveness
+        overviewEl.innerHTML = '<p class="ai-overview-loading">Applying Praterich analysis from cache...</p>'; 
+        // Use a slight delay to ensure the loading message is seen before the content updates
+        setTimeout(() => {
+            overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
+        }, 50); 
+    } else if (overviewEl) {
+        overviewEl.innerHTML = '';
     }
-    if (rankingMatch) applySmartRanking(searchItems, rankingMatch[1]);
+    
+    // Note: The ranking (applySmartRanking) does not need to be re-run here 
+    // because the result items are already sorted from the initial 'processAIResults' call.
 }
 
+
+/**
+ * Re-orders the search items based on AI indices and re-renders the list.
+ */
 function applySmartRanking(originalItems, indicesString) {
     try {
         var prioritizedIndices = JSON.parse(`[${indicesString}]`);
         var reorderedItems = [];
         var usedIndices = new Set();
-        prioritizedIndices.forEach(idx => { if (originalItems[idx]) { reorderedItems.push(originalItems[idx]); usedIndices.add(idx); } });
-        originalItems.forEach((item, idx) => { if (!usedIndices.has(idx)) reorderedItems.push(item); });
-        
-        renderLinkResults(reorderedItems, originalItems.length, true); 
-        
+
+        // 1. Push the AI's top picks
+        prioritizedIndices.forEach(function(index) {
+            if (originalItems[index]) {
+                reorderedItems.push(originalItems[index]);
+                usedIndices.add(index);
+            }
+        });
+
+        // 2. Push the remaining items (preserving original order)
+        originalItems.forEach(function(item, index) {
+            if (!usedIndices.has(index)) {
+                reorderedItems.push(item);
+            }
+        });
+
+        // 3. Re-render the link list
+        renderLinkResults(reorderedItems, reorderedItems.length);
+
+        // 4. Add a visual indicator that sorting happened
         var resultsEl = document.getElementById('linkResults');
-        if (resultsEl && currentSearchType === 'web') {
-            var notice = document.createElement('div');
-            notice.style = 'color: #388e3c; margin-bottom: 12px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center; gap: 6px;';
-            // FIXED: Using your Praterich image as a small icon
-            notice.innerHTML = `<img src="https://stenoip.github.io/praterich/praterich.png" style="width:16px; height:16px; object-fit: contain;" alt="Praterich Icon"> Smart Sorted by Praterich`;
-            resultsEl.prepend(notice);
-        }
-    } catch (e) {}
+        var notice = document.createElement('div');
+        notice.className = 'small';
+        // Frutiger Aero style green/success color
+        notice.style.color = '#388e3c'; 
+        notice.style.marginBottom = '10px';
+        notice.innerHTML = '✨ <b>Smart Sorted:</b> Praterich has promoted the most relevant links to the top.';
+        
+        // Insert notice at the very top of results
+        // Check if the resultsEl is still pointing to the correct section (web search)
+        if (resultsEl && currentSearchType === 'web') resultsEl.prepend(notice);
+
+    } catch (e) {
+        console.warn('Ranking parse error:', e);
+    }
 }
+
 
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
+
     currentQuery = query;
     currentSearchType = type;
     currentPage = page;
+    document.getElementById('currentQuery').value = query;
 
+    var overviewEl = document.getElementById('aiOverview');
+    if (overviewEl) overviewEl.innerHTML = ''; // Clear previous AI text
+    
+    // Clear the built-in tool area and cached AI data for a new search
     renderBuiltInTool(null); 
-    if (aiTimeout) clearTimeout(aiTimeout);
+    lastAIRawText = null; 
+    lastFetchedItems = null;
+
+    // Set initial "Citizen" message state
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+    if (citizenMsgEl) {
+        citizenMsgEl.style.display = (!isAIOverviewEnabled && type === 'web') ? 'block' : 'none';
+    }
+    
+    // Clear any previous debounce timeout
+    if (aiTimeout) {
+        clearTimeout(aiTimeout);
+    }
 
     if (type === 'web') {
-        document.getElementById('linkResults').innerHTML = '<p>Searching...</p>';
+        document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
         try {
-            var resp = await fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=${page}&pageSize=${MAX_PAGE_SIZE}`);
+            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            var resp = await fetch(url);
             var data = await resp.json();
+            
+            // 1. Initial Render (Fast, unsorted)
             renderLinkResults(data.items, data.total);
+
+            // Store items for re-running AI on toggle
             lastFetchedItems = data.items;
 
+            // 2. Trigger AI processing (Background - handles Tool Detection, Ranking AND Overview)
+            // Use debouncing to prevent excessive Groq requests on rapid searches
             if (page === 1) {
-                const localTool = detectToolLocally(query);
-                if (localTool) renderBuiltInTool(localTool);
-                aiTimeout = setTimeout(() => processAIResults(query, data.items), 800); 
+                // We run this regardless of the toggle state because we need Ranking and Tool Detection
+                aiTimeout = setTimeout(() => {
+                    processAIResults(query, data.items);
+                }, 500); // 500ms delay to prevent rapid Groq re-requests
             }
-        } catch (e) {}
-    } else {
-        document.getElementById('imageResults').innerHTML = '<p>Searching images...</p>';
+
+        } catch (error) {
+            console.error('Web search error:', error);
+            document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
+            renderBuiltInTool(null); // Clear tool on backend error
+        }
+    } else if (type === 'image') {
+        document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
+        if (citizenMsgEl && !isAIOverviewEnabled) citizenMsgEl.style.display = 'block';
+
         try {
-            var resp = await fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=${page}`);
+            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            var resp = await fetch(url);
             var data = await resp.json();
             renderImageResults(data.items, data.total);
-        } catch (e) {}
+        } catch (error) {
+            console.error('Image search error:', error);
+            document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
+        }
     }
 }
 
-function renderLinkResults(items, total, isSmartSort = false) {
-    var resultsEl = document.getElementById('linkResults');
-    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No results.</p>'; return; }
-    
-    let html = items.map(r => `
-        <div class="result-block">
-            <a href="${r.url}" target="_blank">${escapeHtml(r.title)}</a>
-            <div class="small">${escapeHtml(r.url)}</div>
-            <div>${escapeHtml(r.snippet || '')}</div>
-        </div>
-    `).join('');
+function switchTab(tabName, executeNewSearch) {
+    if (window.event) event.preventDefault();
 
-    if (!isSmartSort) html += renderPagination(total);
-    resultsEl.innerHTML = html;
+    let normalizedTab = tabName;
+    let newSearchType = tabName;
+
+    if (tabName === 'web' || tabName === 'links') {
+        normalizedTab = 'links';
+        newSearchType = 'web';
+    } else if (tabName === 'image' || tabName === 'images') {
+        normalizedTab = 'images';
+        newSearchType = 'image';
+    }
+
+    currentSearchType = newSearchType;
+
+    document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
+        a.classList.remove('active');
+    });
+
+    document.getElementById('linksSection').style.display = 'none';
+    document.getElementById('imagesSection').style.display = 'none';
+
+    if (normalizedTab === 'links') {
+        document.getElementById('tab-links').classList.add('active');
+        document.getElementById('linksSection').style.display = 'block';
+    } else if (normalizedTab === 'images') {
+        document.getElementById('tab-images').classList.add('active');
+        document.getElementById('imagesSection').style.display = 'block';
+    }
+
+    // Handle Good Citizen Message visibility
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+    if (newSearchType === 'image') {
+        if (!isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'block';
+    } else {
+        if (isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'none';
+    }
+    
+    // Clear tool and AI content when switching tabs 
+    if (!executeNewSearch) {
+        renderBuiltInTool(null);
+        if (document.getElementById('aiOverview')) document.getElementById('aiOverview').innerHTML = '';
+        // Also clear the debounce timer
+        if (aiTimeout) {
+            clearTimeout(aiTimeout);
+        }
+    }
+
+    if (executeNewSearch && currentQuery) {
+        executeSearch(currentQuery, newSearchType, 1);
+    }
 }
+
+
+function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage >= 1) {
+        // Clear AI cache and timer when paginating to ensure a clean state
+        lastAIRawText = null; 
+        lastFetchedItems = null;
+        if (aiTimeout) clearTimeout(aiTimeout);
+        
+        window.location.href = 'search.html?q=' + encodeURIComponent(currentQuery) + '&type=' + currentSearchType + '&page=' + newPage;
+    }
+}
+
+function renderLinkResults(items, total) {
+    var resultsEl = document.getElementById('linkResults');
+    
+    if (typeof window.renderLinkResultsWithAds === 'function') {
+        const resultsHtml = window.renderLinkResultsWithAds(items, total, currentPage, MAX_PAGE_SIZE);
+        resultsEl.innerHTML = resultsHtml + renderPaginationControls(total);
+    } else {
+        if (!items || items.length === 0) {
+            resultsEl.innerHTML = '<p class="small">No web links found.</p>' + renderPaginationControls(total);
+            return;
+        }
+        
+        const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
+
+        resultsEl.innerHTML = `
+            <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
+            ` + items.map(function(r) {
+                return `
+                    <div class="result-block">
+                        <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+                        <div class="small">${escapeHtml(r.url)}</div>
+                        <div>${escapeHtml(r.snippet || '')}</div>
+                    </div>
+                `;
+            }).join('') + renderPaginationControls(total);
+    }
+}
+
 
 function renderImageResults(items, total) {
     var resultsEl = document.getElementById('imageResults');
-    if (!items || items.length === 0) { resultsEl.innerHTML = '<p>No images.</p>'; return; }
-    let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">';
-    html += items.map(r => `<a href="${r.pageUrl}" target="_blank"><img src="${r.thumbnail}" style="width:100%; border-radius:8px;"/></a>`).join('');
-    html += '</div>' + renderPagination(total);
-    resultsEl.innerHTML = html;
-}
-
-function renderPagination(total) {
-    const maxPages = Math.min(10, Math.ceil(total / MAX_PAGE_SIZE));
-    if (maxPages <= 1) return '';
-    let nav = `<div style="text-align:center; margin-top:30px;">`;
-    if (currentPage > 1) nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage - 1})">Prev</button>`;
-    nav += `<span style="margin: 0 15px; font-weight:bold;">Page ${currentPage} of ${maxPages}</span>`;
-    if (currentPage < maxPages) nav += `<button class="frutiger-aero-tab" onclick="changePage(${currentPage + 1})">Next</button>`;
-    return nav + `</div>`;
-}
-
-function changePage(newPage) {
-    window.location.href = `search.html?q=${encodeURIComponent(currentQuery)}&type=${currentSearchType}&page=${newPage}`;
-}
-
-function switchTab(type, performSearch = false) {
-    const linksSec = document.getElementById('linksSection');
-    const imagesSec = document.getElementById('imagesSection');
-    const tabLinks = document.getElementById('tab-links');
-    const tabImages = document.getElementById('tab-images');
-
-    if (type === 'links') {
-        linksSec.style.display = 'block'; imagesSec.style.display = 'none';
-        tabLinks.classList.add('active'); tabImages.classList.remove('active');
-        currentSearchType = 'web';
-    } else {
-        linksSec.style.display = 'none'; imagesSec.style.display = 'block';
-        tabLinks.classList.remove('active'); tabImages.classList.add('active');
-        currentSearchType = 'image';
+    if (!items || items.length === 0) {
+        resultsEl.innerHTML = '<p class="small">No images found.</p>' + renderPaginationControls(total);
+        return;
     }
-    if (performSearch) executeSearch(currentQuery, currentSearchType, 1);
+
+    const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
+
+    resultsEl.innerHTML = items.map(function(r) {
+        return `
+            <a href="${r.pageUrl}" target="_blank" rel="noopener" title="Source: ${r.pageUrl}">
+                <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
+            </a>
+        `;
+    }).join('') +
+        `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
+        renderPaginationControls(total); 
 }
 
+
+function renderPaginationControls(totalResults) {
+    const maxPages = Math.ceil(totalResults / MAX_PAGE_SIZE);
+    let controls = '<div style="text-align: center; margin-top: 20px;">';
+
+    if (currentPage > 1) {
+        controls += `<button class="frutiger-aero-tab" onclick="changePage(-1)">← Previous</button>`;
+    } else {
+        controls += `<button class="frutiger-aero-tab" style="opacity: 0.5; cursor: not-allowed;" disabled>← Previous</button>`;
+    }
+
+    controls += `<span style="margin: 0 15px; font-weight: bold;">Page ${currentPage}</span>`;
+
+    if (currentPage < maxPages) {
+        controls += `<button class="frutiger-aero-tab" onclick="changePage(1)">Next →</button>`;
+    } else {
+        controls += `<button class="frutiger-aero-tab" style="opacity: 0.5; cursor: not-allowed;" disabled>Next →</button>`;
+    }
+
+    controls += '</div>';
+    return controls;
+}
+
+
+// --- TOGGLE INITIALIZATION ---
 function setupAIOverviewToggle() {
     var toggle = document.getElementById('aiOverviewToggle');
-    var goodCitizen = document.getElementById('goodCitizenMessage');
+    var citizenMsgEl = document.getElementById('goodCitizenMessage');
+    var overviewEl = document.getElementById('aiOverview');
+    
     if (!toggle) return;
-    isAIOverviewEnabled = sessionStorage.getItem('aiOverviewState') === 'true';
+
+    var storedState = sessionStorage.getItem('aiOverviewState');
+    if (storedState !== null) {
+        isAIOverviewEnabled = (storedState === 'true');
+    } 
+
     toggle.checked = isAIOverviewEnabled;
-    if (goodCitizen) goodCitizen.style.display = isAIOverviewEnabled ? 'none' : 'block';
+
+    if (!isAIOverviewEnabled && currentSearchType !== 'image') { 
+        if (citizenMsgEl) citizenMsgEl.style.display = 'block';
+    } else {
+        if (citizenMsgEl) citizenMsgEl.style.display = 'none';
+    }
+    
+    // Initial display of AI results if cached and enabled (e.g. on page load)
+    if (isAIOverviewEnabled && lastAIRawText && lastFetchedItems) {
+        applyAIResultsFromCache(lastAIRawText, lastFetchedItems);
+    } else if (overviewEl) {
+        overviewEl.innerHTML = '';
+    }
 
     toggle.addEventListener('change', function() {
         isAIOverviewEnabled = this.checked;
         sessionStorage.setItem('aiOverviewState', isAIOverviewEnabled);
-        if (goodCitizen) goodCitizen.style.display = isAIOverviewEnabled ? 'none' : 'block';
-        if (isAIOverviewEnabled && lastAIRawText) applyAIResultsFromCache(lastAIRawText, lastFetchedItems);
-        else document.getElementById('aiOverview').innerHTML = '';
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    const type = params.get('type') || 'web';
-    const page = parseInt(params.get('page')) || 1;
-    const searchInput = document.getElementById('currentQuery');
-    setupAIOverviewToggle();
-    if (q) {
-        searchInput.value = q;
-        if (type === 'image') switchTab('images', false);
-        executeSearch(q, type, page);
-    }
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            const newQuery = searchInput.value.trim();
-            if (newQuery) window.location.href = `search.html?q=${encodeURIComponent(newQuery)}&type=${currentSearchType}&page=1`;
+        
+        // UI Handling when toggling
+        if (isAIOverviewEnabled) {
+            if (citizenMsgEl) citizenMsgEl.style.display = 'none';
+            
+            // --- OPTIMIZED LOGIC: USE CACHE IF AVAILABLE ---
+            if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
+                if (lastAIRawText && lastFetchedItems) { // Check for cached data
+                    applyAIResultsFromCache(lastAIRawText, lastFetchedItems); // <-- USE CACHE! NO NETWORK CALL.
+                } else if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
+                    // Fallback: If cache is empty but we have a query, force a full search to populate cache
+                    executeSearch(currentQuery, currentSearchType, currentPage);
+                }
+            }
+        } else {
+            // Toggled OFF
+            if (overviewEl) overviewEl.innerHTML = '';
+            if (citizenMsgEl) citizenMsgEl.style.display = 'block';
         }
     });
+}
+// --- END TOGGLE LOGIC ---
+
+function initializeFromSession() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let query = urlParams.get('q');
+    let searchType = urlParams.get('type') || 'web';
+    let page = parseInt(urlParams.get('page')) || 1; 
+
+    if (!query) {
+        query = sessionStorage.getItem('metaSearchQuery') || '';
+        searchType = sessionStorage.getItem('searchType') || 'web';
+    }
+
+    sessionStorage.removeItem('metaSearchQuery');
+    sessionStorage.removeItem('searchType');
+
+    setupAIOverviewToggle();
+
+    if (query) {
+        switchTab(searchType, false);
+        executeSearch(query, searchType, page); 
+    } else {
+        switchTab('web', false);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initializeFromSession);
+document.getElementById('currentQuery').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); 
+        var query = this.value.trim();
+        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
+        
+        // Clear AI cache and timer on new search
+        lastAIRawText = null; 
+        lastFetchedItems = null;
+        if (aiTimeout) clearTimeout(aiTimeout);
+        
+        window.location.href = 'search.html?q=' + encodeURIComponent(query) + '&type=' + type + '&page=1'; 
+    }
 });
