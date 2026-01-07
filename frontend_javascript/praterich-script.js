@@ -698,7 +698,7 @@ function loadFromLocalStorage() {
         // Automatically send the message after a brief delay to ensure UI updates
         setTimeout(sendMessage, 100);
     }
-}
+
 
 /**
  * Deletes the current chat session and starts a new one.
