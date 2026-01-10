@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Oodles Search</title>
+  <link rel="icon" href="favicon.ico" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BASE STYLES - IE11 COMPATIBLE */
+    /* ------------------------------------------- */
+    body {
+      margin: 0;
+      font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", Tahoma, sans-serif;
+      color: #333333;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-direction: column;
+      flex-direction: column;
+      min-height: 100vh;
+      background-image: url('/new_new_wallpaper.png');
+      background-attachment: fixed;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-color: #add8e6;
+    }
+
+    .container {
+      -ms-flex: 1;
+      flex: 1;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-direction: column;
+      flex-direction: column;
+      -ms-flex-align: center;
+      align-items: center;
+      padding: 20px;
+      max-width: 90%;
+      margin: 20px auto;
+    }
+
+    .search-box {
+      background-color: #ffffff; /* Solid fallback */
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      padding: 5px 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-align: center;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid #b4b4b4;
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      -ms-flex: 1;
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      padding: 10px;
+      background-color: transparent;
+    }
+
+    /* Microphone & AI Buttons */
+    .microphone-btn, .ai-btn, .world-search-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #666;
+      margin-left: 10px;
+      padding: 0;
+      line-height: 0;
+      vertical-align: middle;
+    }
+
+    .microphone-btn img, .world-search-btn img {
+      width: 24px;
+      height: 24px;
+      display: block;
+      border: none;
+    }
+
+    /* Red Circle Effect for IE */
+    .mic-recording {
+      background-color: #f44336 !important;
+      border-radius: 50%;
+    }
+
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BUTTON STYLES (IE11 SAFE)     */
+    /* ------------------------------------------- */
+    .frutiger-aero-button {
+      background: #4a90e2; /* Fallback */
+      background: linear-gradient(to bottom, #4a90e2, #2171ad);
+      border: 1px solid #1a5a8a;
+      border-radius: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      color: #ffffff;
+      font-family: inherit;
+      font-weight: bold;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      position: relative;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      padding: 10px 25px;
+    }
+
+    /* Glossy Overlay for IE11 */
+    .frutiger-aero-button:before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 10%;
+      width: 80%;
+      height: 35%;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .frutiger-aero-button:hover {
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Select specific fix */
+    select.frutiger-aero-button {
+      height: 44px;
+      color: #ffffff;
+      padding-top: 5px;
+    }
+    
+    select.frutiger-aero-button option {
+      color: #000;
+    }
+
+    /* ------------------------------------------- */
+    /* LAYOUT & LOGO                               */
+    /* ------------------------------------------- */
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+    }
+
+    header img {
+      max-height: 200px;
+      max-width: 500px;
+      width: auto;
+      border: none;
+    }
+
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    nav a {
+      font-size: 1rem;
+      margin: 0 15px;
+      color: #666;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .actions {
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-pack: center;
+      justify-content: center;
+    }
+    
+    .actions > * {
+      margin: 0 5px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #333;
+    }
+
+    /* PONG BUTTON */
+    .play-pong-btn {
+      display: inline-block;
+      background-color: #00ccff;
+      background: linear-gradient(90deg, #00ccff, #00ffcc);
+      border: none;
+      color: #000;
+      font-size: 1.2em;
+      font-weight: bold;
+      padding: 16px 45px;
+      border-radius: 50px;
+      text-decoration: none;
+      box-shadow: 0 0 15px rgba(0,255,255,0.5);
+      position: relative;
+    }
+
+    .play-pong-btn .ball {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border-radius: 50%;
+      top: 15px;
+      left: 15px;
+    }
+
+    @media (max-width: 600px) {
+      .search-box { max-width: 100%; }
+      header img { width: 90%; height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo">
+  </header>
+
+  <nav>
+    <a href="javascript:void(0)" onclick="switchTab('metasearch')">MetaSearch</a>
+    <a href="javascript:void(0)" onclick="switchTab('about')">About</a>
+    <a href="generate.html">Generate</a>
+  </nav>
+
+  <div class="container">
+    <div id="panel-metasearch" style="display:block; text-align:center; width:100%;">
+      <div class="search-box">
+        <input type="text" id="metaQuery" placeholder="Search Oodles...">
+        
+        <button class="microphone-btn" onclick="startVoiceSearch()">
+          <i id="mic-icon-circle">
+            <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Mic"/>
+          </i>
+        </button>
+
+        <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
+        
+        <button class="world-search-btn" onclick="var q = document.getElementById('metaQuery').value; window.location.href='https://stenoip.github.io/oodles/world-search?q=' + encodeURIComponent(q)">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/8-cell-simple.gif/250px-8-cell-simple.gif" alt="World Search">
+        </button>
+      </div>
+
+      <div class="actions">
+        <select id="searchTypeSelector" class="frutiger-aero-button">
+          <option value="web">Web</option>
+          <option value="image">Images (BETA)</option>
+        </select>
+        <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
+      </div>
+   
+      <div style="margin-top: 30px;">
+        <a href="https://stenoip.github.io/index.html" class="play-pong-btn">
+          <div class="ball"></div>
+          New Christmas styles on StenoipKonnect!
+        </a>
+      </div>
+    </div>
+
+    <div id="panel-about" style="display:none; max-width:600px; color: #333; background: rgba(255,255,255,0.8); padding: 20px; border-radius: 15px;">
+      <h3>About Us</h3>
+      <p>Oodles MetaSearch Engine gathers information from various other search engines into one place. Less bias, more privacy.</p>
+      <p><a href="https://github.com/stenoip/oodles">GitHub Repository</a></p>
+    </div>
+  </div>
+
+  <footer>© Stenoip Company • Launched 19th October, 2025</footer>
+
+  <script src="main-page.js"></script>
+  
+  <script>
+    // Simple tab switcher for IE11
+    function switchTab(tab) {
+      if (tab === 'metasearch') {
+        document.getElementById('panel-metasearch').style.display = 'block';
+        document.getElementById('panel-about').style.display = 'none';
+      } else {
+        document.getElementById('panel-metasearch').style.display = 'none';
+        document.getElementById('panel-about').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
