@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title>Oodles Search Results</title>
+  <link rel="icon" href="favicon.ico" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO STYLES - IE11 COMPATIBLE      */
+    /* ------------------------------------------- */
+
+    body {
+      margin: 0;
+      font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", Tahoma, sans-serif;
+      color: #202124;
+      background-image: url('https://stenoip.github.io/oodles/waves_cool_gif.gif');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+      background-color: #add8e6; /* Fallback color */
+    }
+
+    /* HEADER + TOP BAR */
+    header {
+      padding: 15px 20px;
+      max-width: 950px;
+      margin: 0 auto;
+      background-color: rgb(255, 255, 255); /* IE11: No backdrop-filter, use solid or high-alpha rgb */
+      background-color: rgba(255, 255, 255, 0.8);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .top-bar {
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-align: center;
+      align-items: center;
+      -ms-flex-pack: justify;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .logo-area img {
+      height: 60px;
+      width: auto;
+      display: block;
+      border: none;
+    }
+
+    .search-area {
+      -ms-flex: 1;
+      flex: 1;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-pack: end;
+      justify-content: flex-end;
+    }
+
+    .search-area input {
+      width: 100%;
+      max-width: 500px;
+      border: 1px solid #b4b4b4;
+      border-radius: 24px;
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    /* NAVIGATION BAR */
+    nav {
+      margin-top: 15px;
+      display: -ms-flexbox;
+      display: flex;
+      -ms-flex-pack: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .frutiger-aero-tab {
+      display: inline-block;
+      /* IE11: Linear gradients must be standard format */
+      background: #4682b4; /* Fallback */
+      background: linear-gradient(to bottom, #4a90e2, #2171ad);
+      border: 1px solid #1a5a8a;
+      border-radius: 20px; /* IE11 handles large px for pills better than 9999px */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      color: #ffffff;
+      font-weight: bold;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      position: relative;
+      text-decoration: none;
+      padding: 8px 20px;
+      font-size: 14px;
+      margin: 5px;
+    }
+
+    /* Glass Highlight for IE11 */
+    .frutiger-aero-tab:before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 5px;
+      right: 5px;
+      height: 40%;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      pointer-events: none;
+    }
+
+    nav a.active {
+      background: linear-gradient(to bottom, #1a5a8a, #4a90e2);
+      transform: translateY(1px);
+    }
+
+    /* CONTAINERS */
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 15px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .results-section {
+      padding: 15px;
+      margin-top: 10px;
+      background-color: #ffffff;
+      border-radius: 8px;
+    }
+
+    hr.divider {
+      margin: 15px auto;
+      border: 0;
+      height: 1px;
+      background: #cccccc;
+      width: 90%;
+    }
+
+    .result-block a {
+      color: #0055ff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .result-block a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      max-width: 900px;
+      margin: 20px auto;
+    }
+
+    #ant-walker {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      z-index: 10000;
+      display: none;
+    }
+  </style>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.4/fetch.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="top-bar">
+      <div class="logo-area">
+        <a href="index.html"> <img src="https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png" alt="Oodles Logo"></a>
+      </div>
+      <div class="search-area">
+        <input type="text" id="currentQuery" placeholder="Search again...">
+      </div>
+    </div>
+
+    <nav>
+      <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
+      <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
+      <a href="https://stenoip.github.io/oodles/video" class="frutiger-aero-tab" target="_blank">Video</a>
+      <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Portal</a>
+      <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">World Search</a>
+    </nav>
+
+    <hr class="divider">
+  </header>
+
+  <div class="container">
+    <div id="goodCitizenMessage" style="padding:10px; background:#f0f8ff; margin-bottom:10px; border-radius:5px;">
+        Thank you for choosing to turn off AI-Overviews. <a href="#">Learn more</a>.
+    </div>
+    
+    <div class="results-section" id="aiOverview"></div>
+
+    <div class="results-section" id="linksSection">
+      <h3>Links</h3>
+      <div id="linkResults"><p class="small">Enter a search query.</p></div>
+    </div>
+
+    <div class="results-section" id="imagesSection" style="display:none;">
+      <h3>Images</h3>
+      <div id="imageResults"><p class="small">Select a query from links.</p></div>
+    </div>
+  </div>
+
+  <footer>© Stenoip Company • Oodles Search</footer>
+  
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
+  <script src="frontend_javascript/search-logic.js"></script>
+  <script src="frontend_javascript/ad.js"></script>
+  <script src="ant_walking.js"></script>
+</body>
+</html>
