@@ -14,16 +14,13 @@ var fetch = require('node-fetch');
 var cheerio = require('cheerio');
 var { setCors } = require('./_cors');
 
-// --- CONFIGURATION ---
-// We use a "Legacy" User Agent to trick engines into serving simple HTML (Server-Side Rendered)
-// instead of complex JavaScript apps. This makes 'Ctrl+U' look like 'Inspect Element'.
-var UA_MOBILE_LEGACY = 'Mozilla/5.0 (Linux; Android 7.0; SM-G930V Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.125 Mobile Safari/537.36';
+// Config
+var UA = 'Mozilla/5.0 (compatible; Oodlebot/2.0; +https://stenoip.github.io/oodles)';
+var TIMEOUT_MS = 8000; // Bumped slightly for deeper parsing
+var DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 50; 
 
-var TIMEOUT_MS = 10000; 
-var DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 150; 
-
-// --- UTILITY ---
+// --- Utility functions ---
 function withTimeout(promise, ms, label) {
     var t;
     const timeout = new Promise((_, reject) => {
@@ -35,29 +32,14 @@ function withTimeout(promise, ms, label) {
 function normalize({ title, url, snippet, source }) {
     if (!url || !title) return null;
     
-    // Clean Google Redirects (gbv=1 returns /url?q=...)
-    if (url.startsWith('/url?q=')) {
-        try {
-            url = url.split('/url?q=')[1].split('&')[0];
-            url = decodeURIComponent(url);
-        } catch (e) {}
-    }
-
-    // General cleanup
+    // Cleaning: Remove tracking parameters often found in search results
     let cleanUrl = url;
     try {
         const u = new URL(url);
-        ['utm_source', 'utm_medium', 'utm_campaign', 'ref', 'click_id', 'sa', 'ved', 'usg'].forEach(p => u.searchParams.delete(p));
+        // Remove common tracking params
+        ['utm_source', 'utm_medium', 'utm_campaign', 'ref', 'click_id'].forEach(p => u.searchParams.delete(p));
         cleanUrl = u.href;
     } catch(e) {}
-
-    // Filter internal engine links
-    if (cleanUrl.includes('google.com/search') || 
-        cleanUrl.includes('yahoo.com/search') || 
-        cleanUrl.includes('duckduckgo.com') ||
-        !cleanUrl.startsWith('http')) {
-        return null;
-    }
 
     return {
         title: title.trim(),
@@ -79,25 +61,34 @@ function dedupe(items) {
         try {
             const targetUrl = it.originalUrl || it.url || it.pageUrl || '';
             var u = new URL(targetUrl);
+            // Key by domain + path to remove duplicates like http://site.com vs https://site.com/
             var key = `${u.hostname}${u.pathname}`.toLowerCase();
+            
             if (!seen.has(key)) {
                 seen.add(key);
                 out.push(it);
             }
-        } catch { }
+        } catch {
+            // skip invalid URLs
+        }
     }
     return out;
 }
 
 function scoreItem(item, query, weight = 0.6) {
     var q = query.toLowerCase();
-    var titleHit = item.title?.toLowerCase().includes(q) ? 2.5 : 0; 
-    var snippetHit = item.snippet?.toLowerCase().includes(q) ? 1.0 : 0;
+    var titleHit = item.title?.toLowerCase().includes(q) ? 1.5 : 0; // Increased weight for title matches
+    var snippetHit = item.snippet?.toLowerCase().includes(q) ? 0.8 : 0;
+    var httpsBonus = 0;
+    try {
+        var u = new URL(item.url);
+        httpsBonus = u.protocol === 'https:' ? 0.2 : 0;
+    } catch {}
     
-    // Boost shorter, cleaner URLs (usually better quality)
-    var urlLenPenalty = (item.url.length > 100) ? -0.5 : 0;
-    
-    return weight + titleHit + snippetHit + urlLenPenalty;
+    // Penalize very short snippets (likely bad parsing)
+    let lengthPenalty = (item.snippet && item.snippet.length < 20) ? -0.5 : 0;
+
+    return weight + titleHit + snippetHit + httpsBonus + lengthPenalty;
 }
 
 function paginate(items, page, pageSize) {
@@ -105,147 +96,180 @@ function paginate(items, page, pageSize) {
     return items.slice(start, start + pageSize);
 }
 
-// Fetcher with Legacy Headers
-async function getHTML(url, isMobile = true) {
-    const headers = {
-        'User-Agent': isMobile ? UA_MOBILE_LEGACY : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-    };
-
-    var resp = await fetch(url, { headers });
+// Safety check: Ensure we are only parsing HTML
+async function getHTML(url) {
+    var resp = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
     if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
+    
+    const contentType = resp.headers.get('content-type');
+    if (!contentType || !contentType.includes('text/html')) {
+        throw new Error(`Skipping non-HTML content: ${contentType}`);
+    }
+
     return resp.text();
 }
 
+// --- INTELLIGENT PARSERS ---
 
-// --- CRAWLERS (TARGETING "NO-JS" ENDPOINTS) ---
-
-// 1. Google "Basic Version" (gbv=1) - The Holy Grail of static scraping
-async function crawlGoogleLegacy(query) {
-    // num=100 asks for 100 results. gbv=1 forces legacy HTML mode.
-    const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&gbv=1&num=60`;
-    const html = await getHTML(url, true);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    // In gbv=1, results are often in plain divs with class 'g' or inside 'div.kCrYT'
-    // We look for 'h3' which is the title
-    $('h3').each((_, el) => {
-        const h3 = $(el);
-        const a = h3.parent('a'); // usually h3 is inside a
+// A generic "Heuristic" parser that works on almost any search engine layout
+// It looks for the pattern: Container -> Header(h2/h3) -> Link(a) -> Text
+function extractGenericLinks($, sourceName) {
+    const results = [];
+    
+    // Select all headings (h2, h3) that contain links
+    $('h2, h3, h4').each((_, el) => {
+        const titleEl = $(el);
+        const link = titleEl.find('a').first();
         
-        if (a.length) {
-            const title = h3.text();
-            const rawUrl = a.attr('href');
+        if (link.length > 0) {
+            const title = titleEl.text().trim();
+            const url = link.attr('href');
             
-            // Find snippet: usually in a div following the title container
-            // In mobile gbv=1, snippets are messy. We try to grab the nearest meaningful text.
-            let snippet = a.parent().next().text();
+            // Find snippet: Look at the parent's next sibling or text inside the parent container
+            let snippet = "";
+            const parent = titleEl.parent();
             
-            const item = normalize({ title, url: rawUrl, snippet, source: 'google-lite' });
+            // Try to find a paragraph or span with text nearby
+            snippet = parent.find('p, span.st, div.snippet, div.compText').text().trim();
+            if (!snippet) snippet = parent.next().text().trim(); // Next sibling often has text
+            
+            // Validate: Must be a valid HTTP link (no javascript: or relative internal links)
+            if (url && url.startsWith('http') && !url.includes('google.com/search') && !url.includes('yahoo.com/search')) {
+                results.push(normalize({ title, url, snippet, source: sourceName + '-generic' }));
+            }
+        }
+    });
+    return results;
+}
+
+// --- Web Crawlers (Updated with Multi-Strategy) ---
+
+async function crawlYahoo(query) {
+    var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=30`; // Fetch more
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
+
+    // Strategy 1: Specific Classes
+    $('div.algo, div.dd.algo').each((_, el) => {
+        var title = $(el).find('h3.title a').text();
+        var href = $(el).find('h3.title a').attr('href');
+        var snippet = $(el).find('div.compText, p.lh-16').text();
+        
+        // Yahoo sometimes wraps links in tracking, often the real link is in href
+        if (title && href) {
+            var item = normalize({ title, url: href, snippet, source: 'yahoo' });
             if (item) out.push(item);
         }
     });
 
+    // Strategy 2: Fallback to generic if specific failed
+    if (out.length < 5) {
+        out = out.concat(extractGenericLinks($, 'yahoo'));
+    }
+
     return out;
 }
 
-// 2. DuckDuckGo HTML (Lite) - Pure static HTML
-async function crawlDuckDuckGoLite(query) {
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url, false); // Desktop UA often works better for DDG Html
-    const $ = cheerio.load(html);
-    const out = [];
+async function crawlEcosia(query) {
+    var url = `https://www.ecosia.org/search?q=${encodeURIComponent(query)}`;
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
 
-    $('.result').each((_, el) => {
-        const title = $(el).find('.result__a').text();
-        const rawUrl = $(el).find('.result__a').attr('href');
-        const snippet = $(el).find('.result__snippet').text();
-
-        const item = normalize({ title, url: rawUrl, snippet, source: 'ddg-lite' });
+    // Strategy 1: Main Results
+    $('div.mainline-results .result').each((_, el) => {
+        const a = $(el).find('a.result-title');
+        const title = a.text();
+        const href = a.attr('href');
+        const snippet = $(el).find('.result-snippet').text();
+        const item = normalize({ title, url: href, snippet, source: 'ecosia' });
         if (item) out.push(item);
     });
 
-    return out;
-}
-
-// 3. Mojeek - Crawler based, always static
-async function crawlMojeek(query) {
-    const url = `https://www.mojeek.com/search?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url, false);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    $('li').each((_, el) => {
-        const title = $(el).find('h2 a').text();
-        const href = $(el).find('h2 a').attr('href');
-        const snippet = $(el).find('p.s').text();
-        
-        if (title && href) {
-            const item = normalize({ title, url: href, snippet, source: 'mojeek' });
-            if (item) out.push(item);
-        }
+    // Strategy 2: Sidebar / News Cards
+    $('div.card-mobile').each((_, el) => {
+         const a = $(el).find('a.result-title');
+         if(a.length) {
+             const title = a.text();
+             const href = a.attr('href');
+             const item = normalize({ title, url: href, snippet: 'News result', source: 'ecosia-news' });
+             if (item) out.push(item);
+         }
     });
 
     return out;
 }
 
-// 4. Bing - Using standard but with headers
 async function crawlBing(query) {
-    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=50`;
-    const html = await getHTML(url, false);
+    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=30`;
+    const html = await getHTML(url);
     const $ = cheerio.load(html);
     const out = [];
 
+    // Strategy 1: Standard Algo
     $('li.b_algo').each((_, el) => {
-        const title = $(el).find('h2 a').text();
-        const href = $(el).find('h2 a').attr('href');
+        const a = $(el).find('h2 a');
+        const title = a.text();
+        const href = a.attr('href');
         const snippet = $(el).find('.b_caption p').text();
-        
-        if(title && href) {
-            const item = normalize({ title, url: href, snippet, source: 'bing' });
-            if (item) out.push(item);
-        }
+        const item = normalize({ title, url: href, snippet, source: 'bing' });
+        if (item) out.push(item);
+    });
+
+    // Strategy 2: "Top Stories" or "Cards" (often miss these)
+    $('li.b_ans').each((_, el) => {
+         const a = $(el).find('h2 a, .b_title a'); // Broader selector
+         if(a.length && $(el).find('.b_entityTitle').length === 0) { // Avoid sidebar entities
+             const title = a.text();
+             const href = a.attr('href');
+             const item = normalize({ title, url: href, snippet: 'Featured Result', source: 'bing-featured' });
+             if (item) out.push(item);
+         }
     });
 
     return out;
 }
 
-// 5. Ask.com - Often good static results
-async function crawlAsk(query) {
-    const url = `https://www.ask.com/web?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url, false);
+async function crawlBrave(query) {
+    const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
     const $ = cheerio.load(html);
     const out = [];
 
-    $('.PartialSearchResults-item').each((_, el) => {
-        const title = $(el).find('a.PartialSearchResults-item-title-link').text();
-        const href = $(el).find('a.PartialSearchResults-item-title-link').attr('href');
-        const snippet = $(el).find('.PartialSearchResults-item-abstract').text();
-        
-        if(title && href) {
-            const item = normalize({ title, url: href, snippet, source: 'ask' });
-            if (item) out.push(item);
-        }
+    // Strategy 1: Snippets
+    $('div.snippet').each((_, el) => {
+        const a = $(el).find('a').first();
+        const title = a.text();
+        const href = a.attr('href');
+        // Brave snippets are often in a div with text-gray classes
+        const snippet = $(el).find('div[class*="text-gray"]').last().text(); 
+        const item = normalize({ title, url: href, snippet, source: 'brave' });
+        if (item) out.push(item);
     });
     
+    // Strategy 2: Info Cards
+    if (out.length < 5) {
+         out = out.concat(extractGenericLinks($, 'brave'));
+    }
+
     return out;
 }
 
-// --- IMAGE CRAWLER (Unchanged, already powerful) ---
+// --- Image Crawler (Kept your powerful metadata version) ---
 async function crawlImagesFromUrl(pageUrl, source) {
     try {
-        const html = await withTimeout(getHTML(pageUrl, false), TIMEOUT_MS / 2, `Crawl Images from ${pageUrl}`);
+        const html = await withTimeout(getHTML(pageUrl), TIMEOUT_MS / 2, `Crawl Images from ${pageUrl}`);
         const $ = cheerio.load(html);
         const images = [];
 
-        // 1. Meta Tags 
+        // 1. Meta Tags (High Relevance)
         const metaSelectors = [
-            'meta[property="og:image"]', 'meta[property="og:image:secure_url"]',
-            'meta[name="twitter:image"]', 'link[rel="image_src"]'
+            'meta[property="og:image"]',
+            'meta[property="og:image:secure_url"]',
+            'meta[name="twitter:image"]',
+            'meta[name="twitter:image:src"]',
+            'link[rel="image_src"]'
         ];
 
         metaSelectors.forEach(selector => {
@@ -254,35 +278,45 @@ async function crawlImagesFromUrl(pageUrl, source) {
                 if (imgUrl) {
                     try {
                         const resolved = new URL(imgUrl, pageUrl).href;
-                        images.push(normalizeImage({
-                            thumbnail: resolved, originalUrl: resolved, pageUrl: pageUrl, source: `${source}-meta`
-                        }));
+                        const item = normalizeImage({
+                            thumbnail: resolved,
+                            originalUrl: resolved,
+                            pageUrl: pageUrl,
+                            source: `${source}-meta`
+                        });
+                        if (item) images.push(item);
                     } catch (e) {}
                 }
             });
         });
 
-        // 2. Body Images
+        // 2. Body Images (with Lazy Load logic)
         $('img').each((_, el) => {
             const img = $(el);
-            let candidateUrl = img.attr('src') || img.attr('data-src') || img.attr('data-lazy-src');
-            
-            // Try to find large images in srcset
-            const srcset = img.attr('srcset');
+            let candidateUrl = img.attr('src') || 
+                               img.attr('data-src') || 
+                               img.attr('data-original') || 
+                               img.attr('data-lazy-src');
+                               
+            const srcset = img.attr('srcset') || img.attr('data-srcset');
             if (srcset) {
                 const parts = srcset.split(',');
-                candidateUrl = parts[parts.length - 1].trim().split(' ')[0];
+                const lastPart = parts[parts.length - 1].trim();
+                const urlPart = lastPart.split(' ')[0];
+                if (urlPart) candidateUrl = urlPart;
             }
 
-            if (candidateUrl && !candidateUrl.startsWith('data:')) {
+            if (candidateUrl) {
                 try {
-                    const resolved = new URL(candidateUrl, pageUrl).href;
-                    // Filter icons
-                    if(!resolved.match(/icon|logo|pixel|blank/i)) {
-                         images.push(normalizeImage({
-                            thumbnail: resolved, originalUrl: resolved, pageUrl: pageUrl, source: `${source}-page`
-                        }));
-                    }
+                    if (candidateUrl.startsWith('data:image') && candidateUrl.length < 1000) return; 
+                    const resolvedUrl = new URL(candidateUrl, pageUrl).href;
+                    const item = normalizeImage({
+                        thumbnail: resolvedUrl,
+                        originalUrl: resolvedUrl,
+                        pageUrl: pageUrl,
+                        source: `${source}-page`
+                    });
+                    if (item) images.push(item);
                 } catch (e) {}
             }
         });
@@ -293,44 +327,54 @@ async function crawlImagesFromUrl(pageUrl, source) {
     }
 }
 
-
-// --- MAIN HANDLER ---
+// --- Main handler ---
 module.exports = async (req, res) => {
     setCors(res);
-    if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
     const q = (req.query.q || '').trim();
     const type = (req.query.type || 'web').trim();
 
-    if (!q) { res.status(400).json({ error: 'Missing query' }); return; }
+    if (!q) {
+        res.status(400).json({ error: 'Missing query parameter q' });
+        return;
+    }
 
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.min(MAX_PAGE_SIZE, parseInt(req.query.pageSize || DEFAULT_PAGE_SIZE));
+    const pageSize = Math.min(
+        MAX_PAGE_SIZE,
+        Math.max(5, parseInt(req.query.pageSize || String(DEFAULT_PAGE_SIZE), 10))
+    );
 
     try {
-        // --- 1. SEARCH PHASE ---
-        // We use promise.allSettled or catch() to ensure one failure doesn't stop the rest
+        // Run all web crawlers in parallel
         const webSearchTasks = [
-            withTimeout(crawlGoogleLegacy(q), TIMEOUT_MS, 'Google').catch(e => { console.log('Google fail', e.message); return []; }),
-            withTimeout(crawlDuckDuckGoLite(q), TIMEOUT_MS, 'DDG').catch(e => { console.log('DDG fail', e.message); return []; }),
-            withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(e => { console.log('Bing fail', e.message); return []; }),
-            withTimeout(crawlMojeek(q), TIMEOUT_MS, 'Mojeek').catch(e => { console.log('Mojeek fail', e.message); return []; }),
-            withTimeout(crawlAsk(q), TIMEOUT_MS, 'Ask').catch(e => { console.log('Ask fail', e.message); return []; })
+            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(() => []),
+            withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(() => []),
+            withTimeout(crawlYahoo(q), TIMEOUT_MS, 'Yahoo').catch(() => []),
+            withTimeout(crawlEcosia(q), TIMEOUT_MS, 'Ecosia').catch(() => [])
         ];
 
-        let resultsArrays = await Promise.all(webSearchTasks);
-        let allWebResults = resultsArrays.flat().filter(i => i !== null);
+        let [brave, bing, yahoo, ecosia] = await Promise.all(webSearchTasks);
         
+        // Combine and cleanup
+        let allWebResults = [...brave, ...bing, ...yahoo, ...ecosia];
+        
+        // Robust Deduplication
         allWebResults = dedupe(allWebResults);
 
         if (type === 'web') {
-            // Scoring
+            // Ranking Logic
             const engineWeights = { 
-                'google-lite': 1.0, 
-                'ddg-lite': 0.9, 
+                'brave': 0.85, 
                 'bing': 0.8, 
-                'mojeek': 0.7,
-                'ask': 0.6
+                'yahoo': 0.7, 
+                'ecosia': 0.7, 
+                'bing-featured': 0.9, // Boost featured results
+                'ecosia-news': 0.8 
             };
 
             allWebResults = allWebResults.map(it => ({
@@ -342,30 +386,43 @@ module.exports = async (req, res) => {
             const items = paginate(allWebResults, page, pageSize);
 
             res.status(200).json({ query: q, total, page, pageSize, items });
+            return;
 
         } else if (type === 'image') {
-            // --- 2. IMAGE PHASE ---
-            // We take the top ~25 distinct URLs from our massive web search
-            // and deep-crawl them for images.
-            const urlsToCrawl = allWebResults.slice(0, 25).map(it => it.url);
-            
-            const imageTasks = urlsToCrawl.map(url => 
-                withTimeout(crawlImagesFromUrl(url, 'web-crawl'), TIMEOUT_MS, `Img ${url}`).catch(() => [])
+            // Use the high-quality web results to feed the image crawler
+            // Limit to top 15 results to avoid timeout, but deep crawl them
+            const urlsToCrawl = allWebResults.slice(0, 15).map(it => it.url).filter(u => u);
+
+            const imageCrawlTasks = urlsToCrawl.map(url =>
+                withTimeout(
+                    crawlImagesFromUrl(url, allWebResults.find(it => it.url === url)?.source || 'unknown'), 
+                    TIMEOUT_MS, 
+                    `Image Crawl from ${url}`
+                ).catch(() => [])
             );
 
-            let imageArrays = await Promise.all(imageTasks);
-            let allImages = dedupe(imageArrays.flat());
+            let allImageResultsArrays = await Promise.all(imageCrawlTasks);
+            let allImageResults = dedupe(allImageResultsArrays.flat());
+
+            const total = allImageResults.length;
+            const items = paginate(allImageResults, page, pageSize);
 
             res.status(200).json({
-                query: q, total: allImages.length, page, pageSize,
-                items: paginate(allImages, page, pageSize)
+                query: q,
+                total,
+                page,
+                pageSize,
+                items
             });
+            return;
+
         } else {
-            res.status(400).json({ error: 'Invalid type' });
+             res.status(400).json({ error: 'Invalid type parameter. Must be "web" or "image"' });
+             return;
         }
 
     } catch (err) {
-        console.error('Search Error:', err);
-        res.status(500).json({ error: 'Oodlebot internal error' });
+        console.error('Metasearch/Image Crawl error:', err);
+        res.status(500).json({ error: 'Oodlebot search failed' });
     }
 };
