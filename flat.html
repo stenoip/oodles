@@ -6,7 +6,6 @@
   <link rel="icon" href="favicon.ico" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Flat design styles -->
   <style>
     :root {
       --blue: #1a73e8;
@@ -15,7 +14,6 @@
       --text-muted: #5f6368;
       --border: #dadce0;
       --bg-page: #ffffff;
-      --bg-light: #f8f9fa;
     }
 
     * {
@@ -171,9 +169,17 @@
       border-top: 1px solid var(--border);
     }
 
-    /* -------------------------------- ANT FEATURE -------------------------------- */
+    /* -------------------------------- ANT Animation FEATURE  -------------------------------- */
     #ant-walker {
-      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 60px;
+      height: 60px;
+      z-index: 10000;
+      transform: translateX(-100%);
+      display: none; /* JS controls visibility */
+      pointer-events: none;
     }
 
     /* -------------------------------- MOBILE -------------------------------- */
@@ -225,7 +231,7 @@
 
   <div class="results-section" id="aiOverview"></div>
 
-  <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
+  <div id="toolContainer" style="margin-top:15px;margin-bottom:20px;"></div>
 
   <div class="results-section" id="linksSection">
     <h3>Links</h3>
@@ -246,10 +252,13 @@
   © Stenoip Company • Oodles Search
 </footer>
 
-<img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
+<img id="ant-walker"
+     src="https://stenoip.github.io/oodles/ant_walking.gif"
+     alt="A walking ant animation">
+
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="frontend_javascript/search-logic.js"></script>
+<script src="frontend_javascript/search-logic(flat).js"></script>
 <script src="frontend_javascript/ad.js"></script>
 <script src="ant_walking.js"></script>
 
