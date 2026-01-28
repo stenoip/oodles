@@ -1,117 +1,83 @@
-# Oodles Search Engine
 
-Oodles is a self-serve search engine platform. It lets anyone generate their own `index.json` datasets by crawling websites, then search through them with ranking, synonyms, pagination and analytics. Think of it as a buffet of web information you can build yourself!
+
+# Oodles Metasearch Engine
+
+![Oodles Logo](https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png)
+
+Note, this is a technical overview of Oodles. If you do not know programming, it may be hard for you to understand!
+
 
 ---
 
-## Features
+Oodles is a dual-purpose search platform that functions  as a **Metasearch Engine** (crawling results from Bing, Brave and Yahoo) and secondarily as a **self-serve index generator**. It features an integrated AI system called **Praterich** that synthesizes, ranks and detects tools for a smarter search experience.
 
-### Frontend (GitHub Pages)
 
-* Classic 90s-inspired UI
-* Generate an index from one or more URLs
-* Upload your own `index.json`
-* Search with ranking (title, headings, description, body)
-* Pagination controls
-* Ad-hoc single-URL search
-* Auto-prefixes `stenoip.github.io/` → `https://stenoip.github.io/`
-* Click tracking (analytics)
+---
 
-### Backend (Vercel)
+## Key Features
 
-* `/generate` — crawl sites and build index.json
-* `/search` — ranked search with synonyms & stemming
-* `/analytics` — log clicks for future ranking improvements
-* `/health` — simple health check
-* Multi-page crawling with depth/breadth limits
-* CORS enabled for GitHub Pages frontend
+### 1. Metasearch Aggregator (Primary)
+* **Multi-Source Fetching:** Queries Bing, Yahoo, Brave simultaneously via the `/api` endpoint.
+* **AI Synthesis (Praterich):** Generates  search overviews and summarizes technical results.
+* **Smart Ranking:** AI-driven re-ranking that promotes the top 5 most relevant links above standard algorithmic results.
+* **Tool Detection:** Automatically triggers built-in tools (Calculator, Translator, Colour Picker) based on natural language queries.
+* **Deep Image Crawler:** Extracts images directly from the source pages. A recent update has increased the range of number of images to 100-400.
+
+### Oodles features Dataset Generation
+* **Deep Crawling:** Visits and scrapes a webpage, headings and metadata from target URLs using `metasearch.js`.
+* **Index Creation:** Generates and downloads custom `index.json` datasets for offline or private search use.
+
 
 ---
 
 ## Project Structure
 
+```text
+root/
+├── index.html                # Main search entry
+├── search.html               # Results display page
+├── 404.html                  # Error page
+├── frontend_javascript/      # Client-side logic
+│   └── search-logic.js       # UI Controller: AI, Tools, and Tab Management
+└── api/                      # Vercel Backend
+    ├── index.js              # Primary Metasearch & Image Crawler
+    ├── metasearch.js         # Deep Content Scraper (for indexing)
+    ├── generate.js           # index.json Generator logic
+    ├── search.js             # Local index search logic
+    ├── analytics.js          # Click tracking
+    └── _cors.js              # Security & Headers
 ```
-
-oodles/
-├── frontend/ (GitHub Pages)
-│   ├── index.html
-│   ├── 404.html
-│   └── assets/...
-└── backend/ (Vercel)
-├── api/
-│   ├── generate.js
-│   ├── search.js
-│   ├── analytics.js
-│   ├── health.js
-│   └── \_cors.js
-├── package.json
-└── vercel.json
-
-````
 
 ---
 
-## Getting Started
-Visit: https://stenoip.github.io/oodles
+## How Oodles Works
 
-### Generate an index
+### Search Flow
+* User submits a query via `index.html`.
+* `api/index.js` fetches results from multiple engines in parallel using `Promise.all`.
+* `frontend_javascript/search-logic.js` sends snippets to the Praterich AI for synthesis.
+* The AI detects if a tool (such as a calculator) is needed and provides a Smart Ranking to reorder results.
 
-* Enter one or more URLs in the frontend.
-* Adjust depth, link limit, and domain restriction.
-* Download the generated `index.json`.
-
-### Upload an index
-
-* Load any valid `index.json` file.
-* Search through it instantly.
-
-### Search
-
-* Enter a query.
-* Results are ranked by:
-    * Title > Headings > Description > Body
-    * Helpfulness (longer content, richer descriptions)
-    * Synonyms & stemming (e.g. run → running, ran)
-* Paginate through results.
-
-### Analytics
-
-* Every click is logged to `/analytics` for future ranking improvements.
+### Indexing Flow
+* User provides a URL to the generator tool.
+* `api/metasearch.js` performs a deep crawl(our ants), visiting each page and extracting full content.
+* The backend bundles this into a downloadable `index.json` compatible with `api/search.js`.
 
 ---
 
 ## Configuration
 
-* **CORS:** The CORS origin is set to `https://stenoip.github.io`. Update `api/_cors.js` if your frontend lives elsewhere.
-* **Ranking:** Ranking weights can be tuned in `api/search.js` (`WEIGHTS` object).
-* **Synonyms:** Synonyms are defined in `getSynonyms()` inside `api/search.js`.
-
----
-
-## Roadmap
-
-* [ ] Smarter NLP (lemmatization, TF-IDF, embeddings)
-* [ ] Persistent analytics storage (DB or Vercel KV)
-* [ ] Richer UI (filters, categories, tags)
-* [ ] Crawl scheduling & background jobs
-
----
-
-## Contributing
-
-Pull requests are welcome! For major changes, open an issue first to discuss what you’d like to change.
-
----
-
-## License
-
-MIT License. Please read before using.
+* **AI Logic:** Modify `ladyPraterichSystemInstruction` in `search-logic.js` to change how the AI summarizes or ranks results.
+* **Built-in Tools:** Add new utility URLs to the `BUILT_IN_TOOLS` object in `search-logic.js`.
+* **Backend URL:** Update `BACKEND_BASE` in the frontend logic to point to your Vercel deployment.
 
 ---
 
 ## Credits
 
-Built with by Stenoip Company.
-Frontend: GitHub Pages.
-Backend: Vercel.
-````
+Built by Stenoip Company.  2024-2026. LONG LIVE FRUTIGER AERO!
+* **Frontend:** Hosted on GitHub Pages.  
+* **Backend:** Powered by Vercel.  
+* **AI:** Powered by the Praterich model via Groq AI API.
+
+---
