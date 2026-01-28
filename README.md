@@ -9,7 +9,7 @@ Note, this is a technical overview of Oodles. If you do not know programming, it
 
 ---
 
-Oodles is a dual-purpose search platform that functions  as a **Metasearch Engine** (crawling results from Bing, Brave and Yahoo) and secondarily as a **self-serve index generator**. It features an integrated AI system called **Praterich** that synthesizes, ranks and detects tools for a smarter search experience.
+Oodles is a dual-purpose search platform that functions  as a **Metasearch Engine** (crawling results from Bing, Brave and Yahoo) and secondarily as a **self-serve index generator**. It features an integrated AI system called **Praterich** that synthesizes, ranks and detects tools for a smarter search experience. It can be used by the everyday user to stop the monopoly of Google.
 
 
 ---
