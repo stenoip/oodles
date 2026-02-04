@@ -299,13 +299,22 @@ function applySmartRanking(originalItems, indicesString) {
         renderLinkResults(reorderedItems, reorderedItems.length);
 
         // 4. Add a visual indicator that sorting happened
-        var resultsEl = document.getElementById('linkResults');
-        var notice = document.createElement('div');
-        notice.className = 'small';
-        // Frutiger Aero style green/success color
-        notice.style.color = '#388e3c'; 
-        notice.style.marginBottom = '10px';
-        notice.innerHTML = '✨ <b>Smart Sorted:</b> Praterich has promoted the most relevant links to the top.';
+var resultsEl = document.getElementById('linkResults');
+var notice = document.createElement('div');
+notice.className = 'small';
+// Frutiger Aero style green/success color
+notice.style.color = '#388e3c'; 
+notice.style.marginBottom = '10px';
+notice.style.display = 'flex';      // Added for alignment
+notice.style.alignItems = 'center'; // Added for alignment
+notice.style.gap = '8px';           // Space between icon and text
+
+notice.innerHTML = `
+    <img src="https://stenoip.github.io/praterich/praterich.png" 
+         alt="Praterich" 
+         style="width: 18px; height: 18px; object-fit: contain;">
+    <span><b>Smart Sorted:</b> Praterich has promoted the most relevant links to the top.</span>
+`;
         
         // Insert notice at the very top of results
         // Check if the resultsEl is still pointing to the correct section (web search)
@@ -387,59 +396,75 @@ async function executeSearch(query, type, page = 1) {
     }
 }
 
+
 function switchTab(tabName, executeNewSearch) {
     if (window.event) event.preventDefault();
 
     let normalizedTab = tabName;
     let newSearchType = tabName;
 
+    // Normalize tab names to match HTML IDs (links, images, videos)
     if (tabName === 'web' || tabName === 'links') {
         normalizedTab = 'links';
         newSearchType = 'web';
     } else if (tabName === 'image' || tabName === 'images') {
         normalizedTab = 'images';
         newSearchType = 'image';
+    } else if (tabName === 'video' || tabName === 'videos') {
+        normalizedTab = 'videos';
+        newSearchType = 'video';
     }
 
     currentSearchType = newSearchType;
 
+    // Update Tab UI: Remove active class from all tabs
     document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
         a.classList.remove('active');
     });
 
-    document.getElementById('linksSection').style.display = 'none';
-    document.getElementById('imagesSection').style.display = 'none';
+    // Hide all result sections
+    const sections = ['linksSection', 'imagesSection', 'videosSection'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 
-    if (normalizedTab === 'links') {
-        document.getElementById('tab-links').classList.add('active');
-        document.getElementById('linksSection').style.display = 'block';
-    } else if (normalizedTab === 'images') {
-        document.getElementById('tab-images').classList.add('active');
-        document.getElementById('imagesSection').style.display = 'block';
-    }
+    // Show the selected section and activate the tab
+    const activeTab = document.getElementById('tab-' + normalizedTab);
+    const activeSection = document.getElementById(normalizedTab + 'Section');
+    
+    if (activeTab) activeTab.classList.add('active');
+    if (activeSection) activeSection.style.display = 'block';
 
     // Handle Good Citizen Message visibility
+    // Show message if AI is OFF and we are NOT on the video tab (matching your previous logic)
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
-    if (newSearchType === 'image') {
-        if (!isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'block';
-    } else {
-        if (isAIOverviewEnabled && citizenMsgEl) citizenMsgEl.style.display = 'none';
+    if (citizenMsgEl) {
+        if (!isAIOverviewEnabled && (newSearchType === 'web' || newSearchType === 'image')) {
+            citizenMsgEl.style.display = 'block';
+        } else {
+            citizenMsgEl.style.display = 'none';
+        }
     }
     
-    // Clear tool and AI content when switching tabs 
+    // Clear tool and AI content when switching tabs if not triggering a search
     if (!executeNewSearch) {
         renderBuiltInTool(null);
-        if (document.getElementById('aiOverview')) document.getElementById('aiOverview').innerHTML = '';
-        // Also clear the debounce timer
+        var overviewEl = document.getElementById('aiOverview');
+        if (overviewEl) overviewEl.innerHTML = '';
+        
+        // Clear the debounce timer to prevent the previous search's AI from popping up late
         if (aiTimeout) {
             clearTimeout(aiTimeout);
         }
     }
 
+    // Trigger the search if requested and a query exists
     if (executeNewSearch && currentQuery) {
         executeSearch(currentQuery, newSearchType, 1);
     }
 }
+
 
 
 function changePage(delta) {
@@ -490,6 +515,8 @@ function renderImageResults(items, total) {
         return;
     }
 
+    
+
     const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
 
     resultsEl.innerHTML = items.map(function(r) {
@@ -501,6 +528,25 @@ function renderImageResults(items, total) {
     }).join('') +
         `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
         renderPaginationControls(total); 
+}
+function renderVideoResults(items) {
+    const resultsEl = document.getElementById('videoResults');
+    if (!items || items.length === 0) {
+        resultsEl.innerHTML = '<p class="small">No videos found.</p>';
+        return;
+    }
+
+    resultsEl.innerHTML = items.map(item => `
+        <div class="video-card-aero">
+            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" allowfullscreen></iframe>
+            <div style="padding: 8px;">
+                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; margin-bottom:4px;">
+                    ${item.snippet.title}
+                </a>
+                <span class="small" style="opacity:0.8;">${item.snippet.channelTitle}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 
