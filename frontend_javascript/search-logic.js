@@ -335,20 +335,17 @@ async function executeSearch(query, type, page = 1) {
     document.getElementById('currentQuery').value = query;
 
     var overviewEl = document.getElementById('aiOverview');
-    if (overviewEl) overviewEl.innerHTML = ''; // Clear previous AI text
+    if (overviewEl) overviewEl.innerHTML = ''; 
     
-    // Clear the built-in tool area and cached AI data for a new search
     renderBuiltInTool(null); 
     lastAIRawText = null; 
     lastFetchedItems = null;
 
-    // Set initial "Citizen" message state
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
-        citizenMsgEl.style.display = (!isAIOverviewEnabled && type === 'web') ? 'block' : 'none';
+        citizenMsgEl.style.display = (!isAIOverviewEnabled && (type === 'web' || type === 'image')) ? 'block' : 'none';
     }
     
-    // Clear any previous debounce timeout
     if (aiTimeout) {
         clearTimeout(aiTimeout);
     }
@@ -359,31 +356,21 @@ async function executeSearch(query, type, page = 1) {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
             var resp = await fetch(url);
             var data = await resp.json();
-            
-            // 1. Initial Render (Fast, unsorted)
             renderLinkResults(data.items, data.total);
-
-            // Store items for re-running AI on toggle
             lastFetchedItems = data.items;
 
-            // 2. Trigger AI processing (Background - handles Tool Detection, Ranking AND Overview)
-            // Use debouncing to prevent excessive Groq requests on rapid searches
             if (page === 1) {
-                // We run this regardless of the toggle state because we need Ranking and Tool Detection
                 aiTimeout = setTimeout(() => {
                     processAIResults(query, data.items);
-                }, 500); // 500ms delay to prevent rapid Groq re-requests
+                }, 500);
             }
-
         } catch (error) {
             console.error('Web search error:', error);
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
-            renderBuiltInTool(null); // Clear tool on backend error
         }
+
     } else if (type === 'image') {
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
-        if (citizenMsgEl && !isAIOverviewEnabled) citizenMsgEl.style.display = 'block';
-
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
             var resp = await fetch(url);
@@ -393,9 +380,24 @@ async function executeSearch(query, type, page = 1) {
             console.error('Image search error:', error);
             document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
         }
+
+    } else if (type === 'video') {
+        // --- ADDED THIS SECTION ---
+        const videoContainer = document.getElementById('videoResults');
+        if (videoContainer) {
+            videoContainer.innerHTML = '<p class="small">Searching YouTube...</p>';
+            try {
+                var url = BACKEND_BASE + '/video-search?query=' + encodeURIComponent(query);
+                var resp = await fetch(url);
+                var data = await resp.json();
+                renderVideoResults(data);
+            } catch (error) {
+                console.error('Video search error:', error);
+                videoContainer.innerHTML = '<p class="small">Error loading videos.</p>';
+            }
+        }
     }
 }
-
 
 function switchTab(tabName, executeNewSearch) {
     if (window.event) event.preventDefault();
