@@ -229,6 +229,25 @@ hr.divider {
   border-radius: 6px;
 }
 
+    .video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+.video-card-aero {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.video-card-aero iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+}
+
+
 /* --- AI OVERVIEW STYLES (New) --- */
 /* Style for loading/error messages within the overview div */
 .ai-overview-loading, .ai-overview-error {
@@ -349,6 +368,14 @@ footer {
       <h3>Images</h3>
       <div id="imageResults"><p class="small">Select a query from links.</p></div>
     </div>
+
+    <div class="results-section" id="videosSection" style="display:none;">
+  <h3>Videos</h3>
+  <div id="videoResults" class="video-grid">
+    <p class="small">Enter a query to find videos.</p>
+  </div>
+</div>
+
   </div>
 
   <footer>© Stenoip Company • Oodles Search</footer>
