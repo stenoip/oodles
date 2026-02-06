@@ -503,10 +503,16 @@ function renderLinkResults(items, total) {
         resultsEl.innerHTML = `
             <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
             ` + items.map(function(r) {
+                // --- MODIFICATION START: Source Badge Logic ---
+                var sourceBadge = r.source ? `<span style="color: #006400; font-weight: bold; margin-left: 5px;">[${escapeHtml(r.source)}]</span>` : '';
+                // --- MODIFICATION END ---
+
                 return `
                     <div class="result-block">
                         <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-                        <div class="small">${escapeHtml(r.url)}</div>
+                        <div class="small">
+                            ${escapeHtml(r.url)} ${sourceBadge}
+                        </div>
                         <div>${escapeHtml(r.snippet || '')}</div>
                     </div>
                 `;
@@ -696,7 +702,13 @@ function openImageModal(index) {
     document.getElementById('modalImage').src = fullImgUrl;
     document.getElementById('modalTitle').innerText = title;
     document.getElementById('modalDims').innerText = dims;
-    document.getElementById('modalSource').innerText = item.source || 'Unknown Source';
+    
+    // --- MODIFICATION START: Add URL to Source Display ---
+    // Displays: "Pinterest - https://www.pinterest.com/pin/..."
+    const sourceName = item.source || 'Unknown Source';
+    const cleanUrl = sourceUrl ? sourceUrl : '';
+    document.getElementById('modalSource').innerText = `${sourceName} - ${cleanUrl}`;
+    // --- MODIFICATION END ---
     
     // 4. Setup Buttons
     const btnVisit = document.getElementById('btnVisit');
