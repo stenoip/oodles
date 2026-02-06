@@ -6,11 +6,11 @@
 <link rel="icon" href="favicon.ico" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    /* ------------------------------------------- */
+/* ------------------------------------------- */
 /* FRUTIGER AERO STYLES - OODLES SEARCH         */
 /* ------------------------------------------- */
 
-/* Base Color System (Aero defaults to bright blue/green) */
+/* Base Color System */
 :root {
   --hue: 200; /* Bluer, Vista feel */
   --sat: 0.35;
@@ -30,8 +30,6 @@ body {
   margin: 0;
   font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
   color: #202124;
-
-  /* Frutiger Aero Wallpaper */
   background-image: url('https://stenoip.github.io/oodles/waves_cool_gif.gif');
   background-size: cover;
   background-attachment: fixed;
@@ -51,7 +49,6 @@ header {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Top row: logo on left, search box on right */
 .top-bar {
   display: flex;
   align-items: center;
@@ -66,7 +63,6 @@ header {
   display: block;
 }
 
-/* Search bar beside logo */
 .search-area {
   flex: 1;
   display: flex;
@@ -92,7 +88,7 @@ header {
 }
 
 /* ------------------------------------------- */
-/* NAVIGATION BAR                              */
+/* NAVIGATION BAR                               */
 /* ------------------------------------------- */
 nav {
   margin-top: 15px;
@@ -104,7 +100,6 @@ nav {
   border: none;
 }
 
-/* Frutiger Aero Tab Links (Styled like buttons) */
 .frutiger-aero-tab {
   background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
   border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
@@ -158,7 +153,6 @@ nav a.active::after {
   );
 }
 
-/* Divider line below nav */
 hr.divider {
   margin: 15px auto 20px auto;
   border: 0;
@@ -199,7 +193,6 @@ hr.divider {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* Results styling */
 .result-block {
   margin-bottom: 16px;
 }
@@ -220,20 +213,70 @@ hr.divider {
   color: #333;
 }
 
-/* Image Results Grid */
-#imageResults img {
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  margin: 5px;
-  max-width: 150px;
-  border-radius: 6px;
+/* ------------------------------------------- */
+/* NEW IMAGE GRID STYLES (Moved out of Media Query) */
+/* ------------------------------------------- */
+#imageResults {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  padding: 10px;
 }
 
-    .video-grid {
+.image-result-item {
+  position: relative;
+  cursor: pointer;
+  border: 1px solid #aaddff;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: #fff;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.image-result-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(0, 150, 255, 0.3);
+  z-index: 2;
+}
+
+.image-result-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.img-hover-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 10px;
+    padding: 4px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.image-result-item:hover .img-hover-overlay {
+    opacity: 1;
+}
+
+/* ------------------------------------------- */
+/* VIDEO GRID STYLES                            */
+/* ------------------------------------------- */
+.video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 15px;
 }
+
 .video-card-aero {
   background: rgba(255, 255, 255, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -241,109 +284,16 @@ hr.divider {
   overflow: hidden;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+
 .video-card-aero iframe {
   width: 100%;
   aspect-ratio: 16 / 9;
   border: none;
 }
 
-
-/* --- AI OVERVIEW STYLES (New) --- */
-/* Style for loading/error messages within the overview div */
-.ai-overview-loading, .ai-overview-error {
-    text-align: center;
-    font-style: italic;
-    color: #444;
-    padding: 10px 0;
-}
-/* Optional: Style the overview content slightly different */
-#aiOverview p, #aiOverview ul, #aiOverview ol {
-    line-height: 1.6;
-}
-
-
 /* ------------------------------------------- */
-/* FOOTER                                      */
+/* MODAL / WINDOW STYLES (Fixed)               */
 /* ------------------------------------------- */
-footer {
-  text-align: center;
-  padding: 20px;
-  font-size: 12px;
-  color: #000;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
-  background-color: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(2px);
-  border-radius: 12px;
-  max-width: 900px;
-  margin: 0 auto 20px auto;
-}
-
-/* ------------------------------------------- */
-/* ANT FEATURE STYLES                          */
-/* ------------------------------------------- */
-#ant-walker {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 60px;
-  height: 60px;
-  z-index: 10000;
-  transform: translateX(-100%);
-  display: none;
-}
-
-/* ------------------------------------------- */
-/* RESPONSIVE TWEAKS                            */
-/* ------------------------------------------- */
-@media (max-width: 600px) {
-  .logo-area img {
-    height: 45px;
-  }
-
-  .search-area input {
-    max-width: 100%;
-  }
-
-  nav {
-    gap: 5px;
-  }
-
-  .frutiger-aero-tab {
-    font-size: 13px;
-    padding: 0.4em 1em;
-  }
-  /* Image Grid Layout Update */
-#imageResults {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-    padding: 10px;
-}
-
-.image-result-item {
-    position: relative;
-    cursor: pointer;
-    border: 1px solid #aaddff;
-    border-radius: 8px;
-    overflow: hidden;
-    aspect-ratio: 1; /* Makes them square thumbnails */
-    background: #fff;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.image-result-item:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(0, 150, 255, 0.3);
-    z-index: 2;
-}
-
-.image-result-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Modal Overlay */
 .image-modal-overlay {
     position: fixed;
     top: 0;
@@ -351,14 +301,13 @@ footer {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px); /* Aero glass effect */
+    backdrop-filter: blur(5px);
     z-index: 9999;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* The Aero Window */
 .frutiger-window {
     background: linear-gradient(to bottom, #f0f9ff 0%, #cbebff 100%);
     border: 1px solid #64b5f6;
@@ -372,7 +321,6 @@ footer {
     overflow: hidden;
 }
 
-/* Window Title Bar */
 .window-title-bar {
     background: linear-gradient(to bottom, #e3f2fd, #90caf9);
     padding: 8px 15px;
@@ -408,7 +356,6 @@ footer {
     background: #ff5252;
 }
 
-/* Window Content Layout */
 .window-content {
     display: flex;
     flex-direction: row;
@@ -416,14 +363,6 @@ footer {
     gap: 20px;
     height: 100%;
     overflow: hidden;
-}
-
-/* On mobile, stack vertically */
-@media (max-width: 768px) {
-    .window-content {
-        flex-direction: column;
-        overflow-y: auto;
-    }
 }
 
 .modal-image-container {
@@ -492,6 +431,69 @@ footer {
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
+/* ------------------------------------------- */
+/* FOOTER & MISC                               */
+/* ------------------------------------------- */
+footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: #000;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(2px);
+  border-radius: 12px;
+  max-width: 900px;
+  margin: 0 auto 20px auto;
+}
+
+.ai-overview-loading, .ai-overview-error {
+    text-align: center;
+    font-style: italic;
+    color: #444;
+    padding: 10px 0;
+}
+#aiOverview p, #aiOverview ul, #aiOverview ol {
+    line-height: 1.6;
+}
+
+#ant-walker {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 60px;
+  z-index: 10000;
+  transform: translateX(-100%);
+  display: none;
+}
+
+/* ------------------------------------------- */
+/* RESPONSIVE MEDIA QUERIES                     */
+/* ------------------------------------------- */
+@media (max-width: 600px) {
+  .logo-area img {
+    height: 45px;
+  }
+  .search-area input {
+    max-width: 100%;
+  }
+  nav {
+    gap: 5px;
+  }
+  .frutiger-aero-tab {
+    font-size: 13px;
+    padding: 0.4em 1em;
+  }
+  /* On mobile, stack window content vertically */
+  .window-content {
+      flex-direction: column;
+      overflow-y: auto;
+  }
+  .modal-sidebar {
+      min-width: 100%;
+  }
+}
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
