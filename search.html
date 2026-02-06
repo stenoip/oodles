@@ -312,108 +312,186 @@ footer {
     font-size: 13px;
     padding: 0.4em 1em;
   }
-  /* Modal Overlay */
-.modal-overlay {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.7);
-    backdrop-filter: blur(5px);
-    align-items: center;
-    justify-content: center;
+  /* Image Grid Layout Update */
+#imageResults {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 10px;
 }
 
-/* Frutiger Aero Window Style */
-.aero-window {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+.image-result-item {
+    position: relative;
+    cursor: pointer;
+    border: 1px solid #aaddff;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 1; /* Makes them square thumbnails */
+    background: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.image-result-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 150, 255, 0.3);
+    z-index: 2;
+}
+
+.image-result-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Modal Overlay */
+.image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px); /* Aero glass effect */
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The Aero Window */
+.frutiger-window {
+    background: linear-gradient(to bottom, #f0f9ff 0%, #cbebff 100%);
+    border: 1px solid #64b5f6;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.5);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.8);
     width: 90%;
     max-width: 900px;
     max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    animation: zoomIn 0.3s ease-out;
 }
 
-.modal-header {
-    background: linear-gradient(to bottom, #7abcff 0%, #4096ee 50%, #11599a 100%);
-    color: white;
-    padding: 10px 15px;
+/* Window Title Bar */
+.window-title-bar {
+    background: linear-gradient(to bottom, #e3f2fd, #90caf9);
+    padding: 8px 15px;
+    border-bottom: 1px solid #64b5f6;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    color: #0d47a1;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
 }
 
-.close-btn {
-    background: #ff5f56;
-    border: 1px solid #cf3c3c;
+.window-title-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80%;
+}
+
+.window-close-btn {
+    background: #ff8a80;
+    border: 1px solid #d32f2f;
     color: white;
     border-radius: 4px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
-    font-size: 18px;
+    font-weight: bold;
     line-height: 1;
 }
 
-.modal-body {
+.window-close-btn:hover {
+    background: #ff5252;
+}
+
+/* Window Content Layout */
+.window-content {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: row;
     padding: 20px;
     gap: 20px;
-    max-height: calc(90vh - 50px);
-    overflow-y: auto;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* On mobile, stack vertically */
+@media (max-width: 768px) {
+    .window-content {
+        flex-direction: column;
+        overflow-y: auto;
+    }
 }
 
 .modal-image-container {
     flex: 2;
-    min-width: 300px;
+    background: #000;
+    border-radius: 8px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    min-height: 200px;
 }
 
 .modal-image-container img {
     max-width: 100%;
-    max-height: 60vh;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    max-height: 100%;
+    object-fit: contain;
 }
 
-.modal-info {
+.modal-sidebar {
     flex: 1;
-    min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-width: 200px;
 }
 
-.aero-btn {
-    display: inline-block;
-    margin: 5px 0;
-    padding: 8px 15px;
-    background: linear-gradient(to bottom, #f0f9ff 0%,#a1dbff 100%);
-    border: 1px solid #7ebef1;
-    border-radius: 20px;
-    color: #003366;
-    text-decoration: none;
-    font-size: 13px;
-    cursor: pointer;
-    text-align: center;
+.info-group {
+    background: rgba(255, 255, 255, 0.6);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #b3e5fc;
+}
+
+.info-group strong {
+    display: block;
+    color: #0277bd;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.action-btn {
     width: 100%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #0288d1;
+    background: linear-gradient(to bottom, #81d4fa, #29b6f6);
+    color: white;
+    font-weight: bold;
+    border-radius: 20px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+    transition: all 0.2s;
 }
 
-.aero-btn:hover {
-    background: linear-gradient(to bottom, #a1dbff 0%, #f0f9ff 100%);
+.action-btn:hover {
+    background: linear-gradient(to bottom, #4fc3f7, #039be5);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-@keyframes zoomIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-}
-}
 
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
@@ -482,6 +560,44 @@ footer {
   <footer>© Stenoip Company • Oodles Search</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
+
+  <div id="imageModalOverlay" class="image-modal-overlay" style="display: none;">
+    <div class="frutiger-window">
+        <div class="window-title-bar">
+            <span id="modalTitle" class="window-title-text">Image Viewer</span>
+            <button class="window-close-btn" onclick="closeImageModal()">X</button>
+        </div>
+
+        <div class="window-content">
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="Preview">
+            </div>
+            
+            <div class="modal-sidebar">
+                <div class="info-group">
+                    <strong>Dimensions:</strong>
+                    <span id="modalDims">-- x --</span>
+                </div>
+                <div class="info-group">
+                    <strong>Source:</strong>
+                    <span id="modalSource">--</span>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="btnVisit" class="frutiger-btn action-btn">
+                         Visit Site
+                    </button>
+                    <button id="btnDownload" class="frutiger-btn action-btn">
+                         Download
+                    </button>
+                    <button id="btnShare" class="frutiger-btn action-btn">
+                         Share
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
 <script src="frontend_javascript/search-logic.js"></script>
 <script src="frontend_javascript/ad.js"></script>
