@@ -517,40 +517,20 @@ function renderImageResults(items, total) {
         return;
     }
 
-    
-
     const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
 
-    resultsEl.innerHTML = items.map(function(r) {
+    resultsEl.innerHTML = items.map(function(r, index) {
+        // We store the data in a JSON string to pass it to the modal easily
+        const imageData = JSON.stringify(r).replace(/'/g, "&apos;");
         return `
-            <a href="${r.pageUrl}" target="_blank" rel="noopener" title="Source: ${r.pageUrl}">
-                <img src="${r.thumbnail}" alt="Image from ${r.source}" loading="lazy"/>
-            </a>
+            <div class="image-item" onclick='openImageModal(${imageData})'>
+                <img src="${r.thumbnail}" alt="Image" loading="lazy"/>
+            </div>
         `;
     }).join('') +
-        `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
-        renderPaginationControls(total); 
+    `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
+    renderPaginationControls(total); 
 }
-function renderVideoResults(items) {
-    const resultsEl = document.getElementById('videoResults');
-    if (!items || items.length === 0) {
-        resultsEl.innerHTML = '<p class="small">No videos found.</p>';
-        return;
-    }
-
-    resultsEl.innerHTML = items.map(item => `
-        <div class="video-card-aero">
-            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" allowfullscreen></iframe>
-            <div style="padding: 8px;">
-                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; margin-bottom:4px;">
-                    ${item.snippet.title}
-                </a>
-                <span class="small" style="opacity:0.8;">${item.snippet.channelTitle}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
 
 function renderPaginationControls(totalResults) {
     const maxPages = Math.ceil(totalResults / MAX_PAGE_SIZE);
@@ -572,6 +552,62 @@ function renderPaginationControls(totalResults) {
 
     controls += '</div>';
     return controls;
+}
+function openImageModal(data) {
+    // Create modal if it doesn't exist
+    var modal = document.getElementById('imageDetailsModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imageDetailsModal';
+        modal.className = 'modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    // Determine dimensions (fallback if not provided by API)
+    const dims = (data.width && data.height) ? `${data.width} x ${data.height}` : 'Dimensions unknown';
+
+    modal.innerHTML = `
+        <div class="modal-content aero-window">
+            <div class="modal-header">
+                <span class="modal-title">Image Preview</span>
+                <button class="close-btn" onclick="closeImageModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-image-container">
+                    <img src="${data.url}" alt="Full size image">
+                </div>
+                <div class="modal-info">
+                    <h3>${data.title || 'Image Details'}</h3>
+                    <p class="small"><b>Source:</b> ${data.source}</p>
+                    <p class="small"><b>Dimensions:</b> ${dims}</p>
+                    
+                    <div class="modal-actions">
+                        <a href="${data.url}" target="_blank" download class="aero-btn">Download High-Res</a>
+                        <a href="${data.pageUrl}" target="_blank" class="aero-btn">Visit Site</a>
+                        <button onclick="shareImage('${data.url}')" class="aero-btn">Share Link</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    modal.style.display = 'flex';
+}
+
+function closeImageModal() {
+    document.getElementById('imageDetailsModal').style.display = 'none';
+}
+
+function shareImage(url) {
+    navigator.clipboard.writeText(url);
+    alert('Link copied to clipboard!');
+}
+
+// Close modal when clicking outside the content
+window.onclick = function(event) {
+    const modal = document.getElementById('imageDetailsModal');
+    if (event.target == modal) {
+        closeImageModal();
+    }
 }
 
 
