@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Oodles Search Results</title>
+  <title>Oodles Metasearch Results</title>
 <link rel="icon" href="favicon.ico" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -312,6 +312,107 @@ footer {
     font-size: 13px;
     padding: 0.4em 1em;
   }
+  /* Modal Overlay */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+}
+
+/* Frutiger Aero Window Style */
+.aero-window {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.5);
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: zoomIn 0.3s ease-out;
+}
+
+.modal-header {
+    background: linear-gradient(to bottom, #7abcff 0%, #4096ee 50%, #11599a 100%);
+    color: white;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.close-btn {
+    background: #ff5f56;
+    border: 1px solid #cf3c3c;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.modal-body {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 20px;
+    gap: 20px;
+    max-height: calc(90vh - 50px);
+    overflow-y: auto;
+}
+
+.modal-image-container {
+    flex: 2;
+    min-width: 300px;
+    display: flex;
+    justify-content: center;
+}
+
+.modal-image-container img {
+    max-width: 100%;
+    max-height: 60vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.modal-info {
+    flex: 1;
+    min-width: 250px;
+}
+
+.aero-btn {
+    display: inline-block;
+    margin: 5px 0;
+    padding: 8px 15px;
+    background: linear-gradient(to bottom, #f0f9ff 0%,#a1dbff 100%);
+    border: 1px solid #7ebef1;
+    border-radius: 20px;
+    color: #003366;
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.aero-btn:hover {
+    background: linear-gradient(to bottom, #a1dbff 0%, #f0f9ff 100%);
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
 }
 
   </style>
