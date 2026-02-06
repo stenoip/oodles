@@ -687,28 +687,30 @@ document.getElementById('currentQuery').addEventListener('keydown', function(e) 
 // --- IMAGE MODAL / WINDOW LOGIC ---
 
 function openImageModal(index) {
-    // 1. Get the data from global cache
     if (!lastFetchedItems || !lastFetchedItems[index]) return;
     const item = lastFetchedItems[index];
 
-    // 2. Prepare Data
-    // Fallback if the API puts the full image in 'url' or 'media_url'
+    // 1. Setup Data
     const fullImgUrl = item.url || item.media_url || item.thumbnail; 
     const title = item.title || 'Image Result';
-    const dims = (item.width && item.height) ? `${item.width} x ${item.height}` : 'Dimensions Unknown';
-    const sourceUrl = item.pageUrl || item.sourceUrl;
+    const sourceUrl = item.pageUrl || item.sourceUrl || '';
+
+    // 2. Fix "Dimensions Unknown" (Check multiple possible property names)
+    const w = item.width || item.w || (item.details ? item.details.width : null);
+    const h = item.height || item.h || (item.details ? item.details.height : null);
+    const dims = (w && h) ? `${w} x ${h}` : 'Dimensions Unknown';
 
     // 3. Populate HTML
     document.getElementById('modalImage').src = fullImgUrl;
     document.getElementById('modalTitle').innerText = title;
     document.getElementById('modalDims').innerText = dims;
     
-    // --- MODIFICATION START: Add URL to Source Display ---
-    // Displays: "Pinterest - https://www.pinterest.com/pin/..."
-    const sourceName = item.source || 'Unknown Source';
-    const cleanUrl = sourceUrl ? sourceUrl : '';
-    document.getElementById('modalSource').innerText = `${sourceName} - ${cleanUrl}`;
-    // --- MODIFICATION END ---
+    // Display the Source Name + The URL for transparency
+    const sourceName = item.source || 'Website';
+    document.getElementById('modalSource').innerHTML = `
+        <strong>Source:</strong> ${escapeHtml(sourceName)}<br>
+        <span style="word-break: break-all; font-size: 0.85em; opacity: 0.8;">${escapeHtml(sourceUrl)}</span>
+    `;
     
     // 4. Setup Buttons
     const btnVisit = document.getElementById('btnVisit');
