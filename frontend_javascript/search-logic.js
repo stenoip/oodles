@@ -1,4 +1,3 @@
-
 // search-logic.js
 
 // --- AI OVERVIEW & RANKING CONFIGURATION ---
@@ -19,7 +18,6 @@ Provide a very concise A.I. overview based exclusively on the provided search sn
 Do not output a list of links in the text body; use the RANKING tag for that.
 You prefer metric units and do not use Oxford commas.
 You are aware that you were created by Stenoip Company.
-
 
 your overview must be short due to the limited amount of tokens in the backend.
 
@@ -79,6 +77,7 @@ var isAIOverviewEnabled = false;
 var lastAIRawText = null;       // Stores the raw text from the AI for caching
 var lastFetchedItems = null;    // Stores the raw search results for re-ranking/overview
 var aiTimeout = null;           // For debouncing the expensive AI call
+var allTabImagesCache = [];     // Stores images specifically for the 'All' tab modal
 
 function escapeHtml(s) {
     return String(s)
@@ -296,30 +295,39 @@ function applySmartRanking(originalItems, indicesString) {
             }
         });
 
-        // 3. Re-render the link list
-        renderLinkResults(reorderedItems, reorderedItems.length);
+        /* 3. Re-render the link list
+         NOTE: In 'All' mode, we might want to update the displayed top-links, but for now
+         this primarily affects the 'Web' tab or the internal logic of the AI ranking notice.
+         If we are on the 'All' tab, we don't necessarily redraw the whole sections, 
+         but we can add the "Smart Sorted" notice.
+        */
+        if (currentSearchType === 'web' || currentSearchType === 'links') {
+             renderLinkResults(reorderedItems, reorderedItems.length);
+        }
 
         // 4. Add a visual indicator that sorting happened
-var resultsEl = document.getElementById('linkResults');
-var notice = document.createElement('div');
-notice.className = 'small';
-// Frutiger Aero style green/success color
-notice.style.color = '#388e3c'; 
-notice.style.marginBottom = '10px';
-notice.style.display = 'flex';      // Added for alignment
-notice.style.alignItems = 'center'; // Added for alignment
-notice.style.gap = '8px';           // Space between icon and text
+         We look for the container that is currently active.
+        var targetId = (currentSearchType === 'all') ? 'allResults' : 'linkResults';
+        var resultsEl = document.getElementById(targetId);
 
-notice.innerHTML = `
-    <img src="https://stenoip.github.io/praterich/praterich.png" 
-         alt="Praterich" 
-         style="width: 18px; height: 18px; object-fit: contain;">
-    <span><b>Smart Sorted:</b> Praterich has promoted the most relevant links to the top.</span>
-`;
+        var notice = document.createElement('div');
+        notice.className = 'small';
+        // Frutiger Aero style green/success color
+        notice.style.color = '#388e3c'; 
+        notice.style.marginBottom = '10px';
+        notice.style.display = 'flex';      // Added for alignment
+        notice.style.alignItems = 'center'; // Added for alignment
+        notice.style.gap = '8px';           // Space between icon and text
+
+        notice.innerHTML = `
+            <img src="https://stenoip.github.io/praterich/praterich.png" 
+                alt="Praterich" 
+                style="width: 18px; height: 18px; object-fit: contain;">
+            <span><b>Smart Sorted:</b> Praterich has analyzed these results.</span>
+        `;
         
-        // Insert notice at the very top of results
-        // Check if the resultsEl is still pointing to the correct section (web search)
-        if (resultsEl && currentSearchType === 'web') resultsEl.prepend(notice);
+        // Insert notice at the top
+        if (resultsEl) resultsEl.prepend(notice);
 
     } catch (e) {
         console.warn('Ranking parse error:', e);
@@ -344,14 +352,18 @@ async function executeSearch(query, type, page = 1) {
 
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
-        citizenMsgEl.style.display = (!isAIOverviewEnabled && (type === 'web' || type === 'image')) ? 'block' : 'none';
+        // Good citizen message is shown if AI is OFF and we are on text-heavy tabs (All, Web, Image)
+        citizenMsgEl.style.display = (!isAIOverviewEnabled && (type === 'web' || type === 'image' || type === 'all')) ? 'block' : 'none';
     }
     
     if (aiTimeout) {
         clearTimeout(aiTimeout);
     }
 
-    if (type === 'web') {
+    // --- ROUTING BASED ON TYPE ---
+    if (type === 'all') {
+        executeAllSearch(query);
+    } else if (type === 'web') {
         document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
@@ -371,23 +383,20 @@ async function executeSearch(query, type, page = 1) {
         }
 
     } else if (type === 'image') {
-    document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
-    try {
-        var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
-        var resp = await fetch(url);
-        var data = await resp.json();
-        
-       
-        lastFetchedItems = data.items; 
-
-        renderImageResults(data.items, data.total);
-    } catch (error) {
+        document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
+        try {
+            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            var resp = await fetch(url);
+            var data = await resp.json();
+            
+            lastFetchedItems = data.items; 
+            renderImageResults(data.items, data.total);
+        } catch (error) {
             console.error('Image search error:', error);
             document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
         }
 
     } else if (type === 'video') {
-        // --- ADDED THIS SECTION ---
         const videoContainer = document.getElementById('videoResults');
         if (videoContainer) {
             videoContainer.innerHTML = '<p class="small">Searching YouTube...</p>';
@@ -404,13 +413,123 @@ async function executeSearch(query, type, page = 1) {
     }
 }
 
+// --- NEW FUNCTION: UNIVERSAL "ALL" SEARCH ---
+async function executeAllSearch(query) {
+    const allContainer = document.getElementById('allResults');
+    if (!allContainer) return;
+    
+    allContainer.innerHTML = '<p class="small">Gathering the best of the web, images, and video...</p>';
+
+    try {
+        // Fetch Web, Image, and Video concurrently
+        const [webResp, imgResp, vidResp] = await Promise.all([
+            fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=10`),
+            fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=8`),
+            fetch(`${BACKEND_BASE}/video-search?query=${encodeURIComponent(query)}`)
+        ]);
+
+        const webData = await webResp.json();
+        const imgData = await imgResp.json();
+        const vidData = await vidResp.json();
+
+        // Save web items for the AI Overview ranking to work
+        lastFetchedItems = webData.items;
+
+        let combinedHtml = '';
+
+        // 1. Top 3 Web Results (High Relevance)
+        combinedHtml += `<div class="all-web-top">${webData.items.slice(0, 3).map(renderSingleLink).join('')}</div>`;
+
+        // 2. Image Carousel (Frutiger Style)
+        if (imgData.items && imgData.items.length > 0) {
+            // Store for modal
+            allTabImagesCache = imgData.items;
+            
+            combinedHtml += `
+                <div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                    <h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ${escapeHtml(query)}</h4>
+                    <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
+                        ${imgData.items.map((img, idx) => `
+                            <img src="${img.thumbnail}" 
+                                 onclick="openImageModalFromAll(${idx})" 
+                                 title="${escapeHtml(img.title)}"
+                                 style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        // 3. Featured Video (Top Result)
+        if (vidData && vidData.length > 0) {
+            const v = vidData[0];
+            combinedHtml += `
+                <div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">
+                    <div style="flex: 0 0 auto;">
+                        <iframe src="https://www.youtube.com/embed/${v.id.videoId}" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>
+                    </div>
+                    <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">
+                        <h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>
+                        <a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">
+                            ${v.snippet.title}
+                        </a>
+                        <p class="small" style="margin-top:5px; opacity:0.8;">${v.snippet.channelTitle}</p>
+                    </div>
+                </div>`;
+        }
+
+        // 4. Remaining Web Results
+        combinedHtml += `<div class="all-web-bottom">${webData.items.slice(3, 8).map(renderSingleLink).join('')}</div>`;
+        
+        // 5. "More" Link
+        combinedHtml += `<div style="text-align:center; margin-top:15px;"><button class="frutiger-aero-tab" onclick="switchTab('web', true)">See more results</button></div>`;
+
+        allContainer.innerHTML = combinedHtml;
+
+        // Trigger the AI processing based on the web results
+        if (webData.items.length > 0) {
+            processAIResults(query, webData.items);
+        }
+
+    } catch (error) {
+        console.error('All Search Error:', error);
+        allContainer.innerHTML = '<p class="small">Error loading universal results. Please try refreshing.</p>';
+    }
+}
+
+// Helper to render individual link blocks consistently
+function renderSingleLink(r) {
+    var sourceBadge = r.source ? `<span style="color: #006400; font-weight: bold; margin-left: 5px;">[${escapeHtml(r.source)}]</span>` : '';
+    return `
+        <div class="result-block">
+            <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+            <div class="small">
+                ${escapeHtml(r.url)} ${sourceBadge}
+            </div>
+            <div>${escapeHtml(r.snippet || '')}</div>
+        </div>`;
+}
+
+// Special Modal opener for the "All" tab that uses the separate image cache
+function openImageModalFromAll(index) {
+    // Temporarily swap the global items to the image cache so the modal logic works
+    const tempItems = lastFetchedItems;
+    lastFetchedItems = allTabImagesCache;
+    
+    openImageModal(index);
+    
+    // We don't necessarily need to swap back immediately, but relying on lastFetchedItems
+    // is the standard way the modal works.
+}
+
+
 function switchTab(tabName, executeNewSearch) {
     if (window.event) event.preventDefault();
 
     let normalizedTab = tabName;
     let newSearchType = tabName;
 
-    // Normalize tab names to match HTML IDs (links, images, videos)
+    // Normalize tab names to match HTML IDs
+    // 'all' stays 'all'
     if (tabName === 'web' || tabName === 'links') {
         normalizedTab = 'links';
         newSearchType = 'web';
@@ -420,6 +539,9 @@ function switchTab(tabName, executeNewSearch) {
     } else if (tabName === 'video' || tabName === 'videos') {
         normalizedTab = 'videos';
         newSearchType = 'video';
+    } else if (tabName === 'all') {
+        normalizedTab = 'all';
+        newSearchType = 'all';
     }
 
     currentSearchType = newSearchType;
@@ -430,7 +552,7 @@ function switchTab(tabName, executeNewSearch) {
     });
 
     // Hide all result sections
-    const sections = ['linksSection', 'imagesSection', 'videosSection'];
+    const sections = ['allSection', 'linksSection', 'imagesSection', 'videosSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -444,10 +566,10 @@ function switchTab(tabName, executeNewSearch) {
     if (activeSection) activeSection.style.display = 'block';
 
     // Handle Good Citizen Message visibility
-    // Show message if AI is OFF and we are NOT on the video tab (matching your previous logic)
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
-        if (!isAIOverviewEnabled && (newSearchType === 'web' || newSearchType === 'image')) {
+        // Show message if AI is OFF and we are on a text-heavy tab
+        if (!isAIOverviewEnabled && (newSearchType === 'web' || newSearchType === 'image' || newSearchType === 'all')) {
             citizenMsgEl.style.display = 'block';
         } else {
             citizenMsgEl.style.display = 'none';
@@ -460,10 +582,7 @@ function switchTab(tabName, executeNewSearch) {
         var overviewEl = document.getElementById('aiOverview');
         if (overviewEl) overviewEl.innerHTML = '';
         
-        // Clear the debounce timer to prevent the previous search's AI from popping up late
-        if (aiTimeout) {
-            clearTimeout(aiTimeout);
-        }
+        if (aiTimeout) clearTimeout(aiTimeout);
     }
 
     // Trigger the search if requested and a query exists
@@ -502,21 +621,7 @@ function renderLinkResults(items, total) {
 
         resultsEl.innerHTML = `
             <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
-            ` + items.map(function(r) {
-                // --- MODIFICATION START: Source Badge Logic ---
-                var sourceBadge = r.source ? `<span style="color: #006400; font-weight: bold; margin-left: 5px;">[${escapeHtml(r.source)}]</span>` : '';
-                // --- MODIFICATION END ---
-
-                return `
-                    <div class="result-block">
-                        <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-                        <div class="small">
-                            ${escapeHtml(r.url)} ${sourceBadge}
-                        </div>
-                        <div>${escapeHtml(r.snippet || '')}</div>
-                    </div>
-                `;
-            }).join('') + renderPaginationControls(total);
+            ` + items.map(renderSingleLink).join('') + renderPaginationControls(total);
     }
 }
 
@@ -530,7 +635,6 @@ function renderImageResults(items, total) {
 
     const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
 
-    // CHANGED: We now map with (r, index) and use an onclick event
     resultsEl.innerHTML = items.map(function(r, index) {
         return `
             <div class="image-result-item" onclick="openImageModal(${index})">
@@ -546,6 +650,7 @@ function renderImageResults(items, total) {
         `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
         renderPaginationControls(total); 
 }
+
 function renderVideoResults(items) {
     const resultsEl = document.getElementById('videoResults');
     if (!items || items.length === 0) {
@@ -554,10 +659,12 @@ function renderVideoResults(items) {
     }
 
     resultsEl.innerHTML = items.map(item => `
-        <div class="video-card-aero">
-            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" allowfullscreen></iframe>
-            <div style="padding: 8px;">
-                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; margin-bottom:4px;">
+        <div class="video-card-aero" style="background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(5px); border-radius: 10px; padding: 5px; margin-bottom: 15px;">
+            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" 
+                    style="border-radius: 5px; width: 100%; aspect-ratio: 16/9; border:none;" 
+                    allowfullscreen></iframe>
+            <div style="padding: 10px;">
+                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; margin-bottom:4px; color: #0d47a1;">
                     ${item.snippet.title}
                 </a>
                 <span class="small" style="opacity:0.8;">${item.snippet.channelTitle}</span>
@@ -568,6 +675,9 @@ function renderVideoResults(items) {
 
 
 function renderPaginationControls(totalResults) {
+    // Pagination is only usually for single-type lists, not "All"
+    if (currentSearchType === 'all') return ''; 
+    
     const maxPages = Math.ceil(totalResults / MAX_PAGE_SIZE);
     let controls = '<div style="text-align: center; margin-top: 20px;">';
 
@@ -605,7 +715,8 @@ function setupAIOverviewToggle() {
 
     toggle.checked = isAIOverviewEnabled;
 
-    if (!isAIOverviewEnabled && currentSearchType !== 'image') { 
+    // Initial message state
+    if (!isAIOverviewEnabled && (currentSearchType === 'web' || currentSearchType === 'all')) { 
         if (citizenMsgEl) citizenMsgEl.style.display = 'block';
     } else {
         if (citizenMsgEl) citizenMsgEl.style.display = 'none';
@@ -627,11 +738,11 @@ function setupAIOverviewToggle() {
             if (citizenMsgEl) citizenMsgEl.style.display = 'none';
             
             // --- OPTIMIZED LOGIC: USE CACHE IF AVAILABLE ---
-            if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
-                if (lastAIRawText && lastFetchedItems) { // Check for cached data
-                    applyAIResultsFromCache(lastAIRawText, lastFetchedItems); // <-- USE CACHE! NO NETWORK CALL.
-                } else if (currentQuery && currentSearchType === 'web' && currentPage === 1) {
-                    // Fallback: If cache is empty but we have a query, force a full search to populate cache
+            if (currentQuery && (currentSearchType === 'web' || currentSearchType === 'all') && currentPage === 1) {
+                if (lastAIRawText && lastFetchedItems) { 
+                    applyAIResultsFromCache(lastAIRawText, lastFetchedItems); 
+                } else {
+                    // Force a re-search if we have no data but turned AI on
                     executeSearch(currentQuery, currentSearchType, currentPage);
                 }
             }
@@ -647,12 +758,12 @@ function setupAIOverviewToggle() {
 function initializeFromSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let query = urlParams.get('q');
-    let searchType = urlParams.get('type') || 'web';
+    let searchType = urlParams.get('type') || 'all'; // Default to 'all' now
     let page = parseInt(urlParams.get('page')) || 1; 
 
     if (!query) {
         query = sessionStorage.getItem('metaSearchQuery') || '';
-        searchType = sessionStorage.getItem('searchType') || 'web';
+        searchType = sessionStorage.getItem('searchType') || 'all';
     }
 
     sessionStorage.removeItem('metaSearchQuery');
@@ -661,10 +772,11 @@ function initializeFromSession() {
     setupAIOverviewToggle();
 
     if (query) {
+        // We set the tab active without firing search, then fire search manually
         switchTab(searchType, false);
         executeSearch(query, searchType, page); 
     } else {
-        switchTab('web', false);
+        switchTab('all', false);
     }
 }
 
@@ -673,7 +785,12 @@ document.getElementById('currentQuery').addEventListener('keydown', function(e) 
     if (e.key === 'Enter') {
         e.preventDefault(); 
         var query = this.value.trim();
-        var type = document.getElementById('tab-images').classList.contains('active') ? 'image' : 'web';
+        
+        // Determine active tab to preserve type on new search
+        var type = 'all';
+        if (document.getElementById('tab-links').classList.contains('active')) type = 'web';
+        if (document.getElementById('tab-images').classList.contains('active')) type = 'image';
+        if (document.getElementById('tab-videos').classList.contains('active')) type = 'video';
         
         // Clear AI cache and timer on new search
         lastAIRawText = null; 
