@@ -4,7 +4,7 @@
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
 var ladyPraterichSystemInstruction = `
-You are Praterich for Oodles Search, an AI developed by Stenoip Company.
+You are Praterich for Oodles Metasearch, an AI developed by Stenoip Company.
 Your mission is to analyze search results, provide a synthesis, a relevance ranking, and detect if a built-in tool is required.
 
 ***TASK 1: Relevance Ranking (CRITICAL)***
@@ -23,7 +23,7 @@ your overview must be short due to the limited amount of tokens in the backend.
 
 ***TASK 3: Tool Detection (CRITICAL)***
 If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag.
-The detection should be based on mathematical expressions, unit conversions, color code lookups, metronome requests, or translation requests.
+The detection should be based on mathematical expressions, unit conversions, colour code lookups, metronome requests, or translation requests.
 The tag MUST be outputted immediately before the @@RANKING tag.
 Format: @@TOOL:[tool_name]@@
 Available tools (use the name exactly as listed):
@@ -306,7 +306,7 @@ function applySmartRanking(originalItems, indicesString) {
         }
 
         // 4. Add a visual indicator that sorting happened
-         We look for the container that is currently active.
+        
         var targetId = (currentSearchType === 'all') ? 'allResults' : 'linkResults';
         var resultsEl = document.getElementById(targetId);
 
