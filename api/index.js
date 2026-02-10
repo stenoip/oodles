@@ -371,7 +371,7 @@ module.exports = async (req, res) => {
             const engineWeights = { 
                 'brave': 0.85, 
                 'bing': 0.8, 
-                'yahoo': 0.7, 
+                'yahoo': 0.89, 
                 'ecosia': 0.7, 
                 'bing-featured': 0.9, // Boost featured results
                 'ecosia-news': 0.8 
