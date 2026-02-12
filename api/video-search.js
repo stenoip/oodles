@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
       part: 'snippet',
       q: query + ' -shorts -tiktok -funniest', // Basic API-level exclusion
       type: 'video',
-      maxResults: '50', 
+      maxResults: '75', 
       relevanceLanguage: 'en',
       key: YOUTUBE_API_KEY
     });
