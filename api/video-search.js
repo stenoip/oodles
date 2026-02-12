@@ -1,67 +1,72 @@
 const fetch = require('node-fetch');
-const { setCors } = require('./_cors'); // Assuming _cors.js is in the same directory
+const { setCors } = require('./_cors');
 
-// The YouTube Data API Key must be set as an Environment Variable in Vercel.
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY; 
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
+const VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 
-// Base URL for the YouTube Search API
-const YOUTUBE_API_BASE_URL = 'https://www.googleapis.com/youtube/v3/search';
-
-/**
- * Serverless function to search videos using the YouTube Data API.
- * @param {object} req - HTTP request object.
- * @param {object} res - HTTP response object.
- */
 module.exports = async (req, res) => {
-  // Apply CORS headers for the allowed origin (stenoip.github.io)
   setCors(res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
 
-  // Handle CORS preflight request
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
-  // Ensure API Key is available
-  if (!YOUTUBE_API_KEY) {
-    res.status(500).json({ error: 'Server configuration error: YOUTUBE_API_KEY is not set.' });
-    return;
-  }
-
-  // Extract the search query from the request URL parameters
   const { query } = req.query;
-
-  if (!query) {
-    res.status(400).json({ error: 'Missing required query parameter: "query"' });
-    return;
-  }
-
-  // Construct the full API URL
-  const apiUrl = `${YOUTUBE_API_BASE_URL}?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=10&key=${YOUTUBE_API_KEY}`;
+  if (!query) return res.status(400).json({ error: 'Missing query' });
 
   try {
-    // 1. Fetch data from the YouTube API
-    const response = await fetch(apiUrl);
+    // 1. Initial Search (Get more than 10 because we will filter some out)
+    const searchParams = new URLSearchParams({
+      part: 'snippet',
+      q: query,
+      type: 'video',
+      maxResults: '15', 
+      key: YOUTUBE_API_KEY
+    });
+
+    const searchRes = await fetch(`${SEARCH_URL}?${searchParams}`);
+    const searchData = await searchRes.json();
     
-    if (!response.ok) {
-        // Handle API error responses (e.g., key invalid, daily limit exceeded)
-        const errorText = await response.text();
-        console.error(`YouTube API Error (${response.status}): ${errorText}`);
-        res.status(response.status).json({ 
-            error: 'Failed to fetch results from YouTube API.', 
-            details: JSON.parse(errorText) // Attempt to parse detailed error
-        });
-        return;
-    }
+    if (!searchData.items) return res.status(200).json([]);
 
-    // 2. Parse the JSON response
-    const data = await response.json();
+    // 2. Get the IDs to fetch detailed metadata
+    const videoIds = searchData.items.map(item => item.id.videoId).join(',');
 
-    // 3. Respond with the search results
-    res.status(200).json(data.items);
+    // 3. Fetch exact durations and file details
+    const detailsParams = new URLSearchParams({
+      part: 'contentDetails,status,snippet',
+      id: videoIds,
+      key: YOUTUBE_API_KEY
+    });
+
+    const detailsRes = await fetch(`${VIDEOS_URL}?${detailsParams}`);
+    const detailsData = await detailsRes.json();
+
+    // 4. Filter out the Shorts
+    // Logic: Shorts are < 60s. We also check for 'dimension: 2d' vs '3d' 
+    // though duration is the most reliable "Shorts" killer.
+    const filteredResults = detailsData.items.filter(video => {
+      const duration = video.contentDetails.duration; // Format: PT1M30S
+      
+      // Convert ISO 8601 duration to seconds
+      const seconds = parseISO8601DurationWithRegex(duration);
+      
+      // Keep videos longer than 60 seconds
+      return seconds > 60;
+    });
+
+    res.status(200).json(filteredResults.slice(0, 10));
 
   } catch (error) {
-    console.error('Video search failed:', error);
-    res.status(500).json({ error: 'Internal Server Error during API request.', detail: error.message });
+    res.status(500).json({ error: 'Search failed', detail: error.message });
   }
 };
+
+/**
+ * Helper to convert ISO 8601 (PT#M#S) to total seconds
+ */
+function parseISO8601DurationWithRegex(duration) {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+  const seconds = parseInt(match[3] || 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
