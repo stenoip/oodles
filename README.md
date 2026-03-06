@@ -2,7 +2,11 @@
 
 # Oodles Metasearch Engine
 
-![Oodles Logo](https://stenoip.github.io/oodles/2025_10_28_0pb_Kleki.png)
+![Oodles Logo](https://stenoip.github.io/oodles/logo.png)
+
+...
+
+---
 
 Note, this is a technical overview of Oodles. If you do not know programming, it may be hard for you to understand!
 
