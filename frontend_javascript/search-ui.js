@@ -62,27 +62,25 @@ function applyAIResultsFromCache(aiRawText, searchItems) {
     var overviewEl = document.getElementById('aiOverview');
     var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
     var toolRegex = /@@TOOL:\[(.*?)\]@@/;
+    var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
     
-    // 1. Tool Detection
     var toolMatch = aiRawText.match(toolRegex);
+    var researchMatch = aiRawText.match(researchRegex);
+    
     var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+    var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
+    
     renderBuiltInTool(detectedTool);
     
-    // 2. Overview Display (Toggle dependent)
-    var cleanDisplayText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').trim();
+    var cleanDisplayText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').replace(researchRegex, '').trim();
+    
     if (isAIOverviewEnabled && overviewEl) {
-        // Display loading first for responsiveness
-        overviewEl.innerHTML = '<p class="ai-overview-loading">Applying Praterich analysis from cache...</p>'; 
-        // Use a slight delay to ensure the loading message is seen before the content updates
-        setTimeout(() => {
-            overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
-        }, 50); 
+        overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
+        // Re-render the re-search link from cache
+        if (suggestedQuery) renderReSearchLink(suggestedQuery);
     } else if (overviewEl) {
         overviewEl.innerHTML = '';
     }
-    
-    // Note: The ranking (applySmartRanking) does not need to be re-run here 
-    // because the result items are already sorted from the initial 'processAIResults' call.
 }
 
 /**
@@ -405,6 +403,33 @@ function renderPaginationControls(totalResults) {
 
     controls += '</div>';
     return controls;
+}
+/**
+ * Renders a red recommendation link if Praterich suggests a re-search.
+ */
+function renderReSearchLink(suggestedQuery) {
+    var overviewEl = document.getElementById('aiOverview');
+    if (!overviewEl || !suggestedQuery) return;
+
+    // Create the red link element
+    var reSearchDiv = document.createElement('div');
+    reSearchDiv.style.marginTop = '15px';
+    reSearchDiv.style.borderTop = '1px solid rgba(255, 0, 0, 0.2)';
+    reSearchDiv.style.paddingTop = '10px';
+    
+    var link = document.createElement('a');
+    link.href = `search.html?q=${encodeURIComponent(suggestedQuery)}&type=${currentSearchType}&page=1`;
+    link.style.color = '#d32f2f'; // Red text
+    link.style.fontWeight = 'bold';
+    link.style.textDecoration = 'none';
+    link.innerHTML = ` Praterich recommends a re-search: "${escapeHtml(suggestedQuery)}"`;
+    
+    // Add a little hover effect via JS
+    link.onmouseover = () => link.style.textDecoration = 'underline';
+    link.onmouseout = () => link.style.textDecoration = 'none';
+
+    reSearchDiv.appendChild(link);
+    overviewEl.appendChild(reSearchDiv);
 }
 
 // --- TOGGLE INITIALIZATION ---
