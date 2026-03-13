@@ -109,15 +109,36 @@ function applySmartRanking(originalItems, indicesString) {
             }
         });
 
+        // 3. Update the global cache to match the new order 
+        // (Helps prevent layout jumps if they toggle the AI off and on)
+        lastFetchedItems = reorderedItems;
+
+        // 4. Re-render based on the active tab
         if (currentSearchType === 'web' || currentSearchType === 'links') {
              renderLinkResults(reorderedItems, reorderedItems.length);
+        } else if (currentSearchType === 'all') {
+            // Surgically update just the web result sections in the "All" tab
+            var topWebEl = document.querySelector('.all-web-top');
+            var bottomWebEl = document.querySelector('.all-web-bottom');
+            
+            if (topWebEl) {
+                topWebEl.innerHTML = reorderedItems.slice(0, 3).map(renderSingleLink).join('');
+            }
+            if (bottomWebEl) {
+                bottomWebEl.innerHTML = reorderedItems.slice(3, 8).map(renderSingleLink).join('');
+            }
         }
 
-        // 4. Add a visual indicator that sorting happened
+        // 5. Add a visual indicator that sorting happened
         var targetId = (currentSearchType === 'all') ? 'allResults' : 'linkResults';
         var resultsEl = document.getElementById(targetId);
 
+        // Remove old notice if it exists so we don't duplicate it on AI toggles
+        var existingNotice = document.getElementById('smart-sort-notice');
+        if (existingNotice) existingNotice.remove();
+
         var notice = document.createElement('div');
+        notice.id = 'smart-sort-notice';
         notice.className = 'small';
         notice.style.color = '#388e3c'; 
         notice.style.marginBottom = '10px';
