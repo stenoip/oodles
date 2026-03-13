@@ -143,20 +143,28 @@ ${rawWebSearchText}
         lastAIRawText = aiRawText;
         // ------------------------------------------------
 
-        // --- 1. EXTRACT RANKING DATA ---
-        var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
-        var toolRegex = /@@TOOL:\[(.*?)\]@@/;
+        // --- 1. EXTRACT DATA ---
+var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
+var toolRegex = /@@TOOL:\[(.*?)\]@@/;
+var researchRegex = /@@RESEARCH:\[(.*?)\]@@/; // New regex
 
-        // Extract tool name first
-        var toolMatch = aiRawText.match(toolRegex);
-        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+var toolMatch = aiRawText.match(toolRegex);
+var researchMatch = aiRawText.match(researchRegex); // Check for re-search
+var rankingMatch = aiRawText.match(rankingRegex);
 
-        var match = aiRawText.match(rankingRegex);
-        // Clean display text by removing BOTH tags
-        var cleanDisplayText = aiRawText.replace(rankingRegex, '').replace(toolRegex, '').trim();
+var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
-        // --- 2. UPDATE UI: TOOL DISPLAY ---
-        renderBuiltInTool(detectedTool);
+// Clean display text by removing ALL tags
+var cleanDisplayText = aiRawText
+    .replace(rankingRegex, '')
+    .replace(toolRegex, '')
+    .replace(researchRegex, '')
+    .trim();
+
+// --- 2. UPDATE UI ---
+renderBuiltInTool(detectedTool);
+renderReSearchLink(suggestedQuery);
 
         // --- 3. UPDATE UI: OVERVIEW ---
         // Only show the text if the toggle is ON
