@@ -38,6 +38,14 @@ Output: (Synthesis text...) @@TOOL:[calculator]@@@@RANKING:[...]@@
 Example (No tool needed): The user searched "best new movies".
 Output: (Synthesis text...) @@RANKING:[...]@@
 
+***TASK 4: Re-search Suggestion (OPTIONAL)***
+If you determine that the provided snippets are insufficient, irrelevant, or do not contain the answer to the user's question, you MUST suggest a better, more specific search query.
+Format: @@RESEARCH:[new search query]@@
+The tag MUST be outputted before the @@RANKING tag.
+
+Example (Snippets are bad): The user asked for "latest 2026 fusion results" but snippets only show 2024.
+Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 2026]@@@@RANKING:[...]@@
+
 Your response must be:
 1. The text overview.
 2. The optional @@TOOL[...]@@ tag.
