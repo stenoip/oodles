@@ -100,20 +100,16 @@ function createRawSearchText(items) {
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    // Initialize tool display to be cleared/hidden before processing
+    
+    // Reset UI before processing
     renderBuiltInTool(null); 
     
-    // Display loading state ONLY if the overview is actually visible
     if (isAIOverviewEnabled && overviewEl) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
 
     var rawWebSearchText = createRawSearchText(searchItems);
-
-    var toolResult = `
-[TOOL_RESULT_FOR_PREVIOUS_TURN]
-${rawWebSearchText}
-`;
+    var toolResult = `\n[TOOL_RESULT_FOR_PREVIOUS_TURN]\n${rawWebSearchText}\n`;
 
     var conversationParts = [
         { role: "model", parts: [{ text: toolResult }] },
@@ -139,44 +135,46 @@ ${rawWebSearchText}
         var data = await response.json();
         var aiRawText = data.text;
         
-        // --- CACHING STEP: STORE THE FULL AI RESPONSE ---
+        // Cache for toggle/session persistence
         lastAIRawText = aiRawText;
-        // ------------------------------------------------
 
         // --- 1. EXTRACT DATA ---
-var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
-var toolRegex = /@@TOOL:\[(.*?)\]@@/;
-var researchRegex = /@@RESEARCH:\[(.*?)\]@@/; // New regex
+        var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
+        var toolRegex = /@@TOOL:\[(.*?)\]@@/;
+        var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
 
-var toolMatch = aiRawText.match(toolRegex);
-var researchMatch = aiRawText.match(researchRegex); // Check for re-search
-var rankingMatch = aiRawText.match(rankingRegex);
+        var toolMatch = aiRawText.match(toolRegex);
+        var researchMatch = aiRawText.match(researchRegex);
+        var rankingMatch = aiRawText.match(rankingRegex); // Corrected variable name
 
-var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
-var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
+        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+        var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
-// Clean display text by removing ALL tags
-var cleanDisplayText = aiRawText
-    .replace(rankingRegex, '')
-    .replace(toolRegex, '')
-    .replace(researchRegex, '')
-    .trim();
+        // Clean display text by removing ALL special tags
+        var cleanDisplayText = aiRawText
+            .replace(rankingRegex, '')
+            .replace(toolRegex, '')
+            .replace(researchRegex, '')
+            .trim();
 
-// --- 2. UPDATE UI ---
-renderBuiltInTool(detectedTool);
-renderReSearchLink(suggestedQuery);
+        // --- 2. UPDATE UI: TOOLS & RE-SEARCH ---
+        renderBuiltInTool(detectedTool);
 
         // --- 3. UPDATE UI: OVERVIEW ---
-        // Only show the text if the toggle is ON
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
+            // Append the red link if a better query was suggested
+            if (suggestedQuery) {
+                renderReSearchLink(suggestedQuery);
+            }
         } else if (overviewEl) {
             overviewEl.innerHTML = '';
         }
 
         // --- 4. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
-        if (match && match[1]) {
-            applySmartRanking(searchItems, match[1]);
+        // Changed 'match' to 'rankingMatch' to fix the ReferenceError
+        if (rankingMatch && rankingMatch[1]) {
+            applySmartRanking(searchItems, rankingMatch[1]);
         }
 
     } catch (error) {
@@ -184,7 +182,7 @@ renderReSearchLink(suggestedQuery);
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
         }
-        renderBuiltInTool(null); // Clear tool on error
+        renderBuiltInTool(null);
     }
 }
 
