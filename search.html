@@ -12,7 +12,7 @@
 
 /* Base Color System */
 :root {
-  --hue: 200; /* Bluer, Vista feel */
+  --hue: 200; 
   --sat: 0.35;
   --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
   --bg: oklch(75% var(--sat) var(--hue) / 0.8);
@@ -164,6 +164,51 @@ hr.divider {
 }
 
 /* ------------------------------------------- */
+/* NEW AI FEATURE STYLES                        */
+/* ------------------------------------------- */
+.pre-click-badge {
+    background: linear-gradient(to bottom, #fffde7, #fff9c4);
+    border: 1px solid #fbc02d;
+    color: #f57f17;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 12px;
+    margin-left: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    vertical-align: middle;
+}
+
+.semantic-refine-container {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(2, 119, 189, 0.3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.ai-control-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 90%;
+    margin: 0 auto;
+}
+
+.knowledge-bridge-select {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #90caf9;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #0d47a1;
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* ------------------------------------------- */
 /* MAIN CONTENT CONTAINERS                      */
 /* ------------------------------------------- */
 .container, .results-section {
@@ -215,7 +260,7 @@ hr.divider {
 }
 
 /* ------------------------------------------- */
-/* NEW IMAGE GRID STYLES (Moved out of Media Query) */
+/* IMAGE GRID STYLES                            */
 /* ------------------------------------------- */
 #imageResults {
   display: grid;
@@ -293,7 +338,7 @@ hr.divider {
 }
 
 /* ------------------------------------------- */
-/* MODAL / WINDOW STYLES (Fixed)               */
+/* MODAL / WINDOW STYLES                        */
 /* ------------------------------------------- */
 .image-modal-overlay {
     position: fixed;
@@ -486,7 +531,6 @@ footer {
     font-size: 13px;
     padding: 0.4em 1em;
   }
-  /* On mobile, stack window content vertically */
   .window-content {
       flex-direction: column;
       overflow-y: auto;
@@ -495,7 +539,6 @@ footer {
       min-width: 100%;
   }
 }
-
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
 </head>
@@ -511,21 +554,33 @@ footer {
     </div>
 
     <nav>
-    <a href="#" id="tab-all" class="frutiger-aero-tab active" onclick="switchTab('all', true)">All</a>
-      <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
-      <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
-      <a href="#" class="frutiger-aero-tab" onclick="switchTab('videos', true)"">Video</a>
-      <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
-    <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">NEW! World Search</a>
+        <a href="#" id="tab-all" class="frutiger-aero-tab active" onclick="switchTab('all', true)">All</a>
+        <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
+        <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
+        <a href="#" class="frutiger-aero-tab" onclick="switchTab('videos', true)">Video</a>
+        <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
+        <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">NEW! World Search</a>
     </nav>
 
-    <div class="ai-control-row">
-        <span class="ai-toggle-label">AI Overview</span>
-        <label class="switch" title="Toggle AI Overview On/Off">
-            <input type="checkbox" id="aiOverviewToggle"> 
-            <span class="slider"></span>
-        </label>
+    <div class="ai-control-header">
+        <div class="ai-control-row">
+            <span class="ai-toggle-label">AI Overview</span>
+            <label class="switch" title="Toggle AI Overview On/Off">
+                <input type="checkbox" id="aiOverviewToggle"> 
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div id="knowledgeLevelContainer" style="display: none;">
+            <label for="aiDifficulty" class="small" style="font-weight: bold; margin-right: 5px;">Complexity:</label>
+            <select id="aiDifficulty" class="knowledge-bridge-select">
+                <option value="Layman's Terms">Beginner (Layman)</option>
+                <option value="Default" selected>Default</option>
+                <option value="Technical Abstract">Expert (Technical)</option>
+            </select>
+        </div>
     </div>
+    
     <hr class="divider">
   </header>
 
@@ -536,38 +591,37 @@ footer {
     </div>
     
     <div class="results-section" id="aiOverview">
-        </div>
-
-
-<div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;">
     </div>
+
+    <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;">
+    </div>
+    
     <div class="results-section" id="allSection">
-  <h3>Search Results</h3>
-  <div id="allResults"><p class="small">Searching everything...</p></div>
-</div>
+        <h3>Search Results</h3>
+        <div id="allResults"><p class="small">Searching everything...</p></div>
+    </div>
     
     <div class="results-section" id="linksSection">
-      <h3>Links</h3>
-      <div id="linkResults"><p class="small">Enter a search query.</p></div>
+        <h3>Links</h3>
+        <div id="linkResults"><p class="small">Enter a search query.</p></div>
     </div>
 
     <div class="results-section" id="imagesSection" style="display:none;">
-      <h3>Images</h3>
-      <div id="imageResults"><p class="small">Select a query from links.</p></div>
+        <h3>Images</h3>
+        <div id="imageResults"><p class="small">Select a query from links.</p></div>
     </div>
 
     <div class="results-section" id="videosSection" style="display:none;">
-  <h3>Videos</h3>
-  <div id="videoResults" class="video-grid">
-    <p class="small">Enter a query to find videos.</p>
-  </div>
-</div>
+        <h3>Videos</h3>
+        <div id="videoResults" class="video-grid">
+            <p class="small">Enter a query to find videos.</p>
+        </div>
+    </div>
 
   </div>
 
   <footer>© Stenoip Company • Oodles Search</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
-
 
   <div id="imageModalOverlay" class="image-modal-overlay" style="display: none;">
     <div class="frutiger-window">
@@ -608,9 +662,8 @@ footer {
 </div>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
 <script src="frontend_javascript/search-logic.js"></script>
-  <script src="frontend_javascript/search-ui.js"></script>
+<script src="frontend_javascript/search-ui.js"></script>
 <script src="frontend_javascript/ad.js"></script>
-  
-  <script src="ant_walking.js"></script>
+<script src="ant_walking.js"></script>
 </body>
 </html>
