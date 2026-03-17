@@ -408,28 +408,36 @@ function renderPaginationControls(totalResults) {
  * Renders a red recommendation link if Praterich suggests a re-search.
  */
 function renderReSearchLink(suggestedQuery) {
-    var overviewEl = document.getElementById('aiOverview');
-    if (!overviewEl || !suggestedQuery) return;
+    if (!suggestedQuery) return;
 
     // Create the red link element
     var reSearchDiv = document.createElement('div');
-    reSearchDiv.style.marginTop = '15px';
-    reSearchDiv.style.borderTop = '1px solid rgba(255, 0, 0, 0.2)';
-    reSearchDiv.style.paddingTop = '10px';
+    reSearchDiv.id = 're-search-container'; // ID for easy removal
+    reSearchDiv.style.marginBottom = '15px';
+    reSearchDiv.style.padding = '10px';
+    reSearchDiv.style.background = 'rgba(211, 47, 47, 0.05)';
+    reSearchDiv.style.borderRadius = '8px';
+    reSearchDiv.style.border = '1px dashed #d32f2f';
     
     var link = document.createElement('a');
     link.href = `search.html?q=${encodeURIComponent(suggestedQuery)}&type=${currentSearchType}&page=1`;
-    link.style.color = '#d32f2f'; // Red text
+    link.style.color = '#d32f2f';
     link.style.fontWeight = 'bold';
     link.style.textDecoration = 'none';
-    link.innerHTML = ` Praterich recommends a re-search: "${escapeHtml(suggestedQuery)}"`;
+    link.innerHTML = ` Praterich recommends: "${escapeHtml(suggestedQuery)}"`;
     
-    // Add a little hover effect via JS
-    link.onmouseover = () => link.style.textDecoration = 'underline';
-    link.onmouseout = () => link.style.textDecoration = 'none';
-
     reSearchDiv.appendChild(link);
-    overviewEl.appendChild(reSearchDiv);
+
+    // Determine active section to prepend ABOVE the title
+    const activeSectionId = currentSearchType === 'all' ? 'allSection' : (currentSearchType + 'Section');
+    const targetSection = document.getElementById(activeSectionId);
+    
+    if (targetSection) {
+        // Remove old ones first
+        const old = targetSection.querySelector('#re-search-container');
+        if (old) old.remove();
+        targetSection.prepend(reSearchDiv);
+    }
 }
 
 // --- TOGGLE INITIALIZATION ---
