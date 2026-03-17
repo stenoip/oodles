@@ -4,32 +4,47 @@
  // Transforms the standard results UI into a Chat-centric interface.
 
 function initiateAdaptiveChat(query, aiResponse, searchItems) {
-    var container = document.querySelector('.container');
-    var sections = ['allSection', 'linksSection', 'imagesSection', 'videosSection', 'aiOverview'];
+    const mainContainer = document.querySelector('.container');
+    const sectionsToHide = ['allSection', 'linksSection', 'imagesSection', 'videosSection', 'aiOverview'];
     
-    // 1. Hide standard result sections
-    sections.forEach(id => {
+    // Hide all standard search UI
+    sectionsToHide.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // 2. Create or find the Chat Container
-    var chatContainer = document.getElementById('adaptiveChatContainer');
-    if (!chatContainer) {
-        chatContainer = document.createElement('div');
-        chatContainer.id = 'adaptiveChatContainer';
-        chatContainer.className = 'results-section chat-mode-active';
-        chatContainer.style.padding = '20px';
-        container.appendChild(chatContainer);
+    let chatWrapper = document.getElementById('adaptiveChatWrapper');
+    if (!chatWrapper) {
+        chatWrapper = document.createElement('div');
+        chatWrapper.id = 'adaptiveChatWrapper';
+        chatWrapper.className = 'glass-panel'; // Keeping the Frutiger Aero aesthetic
+        chatWrapper.style.margin = '20px 0';
+        chatWrapper.style.padding = '25px';
+        mainContainer.appendChild(chatWrapper);
     }
-    chatContainer.innerHTML = ''; // Clear previous chat
 
-    // 3. User Message Bubble
-    appendChatMessage('user', query);
+    // Clean the AI response of tags
+    const cleanAiText = aiResponse.replace(/@@.*?@@/g, '').trim();
 
-    // 4. Praterich Message Bubble (AI Response)
-    appendChatMessage('praterich', aiResponse, searchItems);
+    chatWrapper.innerHTML = `
+        <div class="chat-bubble user-bubble">${escapeHtml(query)}</div>
+
+        <div class="chat-bubble praterich-bubble">
+            <div class="praterich-header">
+                <img src="https://stenoip.github.io/praterich/praterich.png" class="praterich-avatar">
+                <strong>Praterich</strong>
+            </div>
+            <div class="chat-content">
+                ${renderMarkdown(cleanAiText)}
+            </div>
+            
+            <div class="chat-carousel">
+                ${renderChatCarousel(searchItems)}
+            </div>
+        </div>
+    `;
 }
+
 
 function appendChatMessage(sender, text, items = null) {
     var chatContainer = document.getElementById('adaptiveChatContainer');
@@ -61,18 +76,14 @@ function appendChatMessage(sender, text, items = null) {
 
 function renderChatCarousel(items) {
     if (!items || items.length === 0) return '';
-    
-    var carouselHtml = items.slice(0, 5).map(item => `
-        <div style="flex: 0 0 200px; background: white; border-radius: 8px; border: 1px solid #ddd; padding: 10px; font-size: 13px;">
-            <a href="${item.url}" target="_blank" style="font-weight: bold; color: #0277bd; text-decoration: none; display: block; margin-bottom: 5px;">${escapeHtml(item.title)}</a>
-            <p style="margin: 0; color: #555; height: 40px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.snippet || '')}</p>
-        </div>
-    `).join('');
-
     return `
-        <div style="margin-top: 15px; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
-            ${carouselHtml}
+        <div class="carousel-track">
+            ${items.slice(0, 4).map(item => `
+                <a href="${item.url}" target="_blank" class="carousel-card">
+                    <span class="carousel-title">${escapeHtml(item.title)}</span>
+                    <span class="carousel-url">${new URL(item.url).hostname}</span>
+                </a>
+            `).join('')}
         </div>
-        <div class="small" style="margin-top: 5px; color: #0277bd; font-weight: bold;">↑ Relevant Sources Found</div>
     `;
 }
