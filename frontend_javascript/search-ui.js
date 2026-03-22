@@ -166,14 +166,21 @@ function renderAllResults(query, webData, imgData, vidData) {
 
     let combinedHtml = '';
 
-    // 1. Top 3 Web Results (High Relevance)
+    // 1. Top 3 Web Results
     combinedHtml += `<div class="all-web-top">${webData.items.slice(0, 3).map(renderSingleLink).join('')}</div>`;
 
-    // 2. Image Carousel (Frutiger Style)
+    // --- NEW: AD INSERTION FOR "ALL" SECTION ---
+    // We use the first ad slot and the helper from ad.js
+    if (typeof createAdUnitHtml === 'function') {
+        combinedHtml += createAdUnitHtml(ADSENSE_AD_SLOT_1);
+        // Trigger the AdSense push after a short delay to ensure DOM is ready
+        setTimeout(pushAds, AD_PUSH_DELAY_MS);
+    }
+    // --------------------------------------------
+
+    // 2. Image Carousel
     if (imgData.items && imgData.items.length > 0) {
-        // Store for modal
         allTabImagesCache = imgData.items;
-        
         combinedHtml += `
             <div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ${escapeHtml(query)}</h4>
@@ -188,7 +195,7 @@ function renderAllResults(query, webData, imgData, vidData) {
             </div>`;
     }
 
-    // 3. Featured Video (Top Result)
+    // 3. Featured Video 
     if (vidData && vidData.length > 0) {
         const v = vidData[0];
         combinedHtml += `
