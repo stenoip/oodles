@@ -533,13 +533,9 @@ document.getElementById('currentQuery').addEventListener('keydown', function(e) 
         e.preventDefault(); 
         var query = this.value.trim();
         
-        // Determine active tab to preserve type on new search
-        var type = 'all';
-        if (document.getElementById('tab-links').classList.contains('active')) type = 'web';
-        if (document.getElementById('tab-images').classList.contains('active')) type = 'image';
-        if (document.getElementById('tab-videos').classList.contains('active')) type = 'video';
+        // Use the global variable instead of checking DOM classes
+        var type = currentSearchType || 'all'; 
         
-        // Clear AI cache and timer on new search
         lastAIRawText = null; 
         lastFetchedItems = null;
         if (aiTimeout) clearTimeout(aiTimeout);
