@@ -239,8 +239,8 @@ function openImageModalFromAll(index) {
 function switchTab(tabName, executeNewSearch) {
     if (window.event) event.preventDefault();
 
-    let normalizedTab = tabName;
-    let newSearchType = tabName;
+    var normalizedTab = tabName;
+    var newSearchType = tabName;
 
     if (tabName === 'web' || tabName === 'links') {
         normalizedTab = 'links';
@@ -258,6 +258,12 @@ function switchTab(tabName, executeNewSearch) {
 
     currentSearchType = newSearchType;
 
+    //Exit Chat Mode on tab switch 
+    window.isChatModeActive = false;
+    const chatSectionEl = document.getElementById('chatSection');
+    if (chatSectionEl) chatSectionEl.style.display = 'none';
+    
+
     // Update Tab UI: Remove active class from all tabs
     document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
         a.classList.remove('active');
@@ -271,8 +277,8 @@ function switchTab(tabName, executeNewSearch) {
     });
 
     // Show the selected section and activate the tab
-    const activeTab = document.getElementById('tab-' + normalizedTab);
-    const activeSection = document.getElementById(normalizedTab + 'Section');
+    var activeTab = document.getElementById('tab-' + normalizedTab);
+    var activeSection = document.getElementById(normalizedTab + 'Section');
     
     if (activeTab) activeTab.classList.add('active');
     if (activeSection) activeSection.style.display = 'block';
