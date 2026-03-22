@@ -46,6 +46,15 @@ The tag MUST be outputted before the @@RANKING tag.
 Example (Snippets are bad): The user asked for "latest 2026 fusion results" but snippets only show 2024.
 Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 2026]@@@@RANKING:[...]@@
 
+
+***TASK 5: Mode Detection (CRITICAL)***
+Analyze the user's intent:
+- If they are having a conversation (e.g., "how are you"), asking a non-search question, or requesting a generative task (e.g., "write a summary of dogs", "write a poem"), output: @@MODE:[chat]@@
+- If it is a standard informational web search, output: @@MODE:[search]@@
+
+Output the @@MODE tag before the @@RANKING tag.
+
+
 Your response must be:
 1. The text overview.
 2. The optional @@TOOL[...]@@ tag.
@@ -100,21 +109,26 @@ function createRawSearchText(items) {
  */
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
-    
-    // Reset UI before processing
     renderBuiltInTool(null); 
     
-    if (isAIOverviewEnabled && overviewEl) {
+    // Only show standard loading if we aren't already actively in chat mode
+    if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
 
     var rawWebSearchText = createRawSearchText(searchItems);
-    var toolResult = `\n[TOOL_RESULT_FOR_PREVIOUS_TURN]\n${rawWebSearchText}\n`;
-
-    var conversationParts = [
-        { role: "model", parts: [{ text: toolResult }] },
-        { role: "user", parts: [{ text: query }] }
-    ];
+    
+    // Build Conversation Payload
+    var conversationParts = [];
+    
+    // Push recent history if in chat mode to keep context (last 6 interactions)
+    if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
+        conversationParts.push(...window.chatConversationHistory.slice(-6));
+    }
+    
+    // Formulate the current turn, feeding the search results into the user prompt
+    var userTextWithContext = `User Query: ${query}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
+    conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
 
     var requestBody = {
         contents: conversationParts,
@@ -134,57 +148,69 @@ async function processAIResults(query, searchItems) {
 
         var data = await response.json();
         var aiRawText = data.text;
-        
-        // Cache for toggle/session persistence
         lastAIRawText = aiRawText;
 
         // --- 1. EXTRACT DATA ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
         var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
+        var modeRegex = /@@MODE:\[(.*?)\]@@/;
 
         var toolMatch = aiRawText.match(toolRegex);
         var researchMatch = aiRawText.match(researchRegex);
-        var rankingMatch = aiRawText.match(rankingRegex); // Corrected variable name
+        var rankingMatch = aiRawText.match(rankingRegex); 
+        var modeMatch = aiRawText.match(modeRegex);
 
         var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
         var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
+        var detectedMode = modeMatch && modeMatch[1] ? modeMatch[1].trim() : 'search';
 
-        // Clean display text by removing ALL special tags
+        // Clean display text
         var cleanDisplayText = aiRawText
             .replace(rankingRegex, '')
             .replace(toolRegex, '')
             .replace(researchRegex, '')
+            .replace(modeRegex, '')
             .trim();
 
-        // --- 2. UPDATE UI: TOOLS & RE-SEARCH ---
+        // Update Conversation History for the next turn
+        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] }); // Keep history clean without raw data
+        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+
+        // --- 2. CHECK ADAPTIVE CHAT MODE ---
+        // If the AI says it's a chat OR we are already locked into chat mode from a previous message
+        if (detectedMode === 'chat' || window.isChatModeActive) {
+            if (typeof activateAdaptiveChat === 'function') {
+                activateAdaptiveChat(query, cleanDisplayText, searchItems);
+                return; // Exit here. Do not render standard AI Overview.
+            }
+        }
+
+        // --- 3. UPDATE UI: STANDARD SEARCH (If not chat) ---
         renderBuiltInTool(detectedTool);
 
-        // --- 3. UPDATE UI: OVERVIEW ---
         if (isAIOverviewEnabled && overviewEl) {
             overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
-            // Append the red link if a better query was suggested
-            if (suggestedQuery) {
-                renderReSearchLink(suggestedQuery);
-            }
+            if (suggestedQuery) renderReSearchLink(suggestedQuery);
         } else if (overviewEl) {
             overviewEl.innerHTML = '';
         }
 
-        // --- 4. UPDATE UI: RANKING (ALWAYS HAPPENS) ---
-        // Changed 'match' to 'rankingMatch' to fix the ReferenceError
         if (rankingMatch && rankingMatch[1]) {
             applySmartRanking(searchItems, rankingMatch[1]);
         }
 
     } catch (error) {
         console.error('AI Processing Error:', error);
-        if (isAIOverviewEnabled && overviewEl) {
+        if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
             overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
+        } else if (window.isChatModeActive) {
+            appendChatMessage('ai', 'Sorry, I encountered an error while thinking. Please try again.', null, null);
         }
         renderBuiltInTool(null);
     }
 }
+
 
 
 async function executeSearch(query, type, page = 1) {
