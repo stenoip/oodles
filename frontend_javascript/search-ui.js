@@ -249,6 +249,7 @@ function switchTab(tabName, executeNewSearch) {
     var normalizedTab = tabName;
     var newSearchType = tabName;
 
+    // Handle normalization of tab names
     if (tabName === 'web' || tabName === 'links') {
         normalizedTab = 'links';
         newSearchType = 'web';
@@ -265,13 +266,16 @@ function switchTab(tabName, executeNewSearch) {
 
     currentSearchType = newSearchType;
 
-    //Exit Chat Mode on tab switch 
-    window.isChatModeActive = false;
-    const chatSectionEl = document.getElementById('chatSection');
-    if (chatSectionEl) chatSectionEl.style.display = 'none';
-    
+    // --- CHAT VISIBILITY LOGIC ---
+    // If we are switching to ANY tab that is NOT "all", hide the chat.
+    if (normalizedTab !== 'all') {
+        window.isChatModeActive = false;
+        const chatSectionEl = document.getElementById('chatSection');
+        if (chatSectionEl) chatSectionEl.style.display = 'none';
+    }
+    // ------------------------------
 
-    // Update Tab UI: Remove active class from all tabs
+    // Update Tab UI: Use optional chaining (?.) or null checks to prevent the TypeError
     document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
         a.classList.remove('active');
     });
