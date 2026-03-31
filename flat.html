@@ -197,39 +197,27 @@
     }
 
 
-    /* Apply to all result links and images */
+   /* Apply to links and images */
 .result-block a, 
 #imageResults img {
-  display: inline-block; /* Required for transforms to work */
+  display: inline-block;
   position: relative;
-  transition: all 0.3s ease;
-}
-
-/* Creating the shadow "Plane" using a pseudo-element */
-.result-block a::after,
-#imageResults img::after {
-  content: "";
-  position: absolute;
-  top: 90%; /* Start at the bottom of the text/image */
-  left: 5%;
-  width: 100%;
-  height: 20%; /* The depth of the shadow on the plane */
-  background: rgba(0, 0, 0, 0.15); /* Semi-transparent black */
-  filter: blur(4px); /* Softens the shadow edges */
   
-  /* This is the magic: it skews the shadow to look flat on the floor */
-  transform: scaleY(0.5) skewX(-25deg);
-  transform-origin: top;
-  z-index: -1;
-  pointer-events: none;
+  /* 1. Create the shadow by reflecting the object */
+  /* 2. Offset it so it starts at the bottom */
+  /* 3. Apply a mask to make it look like a dark shadow silhouette */
+  -webkit-box-reflect: below -2px 
+    linear-gradient(transparent 10%, rgba(0,0,0,0.4) 90%);
+  
+  /* 4. This flattens the reflection into a 'shadow' on the plane */
+  transform: perspective(500px) rotateX(20deg);
+  transform-origin: bottom;
 }
 
-/* Optional: Make the shadow react when you hover over the link */
-.result-block a:hover::after {
-  background: rgba(0, 0, 0, 0.25);
-  filter: blur(2px);
+/* Specific styling for images to ensure they don't overlap shadows */
+#imageResults img {
+  margin-bottom: 40px; /* Space for the shadow plane */
 }
-
     
     
  
