@@ -1,15 +1,7 @@
-var ALLOWED_ORIGINS = [
-  'https://stenoip.github.io',
-  'http://localhost:9000'
-];
+var ALLOWED_ORIGIN = 'https://stenoip.github.io';
 
-function setCors(req, res) {
-  var origin = req.headers.origin;
-
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
