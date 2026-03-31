@@ -21,11 +21,17 @@
     }
 
     body {
-      margin: 0;
-      font-family: Arial, Helvetica, system-ui, sans-serif;
-      color: var(--text-main);
-      background: var(--bg-page);
-    }
+  /* This creates a soft, metallic horizon look */
+  background: linear-gradient(
+    to bottom, 
+    #ffffff 0%,    /* Pure white at the top (The Sky) */
+    #f0f2f5 45%,   /* Very light grey */
+    #d1d5db 50%,   /* The "Horizon Line" (The metallic shift) */
+    #e5e7eb 100%   /* Soft grey bottom (The Plane) */
+  );
+  background-attachment: fixed;
+  color: #202124; /* Dark text for readability */
+}
     
 
     /* -------------------------------- HEADER -------------------------------- */
