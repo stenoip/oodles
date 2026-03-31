@@ -6,9 +6,7 @@ var ALLOWED_ORIGINS = [
 function setCors(req, res) {
   var origin = req.headers.origin;
 
-  // Check if the incoming origin is in our allowed list
   if (ALLOWED_ORIGINS.includes(origin)) {
-    // res.set is common in Express; use res.setHeader for native Node.js
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
 
