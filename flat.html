@@ -195,6 +195,36 @@
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
+    
+    
+    /* Apply reflection to all text and images globally */
+* {
+  position: relative; /* necessary for pseudo-element positioning */
+}
+
+*::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%; /* below element */
+  width: 100%;
+  height: 100%;
+  transform: scaleY(-1); /* mirror on plane */
+  z-index: -1; /* behind original content */
+  pointer-events: none;
+  background: inherit; /* text or image fallback */
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  opacity: 0.25;
+}
+
+/* Images need a blurred reflection */
+img::after {
+  background: url('') no-repeat center;
+  background-size: cover;
+  filter: blur(1px);
+}
+    
     /* -------------------------------- MOBILE -------------------------------- */
     @media (max-width: 600px) {
       .top-bar {
@@ -206,6 +236,8 @@
         gap: 16px;
         overflow-x: auto;
       }
+
+      
     }
   </style>
 
