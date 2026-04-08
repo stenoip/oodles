@@ -1,5 +1,5 @@
 /*
-########  ########  ########    ##      ######    ########
+########  ########  ########    ##        ######    ########
 ##    ##  ##    ##  ##      ##  ##        ##        ##
 ##    ##  ##    ##  ##      ##  ##        ######    ########
 ##    ##  ##    ##  ##      ##  ##        ##              ##
@@ -15,8 +15,8 @@ var cheerio = require('cheerio');
 var { setCors } = require('./_cors');
 
 // Config
-var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
-var TIMEOUT_MS = 8000; 
+var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+var TIMEOUT_MS = 10000; // Bumped to 10s to give smaller engines time to respond
 var DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50; 
 
@@ -44,7 +44,7 @@ function normalize({ title, url, snippet, source }) {
     return {
         title: title.trim(),
         url: cleanUrl,
-        snippet: (snippet || '').trim(),
+        snippet: (snippet || '').trim().substring(0, 300), // Cap snippet length
         source
     };
 }
@@ -95,13 +95,23 @@ function paginate(items, page, pageSize) {
 }
 
 async function getHTML(url) {
+    // Upgraded headers to bypass aggressive bot-protection
     var resp = await fetch(url, { 
         headers: { 
             'User-Agent': UA, 
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1'
         } 
     });
+    
     if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
     
     const contentType = resp.headers.get('content-type');
@@ -127,12 +137,32 @@ function extractGenericLinks($, sourceName) {
             let snippet = "";
             const parent = titleEl.parent();
             
-            snippet = parent.find('p, span.st, div.snippet, div.compText').text().trim();
+            snippet = parent.find('p, span.st, div.snippet, div.compText, div.description').text().trim();
             if (!snippet) snippet = parent.next().text().trim(); 
             
-            if (url && url.startsWith('http') && !url.includes('google.com/search') && !url.includes('yahoo.com/search')) {
+            if (url && url.startsWith('http') && !url.includes(sourceName.toLowerCase())) {
                 results.push(normalize({ title, url, snippet, source: sourceName + '-generic' }));
             }
+        }
+    });
+    return results;
+}
+
+// Last-resort fallback if specific selectors and h2/h3 parsing fails
+function extractAggressive($, sourceName) {
+    const results = [];
+    $('a[href^="http"]').each((_, el) => {
+        const a = $(el);
+        const title = a.text().trim();
+        const url = a.attr('href');
+        
+        // If the link has a substantial title and isn't pointing back to the search engine itself
+        if (title.split(' ').length > 2 && !url.includes(sourceName.toLowerCase())) {
+            let snippet = a.parent().text().replace(title, '').trim();
+            if (snippet.length < 10) snippet = a.parent().parent().text().replace(title, '').trim();
+            
+            const item = normalize({ title, url, snippet, source: sourceName + '-aggr' });
+            if (item) results.push(item);
         }
     });
     return results;
@@ -155,10 +185,9 @@ async function crawlBrave(query) {
         if (item) out.push(item);
     });
     
-    if (out.length < 5) {
-         out = out.concat(extractGenericLinks($, 'brave'));
-    }
-    return out;
+    if (out.length < 5) out = out.concat(extractGenericLinks($, 'brave'));
+    if (out.length < 5) out = out.concat(extractAggressive($, 'brave'));
+    return dedupe(out);
 }
 
 async function crawlMojeek(query) {
@@ -167,22 +196,22 @@ async function crawlMojeek(query) {
     const $ = cheerio.load(html);
     let out = [];
 
-    $('ul.results li, div.result').each((_, el) => {
-        const a = $(el).find('h2 a, h3 a, a.ob').first();
+    // Broadened to catch specific Mojeek class structures
+    $('.ob-res, ul.results li, ul.results-standard li, .result-item').each((_, el) => {
+        const a = $(el).find('h2 a, h3 a, a.ob, a').first();
         const title = a.text().trim();
         const href = a.attr('href');
-        const snippet = $(el).find('p.s, div.snippet').text().trim();
+        const snippet = $(el).find('p.s, div.snippet, p').first().text().trim();
 
-        if (title && href) {
+        if (title && href && href.startsWith('http')) {
             const item = normalize({ title, url: href, snippet, source: 'mojeek' });
             if (item) out.push(item);
         }
     });
 
-    if (out.length < 5) {
-        out = out.concat(extractGenericLinks($, 'mojeek'));
-    }
-    return out;
+    if (out.length < 5) out = out.concat(extractGenericLinks($, 'mojeek'));
+    if (out.length < 5) out = out.concat(extractAggressive($, 'mojeek'));
+    return dedupe(out);
 }
 
 async function crawlYep(query) {
@@ -191,22 +220,22 @@ async function crawlYep(query) {
     const $ = cheerio.load(html);
     let out = [];
 
-    $('[class*="result"]').each((_, el) => {
-        const a = $(el).find('h2 a, h3 a, [class*="title"] a').first();
+    // Yep heavily obfuscates CSS classes. Using structural targeting.
+    $('[class*="result"], div:has(h2), div:has(h3)').each((_, el) => {
+        const a = $(el).find('h2 a, h3 a, a[class*="title"]').first();
         const title = a.text().trim();
         const href = a.attr('href');
-        const snippet = $(el).find('[class*="snippet"], p').text().trim();
+        const snippet = $(el).find('[class*="snippet"], p').first().text().trim();
 
-        if (title && href && href.startsWith('http')) {
+        if (title && href && href.startsWith('http') && !href.includes('yep.com')) {
             const item = normalize({ title, url: href, snippet, source: 'yep' });
             if (item) out.push(item);
         }
     });
 
-    if (out.length < 5) {
-        out = out.concat(extractGenericLinks($, 'yep'));
-    }
-    return out;
+    if (out.length < 5) out = out.concat(extractGenericLinks($, 'yep'));
+    if (out.length < 5) out = out.concat(extractAggressive($, 'yep'));
+    return dedupe(out);
 }
 
 async function crawlMarginalia(query) {
@@ -215,22 +244,21 @@ async function crawlMarginalia(query) {
     const $ = cheerio.load(html);
     let out = [];
 
-    $('section.search-result, div.result').each((_, el) => {
+    $('section.search-result, article.search-result, div.result').each((_, el) => {
         const a = $(el).find('h2 a, h3 a').first();
         const title = a.text().trim();
         const href = a.attr('href');
-        const snippet = $(el).find('p, div.description').text().trim();
+        const snippet = $(el).find('p.description, p').first().text().trim();
 
-        if (title && href) {
+        if (title && href && href.startsWith('http')) {
             const item = normalize({ title, url: href, snippet, source: 'marginalia' });
             if (item) out.push(item);
         }
     });
 
-    if (out.length < 5) {
-        out = out.concat(extractGenericLinks($, 'marginalia'));
-    }
-    return out;
+    if (out.length < 5) out = out.concat(extractGenericLinks($, 'marginalia'));
+    if (out.length < 5) out = out.concat(extractAggressive($, 'marginalia'));
+    return dedupe(out);
 }
 
 
@@ -326,35 +354,39 @@ module.exports = async (req, res) => {
     );
 
     try {
+        // Appended error logging so server console outputs exact failure reasons
         const webSearchTasks = [
-            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(() => []),
-            withTimeout(crawlMojeek(q), TIMEOUT_MS, 'Mojeek').catch(() => []),
-            withTimeout(crawlYep(q), TIMEOUT_MS, 'Yep').catch(() => []),
-            withTimeout(crawlMarginalia(q), TIMEOUT_MS, 'Marginalia').catch(() => [])
+            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(e => { console.error('Brave Failed:', e.message); return []; }),
+            withTimeout(crawlMojeek(q), TIMEOUT_MS, 'Mojeek').catch(e => { console.error('Mojeek Failed:', e.message); return []; }),
+            withTimeout(crawlYep(q), TIMEOUT_MS, 'Yep').catch(e => { console.error('Yep Failed:', e.message); return []; }),
+            withTimeout(crawlMarginalia(q), TIMEOUT_MS, 'Marginalia').catch(e => { console.error('Marginalia Failed:', e.message); return []; })
         ];
 
-        var [brave, mojeek, yep, marginalia] = await Promise.all(webSearchTasks);
+        let [brave, mojeek, yep, marginalia] = await Promise.all(webSearchTasks);
         
-        var allWebResults = [...brave, ...mojeek, ...yep, ...marginalia];
+        let allWebResults = [...brave, ...mojeek, ...yep, ...marginalia];
         
-        // Remove completely undefined items just in case normalization failed silently
         allWebResults = dedupe(allWebResults.filter(Boolean));
 
         if (type === 'web') {
             const engineWeights = { 
                 'brave': 0.85, 
-                'mojeek': 0.80, 
+                'mojeek': 0.82, 
                 'yep': 0.80, 
-                'marginalia': 0.75,
-                'brave-generic': 0.6,
-                'mojeek-generic': 0.6,
-                'yep-generic': 0.6,
-                'marginalia-generic': 0.5
+                'marginalia': 0.78,
+                'brave-generic': 0.65,
+                'mojeek-generic': 0.65,
+                'yep-generic': 0.65,
+                'marginalia-generic': 0.65,
+                'brave-aggr': 0.5,
+                'mojeek-aggr': 0.5,
+                'yep-aggr': 0.5,
+                'marginalia-aggr': 0.5
             };
 
             allWebResults = allWebResults.map(it => ({
                 ...it,
-                score: scoreItem(it, q, engineWeights[it.source] || 0.5)
+                score: scoreItem(it, q, engineWeights[it.source] || 0.4)
             })).sort((a, b) => b.score - a.score);
 
             const total = allWebResults.length;
@@ -374,8 +406,8 @@ module.exports = async (req, res) => {
                 ).catch(() => [])
             );
 
-            var allImageResultsArrays = await Promise.all(imageCrawlTasks);
-            var allImageResults = dedupe(allImageResultsArrays.flat());
+            let allImageResultsArrays = await Promise.all(imageCrawlTasks);
+            let allImageResults = dedupe(allImageResultsArrays.flat());
 
             const total = allImageResults.length;
             const items = paginate(allImageResults, page, pageSize);
