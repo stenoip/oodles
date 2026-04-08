@@ -1,5 +1,5 @@
 /*
-########  ########  ########    ##        ######    ########
+########  ########  ########    ##      ######    ########
 ##    ##  ##    ##  ##      ##  ##        ##        ##
 ##    ##  ##    ##  ##      ##  ##        ######    ########
 ##    ##  ##    ##  ##      ##  ##        ##              ##
@@ -15,7 +15,6 @@ var cheerio = require('cheerio');
 var { setCors } = require('./_cors');
 
 // Config
-// Using a standard desktop User-Agent to prevent Bing/Yahoo/Ecosia from blocking the request.
 var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 var TIMEOUT_MS = 8000; 
 var DEFAULT_PAGE_SIZE = 10;
@@ -30,41 +29,10 @@ function withTimeout(promise, ms, label) {
     return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
 }
 
-// Decodes base64 tracking URLs from Bing and Yahoo's redirect URLs
-function decodeSearchUrl(url) {
-    if (!url) return url;
-    try {
-        const u = new URL(url);
-        
-        // Bing Base64 Decoder
-        if (u.hostname.includes('bing.com') && u.pathname.includes('/ck/a')) {
-            const uParam = u.searchParams.get('u');
-            if (uParam) {
-                // Bing prefixes the base64 payload with 'a1'
-                const base64Str = uParam.replace(/^a1/, '');
-                const decoded = Buffer.from(base64Str, 'base64').toString('utf-8');
-                if (decoded.startsWith('http')) return decoded;
-            }
-        }
-        
-        // Yahoo Redirect Decoder
-        if (u.hostname.includes('search.yahoo.com') && url.includes('RU=')) {
-            const match = url.match(/RU=([^/]+)/);
-            if (match) {
-                return decodeURIComponent(match[1]);
-            }
-        }
-    } catch (e) {
-        // Fallback to original URL if decoding fails
-    }
-    return url;
-}
-
 function normalize({ title, url, snippet, source }) {
     if (!url || !title) return null;
     
-    // First, try to decode tracking links (Bing, Yahoo)
-    var cleanUrl = decodeSearchUrl(url);
+    var cleanUrl = url;
     
     // Cleaning: Remove tracking parameters often found in search results
     try {
@@ -127,7 +95,6 @@ function paginate(items, page, pageSize) {
 }
 
 async function getHTML(url) {
-    // CHANGED: Added Accept-Language to look more like a real user
     var resp = await fetch(url, { 
         headers: { 
             'User-Agent': UA, 
@@ -173,83 +140,6 @@ function extractGenericLinks($, sourceName) {
 
 // --- Web Crawlers ---
 
-async function crawlYahoo(query) {
-    var url = `https://search.yahoo.com/search?p=${encodeURIComponent(query)}&n=30`; 
-    var html = await getHTML(url);
-    var $ = cheerio.load(html);
-    var out = [];
-
-    $('div.algo, div.dd.algo').each((_, el) => {
-        var title = $(el).find('h3.title a').text();
-        var href = $(el).find('h3.title a').attr('href');
-        var snippet = $(el).find('div.compText, p.lh-16').text();
-        
-        if (title && href) {
-            var item = normalize({ title, url: href, snippet, source: 'yahoo' });
-            if (item) out.push(item);
-        }
-    });
-
-    if (out.length < 5) {
-        out = out.concat(extractGenericLinks($, 'yahoo'));
-    }
-    return out;
-}
-
-async function crawlEcosia(query) {
-    var url = `https://www.ecosia.org/search?q=${encodeURIComponent(query)}`;
-    var html = await getHTML(url);
-    var $ = cheerio.load(html);
-    var out = [];
-
-    $('div.mainline-results .result').each((_, el) => {
-        const a = $(el).find('a.result-title');
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('.result-snippet').text();
-        const item = normalize({ title, url: href, snippet, source: 'ecosia' });
-        if (item) out.push(item);
-    });
-
-    $('div.card-mobile').each((_, el) => {
-         const a = $(el).find('a.result-title');
-         if(a.length) {
-             const title = a.text();
-             const href = a.attr('href');
-             const item = normalize({ title, url: href, snippet: 'News result', source: 'ecosia-news' });
-             if (item) out.push(item);
-         }
-    });
-    return out;
-}
-
-async function crawlBing(query) {
-    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=30`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    const out = [];
-
-    $('li.b_algo').each((_, el) => {
-        const a = $(el).find('h2 a');
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('.b_caption p').text();
-        const item = normalize({ title, url: href, snippet, source: 'bing' });
-        if (item) out.push(item);
-    });
-
-    $('li.b_ans').each((_, el) => {
-         const a = $(el).find('h2 a, .b_title a'); 
-         if(a.length && $(el).find('.b_entityTitle').length === 0) { 
-             const title = a.text();
-             const href = a.attr('href');
-             const item = normalize({ title, url: href, snippet: 'Featured Result', source: 'bing-featured' });
-             if (item) out.push(item);
-         }
-    });
-    return out;
-}
-
 async function crawlBrave(query) {
     const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
     const html = await getHTML(url);
@@ -270,6 +160,79 @@ async function crawlBrave(query) {
     }
     return out;
 }
+
+async function crawlMojeek(query) {
+    const url = `https://www.mojeek.com/search?q=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
+    const $ = cheerio.load(html);
+    let out = [];
+
+    $('ul.results li, div.result').each((_, el) => {
+        const a = $(el).find('h2 a, h3 a, a.ob').first();
+        const title = a.text().trim();
+        const href = a.attr('href');
+        const snippet = $(el).find('p.s, div.snippet').text().trim();
+
+        if (title && href) {
+            const item = normalize({ title, url: href, snippet, source: 'mojeek' });
+            if (item) out.push(item);
+        }
+    });
+
+    if (out.length < 5) {
+        out = out.concat(extractGenericLinks($, 'mojeek'));
+    }
+    return out;
+}
+
+async function crawlYep(query) {
+    const url = `https://yep.com/web?q=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
+    const $ = cheerio.load(html);
+    let out = [];
+
+    $('[class*="result"]').each((_, el) => {
+        const a = $(el).find('h2 a, h3 a, [class*="title"] a').first();
+        const title = a.text().trim();
+        const href = a.attr('href');
+        const snippet = $(el).find('[class*="snippet"], p').text().trim();
+
+        if (title && href && href.startsWith('http')) {
+            const item = normalize({ title, url: href, snippet, source: 'yep' });
+            if (item) out.push(item);
+        }
+    });
+
+    if (out.length < 5) {
+        out = out.concat(extractGenericLinks($, 'yep'));
+    }
+    return out;
+}
+
+async function crawlMarginalia(query) {
+    const url = `https://search.marginalia.nu/search?query=${encodeURIComponent(query)}`;
+    const html = await getHTML(url);
+    const $ = cheerio.load(html);
+    let out = [];
+
+    $('section.search-result, div.result').each((_, el) => {
+        const a = $(el).find('h2 a, h3 a').first();
+        const title = a.text().trim();
+        const href = a.attr('href');
+        const snippet = $(el).find('p, div.description').text().trim();
+
+        if (title && href) {
+            const item = normalize({ title, url: href, snippet, source: 'marginalia' });
+            if (item) out.push(item);
+        }
+    });
+
+    if (out.length < 5) {
+        out = out.concat(extractGenericLinks($, 'marginalia'));
+    }
+    return out;
+}
+
 
 // --- Image Crawler ---
 async function crawlImagesFromUrl(pageUrl, source) {
@@ -365,14 +328,14 @@ module.exports = async (req, res) => {
     try {
         const webSearchTasks = [
             withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(() => []),
-            withTimeout(crawlBing(q), TIMEOUT_MS, 'Bing').catch(() => []),
-            withTimeout(crawlYahoo(q), TIMEOUT_MS, 'Yahoo').catch(() => []),
-            withTimeout(crawlEcosia(q), TIMEOUT_MS, 'Ecosia').catch(() => [])
+            withTimeout(crawlMojeek(q), TIMEOUT_MS, 'Mojeek').catch(() => []),
+            withTimeout(crawlYep(q), TIMEOUT_MS, 'Yep').catch(() => []),
+            withTimeout(crawlMarginalia(q), TIMEOUT_MS, 'Marginalia').catch(() => [])
         ];
 
-        let [brave, bing, yahoo, ecosia] = await Promise.all(webSearchTasks);
+        var [brave, mojeek, yep, marginalia] = await Promise.all(webSearchTasks);
         
-        let allWebResults = [...brave, ...bing, ...yahoo, ...ecosia];
+        var allWebResults = [...brave, ...mojeek, ...yep, ...marginalia];
         
         // Remove completely undefined items just in case normalization failed silently
         allWebResults = dedupe(allWebResults.filter(Boolean));
@@ -380,11 +343,13 @@ module.exports = async (req, res) => {
         if (type === 'web') {
             const engineWeights = { 
                 'brave': 0.85, 
-                'bing': 0.8, 
-                'yahoo': 0.89, 
-                'ecosia': 0.7, 
-                'bing-featured': 0.9,
-                'ecosia-news': 0.8 
+                'mojeek': 0.80, 
+                'yep': 0.80, 
+                'marginalia': 0.75,
+                'brave-generic': 0.6,
+                'mojeek-generic': 0.6,
+                'yep-generic': 0.6,
+                'marginalia-generic': 0.5
             };
 
             allWebResults = allWebResults.map(it => ({
@@ -409,8 +374,8 @@ module.exports = async (req, res) => {
                 ).catch(() => [])
             );
 
-            let allImageResultsArrays = await Promise.all(imageCrawlTasks);
-            let allImageResults = dedupe(allImageResultsArrays.flat());
+            var allImageResultsArrays = await Promise.all(imageCrawlTasks);
+            var allImageResults = dedupe(allImageResultsArrays.flat());
 
             const total = allImageResults.length;
             const items = paginate(allImageResults, page, pageSize);
