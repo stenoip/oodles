@@ -26,13 +26,7 @@
 
     body {
   /* This creates a soft, metallic horizon look */
-  background: linear-gradient(
-    to bottom, 
-    #ffffff 0%,    /* Pure white at the top (The Sky) */
-    #f0f2f5 45%,   /* Very light grey */
-    #d1d5db 50%,   /* The "Horizon Line" (The metallic shift) */
-    #e5e7eb 100%   /* Soft grey bottom (The Plane) */
-  );
+  background: rgb(255, 255, 255);
   background-attachment: fixed;
   color: #202124; /* Dark text for readability */
 }
@@ -40,7 +34,7 @@
 
     /*  HEADER */
     header {
-      background: rgba(255,255,255,0.85);
+      
       backdrop-filter: blur(6px);
     }
 
@@ -276,95 +270,210 @@
   border: none;
   display: block;
 }
+/*UNIVERSAL AERO BUTTON STYLE */
+button:not([id]):not([class]),
+input[type="button"]:not([id]):not([class]),
+input[type="submit"]:not([id]):not([class]) {
+  all: unset; /* Remove default styles */
+  display: inline-block;
+  text-align: center;
+  user-select: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 300ms ease;
+  
+  /* Apply Aero style */
+  --hue: 0;        
+  --sat: 0;       
+  --glow-intensity: 0.8; 
+  --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
+  --bg: oklch(75% var(--sat) var(--hue) / 0.8);
+  --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
+  --bottom-glow: radial-gradient(farthest-corner at bottom center, rgba(255,255,255,var(--glow-intensity)), transparent);
 
+  background-color: var(--bg);
+  background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+  border: 1px solid var(--bg);
+  border-radius: 0;
+  box-shadow: 0 4px 4px rgba(0,0,0,0.4);
+  color: var(--fg);
+  font-weight: 700;
+  text-shadow: 0 2px 0.5em rgba(0,0,0,0.2);
+  padding: 0.75em 2em;
+  font-size: 1rem;
+}
+
+/* Top highlight */
+button:not([id]):not([class])::after,
+input[type="button"]:not([id]):not([class])::after,
+input[type="submit"]:not([id]):not([class])::after {
+  content: "";
+  position: absolute;
+  top: 4%;
+  left: 0.75em;
+  width: calc(100% - 1.5em);
+  height: 40%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
+  border-radius: inherit;
+  pointer-events: none;
+  transition: background 400ms ease;
+}
+
+/* Hover & Focus */
+button:not([id]):not([class]):hover,
+button:not([id]):not([class]):focus,
+input[type="button"]:not([id]):not([class]):hover,
+input[type="submit"]:not([id]):not([class]):focus {
+  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+/* Active */
+button:not([id]):not([class]):active,
+input[type="button"]:not([id]):not([class]):active,
+input[type="submit"]:not([id]):not([class]):active {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  transform: translateY(1px);
+}
+
+/* Size variations */
+button.small, input.small[type="button"], input.small[type="submit"] {
+  padding: 0.5em 1.5em;
+  font-size: 0.875rem;
+}
+
+button.medium, input.medium[type="button"], input.medium[type="submit"] {
+  padding: 0.75em 2em;
+  font-size: 1rem;
+}
+
+button.large, input.large[type="button"], input.large[type="submit"] {
+  padding: 1em 3em;
+  font-size: 1.125rem;
+}
 
 /*MODAL / WINDOW */
 
-.image-modal-overlay {
-  position: fixed;
+.frutiger-window {
+
+  font-size: 9pt;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  border-radius: 2px; 
+  box-shadow:
+    2px 2px 10px 1px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.98);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9999;
+  background: #e6eaf6; /* soft grey-white surface */
+}
+
+/* Glass layers */
+.frutiger-window::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
+  border-radius: 6px;
+  background:
+    linear-gradient(transparent 20%, rgba(255, 255, 255, 0.7) 40%, transparent 41%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2)),
+    #b0b8c6;
+  opacity: 0.6;
 }
 
-.frutiger-window {
-  background: var(--bg-page, #fff);
-  border: 1px solid var(--border, #dadce0);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  width: 90%;
-  max-width: 900px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.frutiger-window::after {
+  content: "";
+  position: absolute;
+  z-index: -10;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
 }
 
+/* Title bar */
 .window-title-bar {
-  background: var(--bg-page, #f9f9f9);
-  padding: 8px 15px;
-  border-bottom: 1px solid var(--border, #dadce0);
+  padding: 6px;
+  padding-top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
-  color: var(--text-main, #202124);
+  border-radius: 6px 6px 0 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.99),
+    inset 1px 0 0 rgba(255, 255, 255, 0.99),
+    inset -1px 0 0 rgba(255, 255, 255, 0.99);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.33) 70px, transparent 100px),
+    linear-gradient(225deg, rgba(255, 255, 255, 0.33) 70px, transparent 100px),
+    linear-gradient(54deg, rgba(0,0,0,0.13) 0 4%, rgba(102,102,102,0.07) 6%, rgba(0,0,0,0.13) 8% 10%);
 }
 
+/* Title text */
 .window-title-text {
-  white-space: nowrap;
+  color: #000;
+  text-shadow:
+    0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 80%;
+  white-space: nowrap;
+  flex: 1;
+  padding-top: 6px;
 }
 
+/* Close button */
 .window-close-btn {
-  background: var(--blue, #1a73e8);
-  border: none;
-  color: #fff;
-  border-radius: 4px;
   width: 24px;
   height: 24px;
+  border-radius: 0; /* remove pill corners */
+  background: #d54f36;
+  color: white;
+  border: 1px solid rgba(0,0,0,0.3);
   cursor: pointer;
   font-weight: bold;
-  line-height: 1;
-  transition: background 0.2s;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  transition: all 0.2s;
 }
 
 .window-close-btn:hover {
-  background: var(--blue-hover, #174ea6);
+  background: #ff5030;
+  box-shadow: 0 0 7px 3px rgba(255,80,48,0.7);
 }
 
+/* Modal body */
 .window-content {
   display: flex;
   flex-direction: row;
-  padding: 20px;
   gap: 20px;
-  height: 100%;
+  padding: 10px;
+  background: #f0f0f0;
+  border: 1px solid rgba(0,0,0,0.7);
+  border-radius: 0 0 6px 6px;
   overflow: hidden;
 }
 
+    
+
+/* Sidebar & image */
 .modal-image-container {
   flex: 2;
-  background: var(--bg-page, #fff);
-  border-radius: 8px;
+  background: #fff;
+  border-radius: 4px;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  min-height: 200px;
-}
-
-.modal-image-container img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
 }
 
 .modal-sidebar {
@@ -375,45 +484,23 @@
   min-width: 200px;
 }
 
-.info-group {
-  background: var(--bg-page, #fff);
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border, #dadce0);
-}
-
-.info-group strong {
-  display: block;
-  color: var(--text-main, #202124);
-  font-size: 0.9em;
-  margin-bottom: 4px;
-}
-
-.modal-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: auto;
-}
-
+/* Action buttons */
 .action-btn {
-  width: 100%;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  border: 1px solid var(--blue, #1a73e8);
-  background: var(--blue, #1a73e8);
-  color: white;
+  background: #b0b8c6;
+  border: 1px solid rgba(0,0,0,0.5);
+  color: #000;
+  border-radius: 4px;
   font-weight: bold;
-  border-radius: 20px;
+  cursor: pointer;
+  padding: 8px;
   transition: all 0.2s;
 }
 
 .action-btn:hover {
-  background: var(--blue-hover, #174ea6);
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  background: #d4dbe6;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
+
 
 
 /* RESPONSIVE ADJUSTMENTS                        */
@@ -470,9 +557,7 @@
 #imageResults img {
   margin-bottom: 40px; /* Space for the shadow plane */
 }
-    
-    
- 
+
     
     /*  MOBILE */
     @media (max-width: 600px) {
@@ -480,13 +565,11 @@
         flex-direction: column;
         align-items: stretch;
       }
-
       nav {
         gap: 16px;
         overflow-x: auto;
       }
 
-      
     }
 
   </style>
@@ -560,7 +643,7 @@
 
   </div>
 
-  <footer>© Stenoip Company • Oodles Search</footer>
+  <footer>© Stenoip Company • Oodles Metasearch</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
 
 
@@ -587,13 +670,13 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button id="btnVisit" class="frutiger-btn action-btn">
+                    <button id="btnVisit" >
                          Visit Site
                     </button>
-                    <button id="btnDownload" class="frutiger-btn action-btn">
+                    <button id="btnDownload" >
                          Download
                     </button>
-                    <button id="btnShare" class="frutiger-btn action-btn">
+                    <button id="btnShare">
                          Share
                     </button>
                 </div>
