@@ -16,14 +16,15 @@ var { setCors } = require('./_cors');
 
 // Config
 var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-var TIMEOUT_MS = 10000; // Bumped to 10s to give smaller engines time to respond
+var TIMEOUT_MS = 10000; 
 var DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 50; 
+var MAX_PAGE_SIZE = 50; 
+var API_FETCH_LIMIT = 50; // Cap APIs to prevent hitting a route 2,000 times
 
 // --- Utility functions ---
 function withTimeout(promise, ms, label) {
     var t;
-    const timeout = new Promise((_, reject) => {
+    var timeout = new Promise((_, reject) => {
         t = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
     });
     return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
@@ -57,9 +58,9 @@ function normalizeImage({ thumbnail, originalUrl, pageUrl, source }) {
 function dedupe(items) {
     var seen = new Set();
     var out = [];
-    for (const it of items) {
+    for (var it of items) {
         try {
-            const targetUrl = it.originalUrl || it.url || it.pageUrl || '';
+            var targetUrl = it.originalUrl || it.url || it.pageUrl || '';
             var u = new URL(targetUrl);
             var key = `${u.hostname}${u.pathname}`.toLowerCase();
             
@@ -67,24 +68,25 @@ function dedupe(items) {
                 seen.add(key);
                 out.push(it);
             }
-        } catch {
+        } catch(e) {
             // skip invalid URLs
         }
     }
     return out;
 }
 
-function scoreItem(item, query, weight = 0.6) {
+function scoreItem(item, query, weight) {
+    weight = weight || 0.6;
     var q = query.toLowerCase();
-    var titleHit = item.title?.toLowerCase().includes(q) ? 1.5 : 0; 
-    var snippetHit = item.snippet?.toLowerCase().includes(q) ? 0.8 : 0;
+    var titleHit = item.title && item.title.toLowerCase().includes(q) ? 1.5 : 0; 
+    var snippetHit = item.snippet && item.snippet.toLowerCase().includes(q) ? 0.8 : 0;
     var httpsBonus = 0;
     try {
         var u = new URL(item.url);
         httpsBonus = u.protocol === 'https:' ? 0.2 : 0;
-    } catch {}
+    } catch(e) {}
     
-    let lengthPenalty = (item.snippet && item.snippet.length < 20) ? -0.5 : 0;
+    var lengthPenalty = (item.snippet && item.snippet.length < 20) ? -0.5 : 0;
 
     return weight + titleHit + snippetHit + httpsBonus + lengthPenalty;
 }
@@ -95,7 +97,6 @@ function paginate(items, page, pageSize) {
 }
 
 async function getHTML(url) {
-    // Upgraded headers to bypass aggressive bot-protection
     var resp = await fetch(url, { 
         headers: { 
             'User-Agent': UA, 
@@ -114,7 +115,7 @@ async function getHTML(url) {
     
     if (!resp.ok) throw new Error(`Fetch ${resp.status} for ${url}`);
     
-    const contentType = resp.headers.get('content-type');
+    var contentType = resp.headers.get('content-type');
     if (!contentType || !contentType.includes('text/html')) {
         throw new Error(`Skipping non-HTML content: ${contentType}`);
     }
@@ -125,17 +126,17 @@ async function getHTML(url) {
 // --- INTELLIGENT PARSERS ---
 
 function extractGenericLinks($, sourceName) {
-    const results = [];
+    var results = [];
     $('h2, h3, h4').each((_, el) => {
-        const titleEl = $(el);
-        const link = titleEl.find('a').first();
+        var titleEl = $(el);
+        var link = titleEl.find('a').first();
         
         if (link.length > 0) {
-            const title = titleEl.text().trim();
-            const url = link.attr('href');
+            var title = titleEl.text().trim();
+            var url = link.attr('href');
             
-            let snippet = "";
-            const parent = titleEl.parent();
+            var snippet = "";
+            var parent = titleEl.parent();
             
             snippet = parent.find('p, span.st, div.snippet, div.compText, div.description').text().trim();
             if (!snippet) snippet = parent.next().text().trim(); 
@@ -148,40 +149,38 @@ function extractGenericLinks($, sourceName) {
     return results;
 }
 
-// Last-resort fallback if specific selectors and h2/h3 parsing fails
 function extractAggressive($, sourceName) {
-    const results = [];
+    var results = [];
     $('a[href^="http"]').each((_, el) => {
-        const a = $(el);
-        const title = a.text().trim();
-        const url = a.attr('href');
+        var a = $(el);
+        var title = a.text().trim();
+        var url = a.attr('href');
         
-        // If the link has a substantial title and isn't pointing back to the search engine itself
         if (title.split(' ').length > 2 && !url.includes(sourceName.toLowerCase())) {
-            let snippet = a.parent().text().replace(title, '').trim();
+            var snippet = a.parent().text().replace(title, '').trim();
             if (snippet.length < 10) snippet = a.parent().parent().text().replace(title, '').trim();
             
-            const item = normalize({ title, url, snippet, source: sourceName + '-aggr' });
+            var item = normalize({ title, url, snippet, source: sourceName + '-aggr' });
             if (item) results.push(item);
         }
     });
     return results;
 }
 
-// --- Web Crawlers ---
+// --- Web Crawler ---
 
 async function crawlBrave(query) {
-    const url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    let out = [];
+    var url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
+    var html = await getHTML(url);
+    var $ = cheerio.load(html);
+    var out = [];
 
     $('div.snippet').each((_, el) => {
-        const a = $(el).find('a').first();
-        const title = a.text();
-        const href = a.attr('href');
-        const snippet = $(el).find('div[class*="text-gray"]').last().text(); 
-        const item = normalize({ title, url: href, snippet, source: 'brave' });
+        var a = $(el).find('a').first();
+        var title = a.text();
+        var href = a.attr('href');
+        var snippet = $(el).find('div[class*="text-gray"]').last().text(); 
+        var item = normalize({ title, url: href, snippet, source: 'brave' });
         if (item) out.push(item);
     });
     
@@ -190,86 +189,62 @@ async function crawlBrave(query) {
     return dedupe(out);
 }
 
-async function crawlMojeek(query) {
-    const url = `https://www.mojeek.com/search?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    let out = [];
+// --- Web APIs ---
 
-    // Broadened to catch specific Mojeek class structures
-    $('.ob-res, ul.results li, ul.results-standard li, .result-item').each((_, el) => {
-        const a = $(el).find('h2 a, h3 a, a.ob, a').first();
-        const title = a.text().trim();
-        const href = a.attr('href');
-        const snippet = $(el).find('p.s, div.snippet, p').first().text().trim();
-
-        if (title && href && href.startsWith('http')) {
-            const item = normalize({ title, url: href, snippet, source: 'mojeek' });
-            if (item) out.push(item);
+async function fetchDuckDuckGo(query) {
+    var url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`;
+    try {
+        var resp = await fetch(url, { headers: { 'User-Agent': UA } });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        var out = [];
+        
+        if (data.RelatedTopics) {
+            for (var topic of data.RelatedTopics) {
+                if (topic.FirstURL && topic.Text) {
+                    var title = topic.Text.split(' - ')[0] || query;
+                    var item = normalize({ title: title, url: topic.FirstURL, snippet: topic.Text, source: 'duckduckgo-api' });
+                    if (item) out.push(item);
+                }
+            }
         }
-    });
-
-    if (out.length < 5) out = out.concat(extractGenericLinks($, 'mojeek'));
-    if (out.length < 5) out = out.concat(extractAggressive($, 'mojeek'));
-    return dedupe(out);
+        return dedupe(out).slice(0, API_FETCH_LIMIT);
+    } catch (err) {
+        return [];
+    }
 }
 
-async function crawlYep(query) {
-    const url = `https://yep.com/web?q=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    let out = [];
-
-    // Yep heavily obfuscates CSS classes. Using structural targeting.
-    $('[class*="result"], div:has(h2), div:has(h3)').each((_, el) => {
-        const a = $(el).find('h2 a, h3 a, a[class*="title"]').first();
-        const title = a.text().trim();
-        const href = a.attr('href');
-        const snippet = $(el).find('[class*="snippet"], p').first().text().trim();
-
-        if (title && href && href.startsWith('http') && !href.includes('yep.com')) {
-            const item = normalize({ title, url: href, snippet, source: 'yep' });
-            if (item) out.push(item);
+async function fetchMediawiki(query) {
+    var url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&srlimit=${API_FETCH_LIMIT}`;
+    try {
+        var resp = await fetch(url, { headers: { 'User-Agent': UA } });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        var out = [];
+        
+        if (data.query && data.query.search) {
+            for (var result of data.query.search) {
+                var cleanSnippet = result.snippet.replace(/<[^>]+>/g, ''); 
+                var pageUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(result.title.replace(/ /g, '_'))}`;
+                var item = normalize({ title: result.title, url: pageUrl, snippet: cleanSnippet, source: 'mediawiki-api' });
+                if (item) out.push(item);
+            }
         }
-    });
-
-    if (out.length < 5) out = out.concat(extractGenericLinks($, 'yep'));
-    if (out.length < 5) out = out.concat(extractAggressive($, 'yep'));
-    return dedupe(out);
+        return dedupe(out);
+    } catch (err) {
+        return [];
+    }
 }
 
-async function crawlMarginalia(query) {
-    const url = `https://search.marginalia.nu/search?query=${encodeURIComponent(query)}`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
-    let out = [];
+// --- Image APIs & Crawler ---
 
-    $('section.search-result, article.search-result, div.result').each((_, el) => {
-        const a = $(el).find('h2 a, h3 a').first();
-        const title = a.text().trim();
-        const href = a.attr('href');
-        const snippet = $(el).find('p.description, p').first().text().trim();
-
-        if (title && href && href.startsWith('http')) {
-            const item = normalize({ title, url: href, snippet, source: 'marginalia' });
-            if (item) out.push(item);
-        }
-    });
-
-    if (out.length < 5) out = out.concat(extractGenericLinks($, 'marginalia'));
-    if (out.length < 5) out = out.concat(extractAggressive($, 'marginalia'));
-    return dedupe(out);
-}
-
-
-// --- Image Crawler ---
 async function crawlImagesFromUrl(pageUrl, source) {
     try {
-        const html = await withTimeout(getHTML(pageUrl), TIMEOUT_MS / 2, `Crawl Images from ${pageUrl}`);
-        const $ = cheerio.load(html);
-        const images = [];
+        var html = await withTimeout(getHTML(pageUrl), TIMEOUT_MS / 2, `Crawl Images from ${pageUrl}`);
+        var $ = cheerio.load(html);
+        var images = [];
 
-        const metaSelectors = [
+        var metaSelectors = [
             'meta[property="og:image"]',
             'meta[property="og:image:secure_url"]',
             'meta[name="twitter:image"]',
@@ -279,11 +254,11 @@ async function crawlImagesFromUrl(pageUrl, source) {
 
         metaSelectors.forEach(selector => {
             $(selector).each((_, el) => {
-                const imgUrl = $(el).attr('content') || $(el).attr('href');
+                var imgUrl = $(el).attr('content') || $(el).attr('href');
                 if (imgUrl) {
                     try {
-                        const resolved = new URL(imgUrl, pageUrl).href;
-                        const item = normalizeImage({
+                        var resolved = new URL(imgUrl, pageUrl).href;
+                        var item = normalizeImage({
                             thumbnail: resolved,
                             originalUrl: resolved,
                             pageUrl: pageUrl,
@@ -296,25 +271,25 @@ async function crawlImagesFromUrl(pageUrl, source) {
         });
 
         $('img').each((_, el) => {
-            const img = $(el);
-            let candidateUrl = img.attr('src') || 
+            var img = $(el);
+            var candidateUrl = img.attr('src') || 
                                img.attr('data-src') || 
                                img.attr('data-original') || 
                                img.attr('data-lazy-src');
                                
-            const srcset = img.attr('srcset') || img.attr('data-srcset');
+            var srcset = img.attr('srcset') || img.attr('data-srcset');
             if (srcset) {
-                const parts = srcset.split(',');
-                const lastPart = parts[parts.length - 1].trim();
-                const urlPart = lastPart.split(' ')[0];
+                var parts = srcset.split(',');
+                var lastPart = parts[parts.length - 1].trim();
+                var urlPart = lastPart.split(' ')[0];
                 if (urlPart) candidateUrl = urlPart;
             }
 
             if (candidateUrl) {
                 try {
                     if (candidateUrl.startsWith('data:image') && candidateUrl.length < 1000) return; 
-                    const resolvedUrl = new URL(candidateUrl, pageUrl).href;
-                    const item = normalizeImage({
+                    var resolvedUrl = new URL(candidateUrl, pageUrl).href;
+                    var item = normalizeImage({
                         thumbnail: resolvedUrl,
                         originalUrl: resolvedUrl,
                         pageUrl: pageUrl,
@@ -331,6 +306,56 @@ async function crawlImagesFromUrl(pageUrl, source) {
     }
 }
 
+async function fetchWikimediaCommons(query) {
+    var url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=${API_FETCH_LIMIT}&prop=imageinfo&iiprop=url&format=json`;
+    try {
+        var resp = await fetch(url, { headers: { 'User-Agent': UA } });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        var out = [];
+        
+        if (data.query && data.query.pages) {
+            var pages = Object.values(data.query.pages);
+            for (var page of pages) {
+                if (page.imageinfo && page.imageinfo[0]) {
+                    var imgUrl = page.imageinfo[0].url;
+                    var descUrl = page.imageinfo[0].descriptionurl;
+                    var item = normalizeImage({ thumbnail: imgUrl, originalUrl: imgUrl, pageUrl: descUrl, source: 'wikimedia-commons-api' });
+                    if (item) out.push(item);
+                }
+            }
+        }
+        return dedupe(out);
+    } catch (err) {
+        return [];
+    }
+}
+
+async function fetchOpenverse(query) {
+    var url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=${API_FETCH_LIMIT}`;
+    try {
+        var resp = await fetch(url, { headers: { 'User-Agent': UA } });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        var out = [];
+        
+        if (data.results) {
+            for (var res of data.results) {
+                var item = normalizeImage({ 
+                    thumbnail: res.thumbnail || res.url, 
+                    originalUrl: res.url, 
+                    pageUrl: res.foreign_landing_url, 
+                    source: 'openverse-api' 
+                });
+                if (item) out.push(item);
+            }
+        }
+        return dedupe(out);
+    } catch (err) {
+        return [];
+    }
+}
+
 // --- Main handler ---
 module.exports = async (req, res) => {
     setCors(res);
@@ -339,49 +364,39 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const q = (req.query.q || '').trim();
-    const type = (req.query.type || 'web').trim();
+    var q = (req.query.q || '').trim();
+    var type = (req.query.type || 'web').trim();
 
     if (!q) {
         res.status(400).json({ error: 'Missing query parameter q' });
         return;
     }
 
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.min(
+    var page = Math.max(1, parseInt(req.query.page || '1', 10));
+    var pageSize = Math.min(
         MAX_PAGE_SIZE,
         Math.max(5, parseInt(req.query.pageSize || String(DEFAULT_PAGE_SIZE), 10))
     );
 
     try {
-        // Appended error logging so server console outputs exact failure reasons
-        const webSearchTasks = [
-            withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(e => { console.error('Brave Failed:', e.message); return []; }),
-            withTimeout(crawlMojeek(q), TIMEOUT_MS, 'Mojeek').catch(e => { console.error('Mojeek Failed:', e.message); return []; }),
-            withTimeout(crawlYep(q), TIMEOUT_MS, 'Yep').catch(e => { console.error('Yep Failed:', e.message); return []; }),
-            withTimeout(crawlMarginalia(q), TIMEOUT_MS, 'Marginalia').catch(e => { console.error('Marginalia Failed:', e.message); return []; })
-        ];
-
-        let [brave, mojeek, yep, marginalia] = await Promise.all(webSearchTasks);
-        
-        let allWebResults = [...brave, ...mojeek, ...yep, ...marginalia];
-        
-        allWebResults = dedupe(allWebResults.filter(Boolean));
-
         if (type === 'web') {
-            const engineWeights = { 
+            var webSearchTasks = [
+                withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave').catch(e => { console.error('Brave Failed:', e.message); return []; }),
+                withTimeout(fetchDuckDuckGo(q), TIMEOUT_MS, 'DuckDuckGo API').catch(e => { console.error('DDG Failed:', e.message); return []; }),
+                withTimeout(fetchMediawiki(q), TIMEOUT_MS, 'MediaWiki API').catch(e => { console.error('MediaWiki Failed:', e.message); return []; })
+            ];
+
+            var [brave, duckduckgo, mediawiki] = await Promise.all(webSearchTasks);
+            
+            var allWebResults = [...brave, ...duckduckgo, ...mediawiki];
+            allWebResults = dedupe(allWebResults.filter(Boolean));
+
+            var engineWeights = { 
                 'brave': 0.85, 
-                'mojeek': 0.82, 
-                'yep': 0.80, 
-                'marginalia': 0.78,
+                'mediawiki-api': 0.82, 
+                'duckduckgo-api': 0.80, 
                 'brave-generic': 0.65,
-                'mojeek-generic': 0.65,
-                'yep-generic': 0.65,
-                'marginalia-generic': 0.65,
-                'brave-aggr': 0.5,
-                'mojeek-aggr': 0.5,
-                'yep-aggr': 0.5,
-                'marginalia-aggr': 0.5
+                'brave-aggr': 0.5
             };
 
             allWebResults = allWebResults.map(it => ({
@@ -389,35 +404,41 @@ module.exports = async (req, res) => {
                 score: scoreItem(it, q, engineWeights[it.source] || 0.4)
             })).sort((a, b) => b.score - a.score);
 
-            const total = allWebResults.length;
-            const items = paginate(allWebResults, page, pageSize);
+            var totalWeb = allWebResults.length;
+            var webItems = paginate(allWebResults, page, pageSize);
 
-            res.status(200).json({ query: q, total, page, pageSize, items });
+            res.status(200).json({ query: q, total: totalWeb, page, pageSize, items: webItems });
             return;
 
         } else if (type === 'image') {
-            const urlsToCrawl = allWebResults.slice(0, 15).map(it => it.url).filter(u => u);
+            // Fast web crawl to seed page image crawler
+            var seedingTask = await withTimeout(crawlBrave(q), TIMEOUT_MS, 'Brave Seed').catch(() => []);
+            var urlsToCrawl = dedupe(seedingTask.filter(Boolean)).slice(0, 15).map(it => it.url).filter(u => u);
 
-            const imageCrawlTasks = urlsToCrawl.map(url =>
+            var imageCrawlTasks = urlsToCrawl.map(url =>
                 withTimeout(
-                    crawlImagesFromUrl(url, allWebResults.find(it => it.url === url)?.source || 'unknown'), 
+                    crawlImagesFromUrl(url, 'brave'), 
                     TIMEOUT_MS, 
                     `Image Crawl from ${url}`
                 ).catch(() => [])
             );
 
-            let allImageResultsArrays = await Promise.all(imageCrawlTasks);
-            let allImageResults = dedupe(allImageResultsArrays.flat());
+            // Directly inject Image APIs into task batch limit queue
+            imageCrawlTasks.push(withTimeout(fetchWikimediaCommons(q), TIMEOUT_MS, 'Wikimedia API').catch(() => []));
+            imageCrawlTasks.push(withTimeout(fetchOpenverse(q), TIMEOUT_MS, 'Openverse API').catch(() => []));
 
-            const total = allImageResults.length;
-            const items = paginate(allImageResults, page, pageSize);
+            var allImageResultsArrays = await Promise.all(imageCrawlTasks);
+            var allImageResults = dedupe(allImageResultsArrays.flat().filter(Boolean));
+
+            var totalImg = allImageResults.length;
+            var imgItems = paginate(allImageResults, page, pageSize);
 
             res.status(200).json({
                 query: q,
-                total,
+                total: totalImg,
                 page,
                 pageSize,
-                items
+                items: imgItems
             });
             return;
 
