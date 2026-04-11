@@ -423,7 +423,7 @@ module.exports = async (req, res) => {
 
         if (type === 'web') {
             const engineWeights = { 
-                'brave': 0.51, 
+                'brave': 0.01, 
                 'bing': 0.8, 
                 'yahoo': 0.89, 
                 'ecosia': 0.7, 
