@@ -237,7 +237,8 @@ async function crawlBrave(query) {
 async function fetchDDG(query) {
     try {
         const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`;
-        const resp = await fetch(url);
+        // Added User-Agent header
+        const resp = await fetch(url, { headers: { 'User-Agent': UA } });
         const data = await resp.json();
         const out = [];
         if (data.RelatedTopics) {
@@ -259,7 +260,8 @@ async function fetchDDG(query) {
 async function fetchWikimediaCommons(query) {
     try {
         const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata&format=json&origin=*`;
-        const resp = await fetch(url);
+        // Added User-Agent header (CRITICAL for Wikimedia)
+        const resp = await fetch(url, { headers: { 'User-Agent': UA } });
         const data = await resp.json();
         const out = [];
         if (data.query && data.query.pages) {
@@ -283,7 +285,8 @@ async function fetchWikimediaCommons(query) {
 async function fetchOpenverse(query) {
     try {
         const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=15`;
-        const resp = await fetch(url);
+        // Added User-Agent header
+        const resp = await fetch(url, { headers: { 'User-Agent': UA } });
         const data = await resp.json();
         const out = [];
         if (data.results) {
@@ -420,7 +423,7 @@ module.exports = async (req, res) => {
 
         if (type === 'web') {
             const engineWeights = { 
-                'brave': 0.01, 
+                'brave': 0.51, 
                 'bing': 0.8, 
                 'yahoo': 0.89, 
                 'ecosia': 0.7, 
