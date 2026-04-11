@@ -420,14 +420,14 @@ module.exports = async (req, res) => {
 
         if (type === 'web') {
             const engineWeights = { 
-                'brave': 0.85, 
+                'brave': 0.01, 
                 'bing': 0.8, 
                 'yahoo': 0.89, 
                 'ecosia': 0.7, 
                 'bing-featured': 0.9,
                 'ecosia-news': 0.8,
-                'duckduckgo-api': 0.82,
-                'medialink-web': 0.75
+                'duckduckgo-api': 0.92,
+                'medialink-web': 0.95
             };
 
             allWebResults = allWebResults.map(it => ({
