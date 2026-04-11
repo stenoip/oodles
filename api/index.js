@@ -15,7 +15,12 @@ var cheerio = require('cheerio');
 var { setCors } = require('./_cors');
 
 // Config
-var UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+var UA_LIST = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0'
+];
 var TIMEOUT_MS = 10000; 
 var DEFAULT_PAGE_SIZE = 10;
 var MAX_PAGE_SIZE = 50; 
@@ -170,6 +175,10 @@ function extractAggressive($, sourceName) {
 // --- Web Crawler ---
 
 async function crawlBrave(query) {
+    // Add a random sleep between 500ms and 2500ms
+    var ms = Math.floor(Math.random() * 2000) + 500;
+    await new Promise(resolve => setTimeout(resolve, ms));
+
     var url = `https://search.brave.com/search?q=${encodeURIComponent(query)}`;
     var html = await getHTML(url);
     var $ = cheerio.load(html);
