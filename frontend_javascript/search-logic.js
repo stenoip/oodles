@@ -319,7 +319,8 @@ async function executeAllSearch(query) {
 
         // 2. TRIGGER SERP MODULE RENDERING
         if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
-            SERP_MODULE.renderFeaturedSnippet(webData.items);
+            // We use await here so the Featured Snippet can crawl the URL if needed
+            await SERP_MODULE.renderFeaturedSnippet(webData.items, query); 
             SERP_MODULE.renderPopularProducts(webData.items);
             SERP_MODULE.renderKnowledgePanel(query);
         }
