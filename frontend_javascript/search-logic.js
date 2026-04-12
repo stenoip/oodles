@@ -297,33 +297,41 @@ async function executeAllSearch(query) {
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
     
-    allContainer.innerHTML = '<p class="small">Gathering the best of the web, images, and video...</p>';
+    // 1. CLEAR PREVIOUS SERP STATE
+    if (typeof SERP_MODULE !== 'undefined') {
+        SERP_MODULE.clearAll();
+    }
+    
+    allContainer.innerHTML = '<p class="small">Gathering the best of the web, images and video...</p>';
 
     try {
-        // Fetch Web, Image, and Video concurrently
         var [webResp, imgResp, vidResp] = await Promise.all([
             fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=10`),
             fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=8`),
             fetch(`${BACKEND_BASE}/video-search?query=${encodeURIComponent(query)}`)
         ]);
 
-        const webData = await webResp.json();
-        const imgData = await imgResp.json();
-        const vidData = await vidResp.json();
+        var webData = await webResp.json();
+        var imgData = await imgResp.json();
+        var vidData = await vidResp.json();
 
-        // Save web items for the AI Overview ranking to work
         lastFetchedItems = webData.items;
 
-        // Render UI Results
+        // 2. TRIGGER SERP MODULE RENDERING
+        if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
+            SERP_MODULE.renderFeaturedSnippet(webData.items);
+            SERP_MODULE.renderPopularProducts(webData.items);
+            SERP_MODULE.renderKnowledgePanel(query);
+        }
+
         renderAllResults(query, webData, imgData, vidData);
 
-        // Trigger the AI processing based on the web results
         if (webData.items.length > 0) {
             processAIResults(query, webData.items);
         }
 
     } catch (error) {
         console.error('All Search Error:', error);
-        allContainer.innerHTML = '<p class="small">Error loading universal results. Please try refreshing.</p>';
+        allContainer.innerHTML = '<p class="small">Error retrieving results.</p>';
     }
 }
