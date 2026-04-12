@@ -625,43 +625,55 @@ button.large, input.large[type="button"], input.large[type="submit"] {
     <hr class="divider">
   </header>
 
-  <div class="container">
+ <div class="container">
     
     <div id="goodCitizenMessage" class="good-citizen-message">
         Thank you for being a good internet citizen by choosing to turn off AI-Overviews. <a href="https://stenoip.github.io/blog/google_ai_overviews.html">Learn more</a>.
     </div>
 
-<div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
-    
-    <div class="results-section" id="aiOverview">
+    <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px;">
+        
+        <div class="main-column" style="flex: 1; min-width: 300px; max-width: 800px;">
+            
+            <div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
+            
+            <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
+
+            <div class="results-section" id="aiOverview"></div>
+
+            <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
+            
+            <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
+
+            <div class="results-section" id="allSection">
+                <h3>Search Results</h3>
+                <div id="allResults"><p class="small">Searching everything...</p></div>
+            </div>
+            
+            <div class="results-section" id="linksSection">
+                <h3>Links</h3>
+                <div id="linkResults"><p class="small">Enter a search query.</p></div>
+            </div>
+
+            <div class="results-section" id="imagesSection" style="display:none;">
+                <h3>Images</h3>
+                <div id="imageResults"><p class="small">Select a query from links.</p></div>
+            </div>
+
+            <div class="results-section" id="videosSection" style="display:none;">
+                <h3>Videos</h3>
+                <div id="videoResults" class="video-grid">
+                    <p class="small">Enter a query to find videos.</p>
+                </div>
+            </div>
         </div>
 
+        <div class="sidebar-column" style="width: 320px;">
+            <div id="knowledgePanelContainer" style="display:none;"></div>
+        </div>
 
-<div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;">
     </div>
-    <div class="results-section" id="allSection">
-  <h3>Search Results</h3>
-  <div id="allResults"><p class="small">Searching everything...</p></div>
 </div>
-    
-    <div class="results-section" id="linksSection">
-      <h3>Links</h3>
-      <div id="linkResults"><p class="small">Enter a search query.</p></div>
-    </div>
-
-    <div class="results-section" id="imagesSection" style="display:none;">
-      <h3>Images</h3>
-      <div id="imageResults"><p class="small">Select a query from links.</p></div>
-    </div>
-
-    <div class="results-section" id="videosSection" style="display:none;">
-  <h3>Videos</h3>
-  <div id="videoResults" class="video-grid">
-    <p class="small">Enter a query to find videos.</p>
-  </div>
-</div>
-
-  </div>
 
   <footer>© Stenoip Company • Oodles Metasearch</footer>
   <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
@@ -705,7 +717,8 @@ button.large, input.large[type="button"], input.large[type="submit"] {
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
-<script src="frontend_javascript/search-logic.js"></script>
+<script src="frontend_javascript/serp.js"></script>
+  <script src="frontend_javascript/search-logic.js"></script>
   <script src="frontend_javascript/search-ui.js"></script>
   <script src="frontend_javascript/adaptive-chat.js"></script>
 <script src="frontend_javascript/ad.js"></script>
