@@ -56,60 +56,25 @@ var SERP_MODULE = {
         container.style.display = 'block';
     },
 
-    /*
-     A robot that finds relavent keywords in a passage
+    /**
+     * Helper to find a relevant chunk of text based on the query
      */
     extractRelevantChunk: function(text, query) {
-    if (!text) return null;
-
-    // 1. Clean the text and split into blocks (paragraphs or large sentence groups)
-    var blocks = text.split(/\n\n|\n/).filter(b => b.trim().length > 60);
-    
-    // 2. Tokenize query and remove words shorter than 3 chars 
-    // (This naturally ignores 'a', 'is', 'to', 'the' without a fixed list)
-    var queryTerms = query.toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .split(/\s+/)
-        .filter(term => term.length > 2);
-
-    var bestBlock = null;
-    var highestScore = 0;
-
-    blocks.forEach(block => {
-        var lowerBlock = block.toLowerCase();
-        var score = 0;
-
-        queryTerms.forEach(term => {
-            // Use Regex to count exact word matches only (prevents 'loaf' matching 'loaves' or 'floating')
-            const regex = new RegExp('\\b' + term + '\\b', 'g');
-            const matches = (lowerBlock.match(regex) || []).length;
-            
-            // SCORING RULE: 
-            // Finding a term once is good. Finding it multiple times in one 
-            // paragraph is a sign of a "definition" or "focused content".
-            score += (matches * 10); 
-            
-            // BONUS: If terms appear close to each other, it's likely a high-quality snippet
-            if (matches > 0) score += 5; 
-        });
-
-        // PENALTY: Decrease score for blocks that look like headers/menus
-        // (Short blocks with very few verbs or lots of special characters)
-        if (block.length < 100 && block.includes('|')) score -= 20;
-
-        if (score > highestScore) {
-            highestScore = score;
-            bestBlock = block;
+        if (!text) return null;
+        var sentences = text.split(/[.!?]\s+/);
+        var keywords = query.toLowerCase().split(' ').filter(w => w.length > 3);
+        
+        // Find the first sentence that matches a keyword
+        for (var i = 0; i < sentences.length; i++) {
+            for (var k = 0; k < keywords.length; k++) {
+                if (sentences[i].toLowerCase().includes(keywords[k])) {
+                    // Return this sentence and the next one for context
+                    return (sentences[i] + ". " + (sentences[i+1] || "")).trim();
+                }
+            }
         }
-    });
-
-    // Final Fallback: If no keywords match, the first large block of text is usually the intro.
-    if (!bestBlock) {
-        bestBlock = blocks.find(b => b.length > 120) || blocks[0];
-    }
-
-    return bestBlock.trim().substring(0, 450);
-},
+        return sentences[0]; // Fallback to first sentence
+    },
 
     renderKnowledgePanel: async function(query) {
         var container = document.getElementById('knowledgePanelContainer');
