@@ -316,6 +316,24 @@ function switchTab(tabName, executeNewSearch) {
     if (executeNewSearch && currentQuery) {
         executeSearch(currentQuery, newSearchType, 1);
     }
+cleanupUIForTabs(normalizedTab);
+}
+
+function cleanupUIForTabs(activeTab) {
+    var kpContainer = document.getElementById('knowledgePanelContainer');
+    var snippetContainer = document.getElementById('featuredSnippetContainer');
+    var productContainer = document.getElementById('popularProductsContainer');
+
+    // SERP features generally only belong on the "All" (web) tab
+    if (activeTab !== 'all') {
+        if (kpContainer) kpContainer.style.display = 'none';
+        if (snippetContainer) snippetContainer.style.display = 'none';
+        if (productContainer) productContainer.style.display = 'none';
+    } else {
+        // Only show if they actually have content
+        if (kpContainer && kpContainer.innerHTML !== '') kpContainer.style.display = 'block';
+        if (snippetContainer && snippetContainer.innerHTML !== '') snippetContainer.style.display = 'block';
+    }
 }
 
 function changePage(delta) {
