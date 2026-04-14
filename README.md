@@ -43,7 +43,7 @@ Traditional search engines are powerful, but they’re rigid. They return fixed 
 Chatbots do the opposite: they generate answers, but they don’t give you real search results or multiple sources to verify anything. 
 
 As of 2026, we introduced Adaptive Search, which merges both worlds. When your query looks like a normal search, Oodles shows you our classic results from Bing, Yahoo and Brave. When your query is conversational or open‑ended, it shifts into chat mode and responds like an **AI assistant**. This hybrid approach removes the limitations of both systems, giving you real search when you need it and real conversation when you want it **all in one place**.
-```
+
 
 ---
 
