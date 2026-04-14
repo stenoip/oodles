@@ -6,55 +6,48 @@
 
 ...
 
----
 
-Note, this is a technical overview of Oodles. If you do not know programming, it may be hard for you to understand!
+Oodles is a full‑scale, general‑purpose metasearch engine that combines results from Bing, Yahoo and Brave into a single, unified search experience.
+It works like Google or Bing: type a query, get web results but with AI‑enhanced ranking,  and zero tracking.
 
-
----
-
-Oodles is a dual-purpose search platform that functions  as a **Metasearch Engine** (crawling results from Bing, Brave and Yahoo) and secondarily as a **self-serve index generator**. It features an integrated AI system called **Praterich** that synthesizes, ranks and detects tools for a smarter search experience. It can be used by the everyday user to stop the monopoly of Google.
+Alongside its everyday search interface, Oodles also includes optional developer tools for deep crawling and custom index generation.
 
 
 ---
 
-## Key Features
 
-### 1. Metasearch Aggregator (Primary)
-* **Multi-Source Fetching:** Queries Bing, Yahoo, Brave simultaneously via the `/api` endpoint.
+### Who Oodles Is For
+Oodles Metasearch is for everyday users who want a Google‑like search engine without tracking and want multi‑source results without bias! It’s ideal for everyday users who simply want to type a question and get clean, fas, multi‑source results but it also appeals to people who care about **privacy** and **independence** in how they search. Because Oodles pulls results from Bing, Yahoo and Brave at the same time, it gives users a broader, more balanced view of the web instead of relying on one company’s algorithm. 
+
+## What Oodles Metasearch Does
+
+
+* **Multi-Source Fetching:** Fetches results from Bing, Yahoo, and Brave simultaneously.
 * **AI Synthesis (Praterich):** Generates  search overviews and summarizes technical results.
 * **Smart Ranking:** AI-driven re-ranking that promotes the top 5 most relevant links above standard algorithmic results.
-* **Tool Detection:** Automatically triggers built-in tools (Calculator, Translator, Colour Picker) based on natural language queries.
-* **Deep Image Crawler:** Extracts images directly from the source pages. A recent update has increased the range of number of images to 100-400.
+* **SERP Detection:** Knowledge Panel, To-Go tools (like translator and calculator) for quick answers.
+* **Deep Image Crawler:** Up to 400 images!
 
-### Oodles features Dataset Generation
-* **Deep Crawling:** Visits and scrapes a webpage, headings and metadata from target URLs using `metasearch.js`.
-* **Index Creation:** Generates and downloads custom `index.json` datasets for offline or private search use.
+
+
+
 
 
 ---
 
-## Project Structure
+## NEW! The Adaptive search engine
 
-```text
-root/
-├── index.html                # Main search entry
-├── search.html               # Results display page
-├── 404.html                  # Error page
-├── frontend_javascript/      # Client-side logic
-│   └── search-logic.js       # UI Controller: AI, Tools, and Tab Management
-└── api/                      # Vercel Backend
-    ├── index.js              # Primary Metasearch & Image Crawler
-    ├── metasearch.js         # Deep Content Scraper (for indexing)
-    ├── generate.js           # index.json Generator logic
-    ├── search.js             # Local index search logic
-    ├── analytics.js          # Click tracking
-    └── _cors.js              # Security & Headers
+
+Traditional search engines are powerful, but they’re rigid. They return fixed lists of links even when the user is clearly asking for an explanation, not a webpage. 
+
+Chatbots do the opposite: they generate answers, but they don’t give you real search results or multiple sources to verify anything. 
+
+As of 2026, we introduced Adaptive Search, which merges both worlds. When your query looks like a normal search, Oodles shows you our classic results from Bing, Yahoo and Brave. When your query is conversational or open‑ended, it shifts into chat mode and responds like an **AI assistant**. This hybrid approach removes the limitations of both systems, giving you real search when you need it and real conversation when you want it **all in one place**.
 ```
 
 ---
 
-## How Oodles Works
+## How Oodles Works (developer info)
 
 ### Search Flow
 * User submits a query via `index.html`.
@@ -67,7 +60,7 @@ root/
 * `api/metasearch.js` performs a deep crawl(our ants), visiting each page and extracting full content.
 * The backend bundles this into a downloadable `index.json` compatible with `api/search.js`.
 
----
+
 
 ## Configuration
 
