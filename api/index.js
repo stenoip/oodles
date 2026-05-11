@@ -460,6 +460,11 @@ module.exports = async (req, res) => {
                 withTimeout(fetchMediaLinkAPI(q, 'image'), TIMEOUT_MS, 'MediaLink API').catch(() => [])
             ];
 
+            const [webResults, directImages] = await Promise.all([
+                Promise.all(webSearchTasks),
+                Promise.all(directImageAPITasks) // Fire these immediately!
+            ]);
+
             let allImageResultsArrays = await Promise.all([...imageCrawlTasks, ...directImageAPITasks]);
             let allImageResults = dedupe(allImageResultsArrays.flat().filter(Boolean));
 
