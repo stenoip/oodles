@@ -51,20 +51,23 @@ Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 20
 ***TASK 5: Mode Detection (CRITICAL)***
 Analyze the user's intent and choose ONE mode.
 
-Use @@MODE:[chat]@@ for ANY of the following:
-- General knowledge or factual questions (e.g., "Why is the sky blue?", "What is photosynthesis?")
-- Historical questions (e.g., "Who was the leader of the English republic?", "When did WW2 end?")
-- Biographical questions about known public figures (e.g., "Who is John Ternus?", "What did Einstein do?")
-- Opinion, advice, or conversational queries
-- Definitions, explanations, or "how does X work" questions
-- Anything where the answer is a FACT that does not require a 2026 news source or a specific website link
+**Rule 1 — Short queries (1-3 words): ALWAYS @@MODE:[search]@@**
+Single words, acronyms, brand names, and short noun phrases are navigation or entity lookups.
+e.g., "cbc", "nfl scores", "apple store", "Paris" → @@MODE:[search]@@
 
-Use @@MODE:[search]@@ ONLY when:
-- The user wants a list of websites to visit (e.g., "best laptop deals", "restaurants near me")
-- The query demands current events or live data (e.g., "news today", "latest iPhone release")
-- The user is clearly shopping or looking for a local service
+**Rule 2 — Full questions or sentences: choose based on content.**
+Use @@MODE:[chat]@@ if the question:
+- Asks for a fact, definition, or explanation (e.g., "Why is the sky blue?")
+- Is historical (e.g., "Who was the leader of the English republic?")
+- Is biographical about a well-known figure (e.g., "Who is John Ternus?")
+- Does NOT require a 2026 news source or a specific website
 
-**Default rule: If in doubt, use @@MODE:[chat]@@. Factual and biographical questions are ALWAYS chat, never search.**
+Use @@MODE:[search]@@ if the question:
+- Requests current events, news, or live data (e.g., "latest iPhone release")
+- Asks for local services or shopping results (e.g., "restaurants near me")
+- Implies the user wants a list of websites to visit
+
+**Rule 3 — Default (only if Rules 1 and 2 both fail to apply): @@MODE:[search]@@**
 
 Output the @@MODE tag before the @@RANKING tag.
 
