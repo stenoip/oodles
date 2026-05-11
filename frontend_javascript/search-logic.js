@@ -49,25 +49,23 @@ Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 20
 
 
 ***TASK 5: Mode Detection (CRITICAL)***
-Analyze the user's intent and choose ONE mode.
 
-**Rule 1 — Short queries (1-3 words): ALWAYS @@MODE:[search]@@**
-Single words, acronyms, brand names, and short noun phrases are navigation or entity lookups.
-e.g., "cbc", "nfl scores", "apple store", "Paris" → @@MODE:[search]@@
+**Rule 1 — Short queries (1–3 words): ALWAYS @@MODE:[search]@@**
+Single words, acronyms, brand names, short noun phrases.
+e.g., "cbc", "nfl scores", "Paris" → @@MODE:[search]@@
 
-**Rule 2 — Full questions or sentences: choose based on content.**
-Use @@MODE:[chat]@@ if the question:
-- Asks for a fact, definition, or explanation (e.g., "Why is the sky blue?")
-- Is historical (e.g., "Who was the leader of the English republic?")
-- Is biographical about a well-known figure (e.g., "Who is John Ternus?")
-- Does NOT require a 2026 news source or a specific website
+**Rule 2 — Question queries (contains Who/What/Where/When/Why/How, or ends with ?): ALWAYS @@MODE:[chat]@@**
+UNLESS the question explicitly asks for current events, news, local services, or shopping.
+e.g., "Who sailed to the West Indies?" → @@MODE:[chat]@@
+e.g., "Who is the current UK prime minister?" → @@MODE:[search]@@ (current event)
+e.g., "What restaurants are near me?" → @@MODE:[search]@@ (local)
 
-Use @@MODE:[search]@@ if the question:
-- Requests current events, news, or live data (e.g., "latest iPhone release")
-- Asks for local services or shopping results (e.g., "restaurants near me")
-- Implies the user wants a list of websites to visit
+**Rule 3 — Everything else: @@MODE:[search]@@**
+If no rule above clearly applies, default to search.
 
-**Rule 3 — Default (only if Rules 1 and 2 both fail to apply): @@MODE:[search]@@**
+**CRITICAL: The presence of good search snippets does NOT override these rules.
+A historical or factual question is ALWAYS chat, even if snippets answer it well.**
+
 
 Output the @@MODE tag before the @@RANKING tag.
 
