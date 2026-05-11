@@ -214,8 +214,20 @@ async function processAIResults(query, searchItems) {
 
 
 
+var searchCache = {};
+
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
+
+    // Create a unique key for this specific request
+    const cacheKey = `${query}_${type}_${page}`;
+    
+    // Check if we already have this in the "Memory Palace"
+    if (searchCache[cacheKey]) {
+        console.log("Retrieving from cache: ", cacheKey);
+        renderCachedResults(searchCache[cacheKey], type);
+        return; 
+    }
 
     currentQuery = query;
     currentSearchType = type;
@@ -290,6 +302,10 @@ async function executeSearch(query, type, page = 1) {
             }
         }
     }
+    var resp = await fetch(url);
+    var data = await resp.json();
+    searchCache[cacheKey] = data; // Cache it!
+    renderLinkResults(data.items, data.total);
 }
 
 
