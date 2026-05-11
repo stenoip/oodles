@@ -49,9 +49,22 @@ Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 20
 
 
 ***TASK 5: Mode Detection (CRITICAL)***
-Analyze the user's intent:
-- Use this if the user is asking a general knowledge question (e.g., "Why is the sky blue?"), asking for an opinion, or engaging in conversation. If the answer is "common knowledge" that doesn't require specific 2026 news or links, prefer chat.: @@MODE:[chat]@@
-- Use this ONLY if the query is looking for specific websites, local services, current events or shopping results where links are the primary goal: @@MODE:[search]@@
+Analyze the user's intent and choose ONE mode.
+
+Use @@MODE:[chat]@@ for ANY of the following:
+- General knowledge or factual questions (e.g., "Why is the sky blue?", "What is photosynthesis?")
+- Historical questions (e.g., "Who was the leader of the English republic?", "When did WW2 end?")
+- Biographical questions about known public figures (e.g., "Who is John Ternus?", "What did Einstein do?")
+- Opinion, advice, or conversational queries
+- Definitions, explanations, or "how does X work" questions
+- Anything where the answer is a FACT that does not require a 2026 news source or a specific website link
+
+Use @@MODE:[search]@@ ONLY when:
+- The user wants a list of websites to visit (e.g., "best laptop deals", "restaurants near me")
+- The query demands current events or live data (e.g., "news today", "latest iPhone release")
+- The user is clearly shopping or looking for a local service
+
+**Default rule: If in doubt, use @@MODE:[chat]@@. Factual and biographical questions are ALWAYS chat, never search.**
 
 Output the @@MODE tag before the @@RANKING tag.
 
