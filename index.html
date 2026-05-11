@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-image: url('bg/stars.jpg');
+  background-image: url('https://stenoip.github.io/oodles/wallpapers/wallpaper.png');
   background-attachment: fixed;
   background-position: center;
   /* Add these two lines to fix the repetition and sizing */
@@ -230,50 +230,31 @@
         max-width: 100%;
       }
     }
-    .play-pong-container {
+    .bulletin-board-container {
       text-align: center;
       margin-top: 30px;
     }
-    .play-pong-btn {
-      position: relative;
-      display: inline-block;
-      background: linear-gradient(90deg, #00ccff, #00ffcc);
-      border: none;
-      color: #000;
-      font-size: 1.4em;
+    
+    .bulletin-text {
+      color: rgb(245,245,245);
+      font-family: "Courier New";
       font-weight: bold;
-      padding: 16px 55px;
-      border-radius: 50px;
-      cursor: pointer;
-      text-decoration: none;
-      overflow: hidden;
-      box-shadow: 0 0 20px rgba(0,255,255,0.5);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      font-size: 17px;
+      position: relative;
+      top: 155px;
+      
+      
     }
-    .play-pong-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 30px rgba(0,255,255,0.8);
+    .bulletin-text-title {
+      color: rgb(245,245,245);
+      font-family: "Courier New";
+      font-weight: bold;
+      font-size: 19px;
+      position: relative;
+      top: 145px;
+      
+      
     }
-    .play-pong-btn .ball {
-      position: absolute;
-      top: 10%;
-      left: 20%;
-      width: 16px;
-      height: 16px;
-      background: #fff;
-      border-radius: 50%;
-      box-shadow: 0 0 10px #fff;
-      animation: bounce 1.2s infinite ease-in-out;
-    }
-    @keyframes bounce {
-      0%, 100% { top: 10%; background: #00ffcc; transform: scaleY(1); }
-      50% { top: 65%; background: #00ccff; transform: scaleY(0.8); }
-    }
-    @media (max-width:600px) {
-      .play-pong-btn { font-size: 1.1em; padding: 14px 40px; }
-      .play-pong-btn .ball { width: 12px; height: 12px; }
-    }
-
 
  .world-search-btn:hover {
       background-color: rgba(255, 255, 255, 0.2);
@@ -282,7 +263,6 @@
       border: none;
       background: transparent;
       cursor: pointer;
-      color: #666;
       margin-left: 10px;
       transition: color 0.3s;
       padding: 0;
@@ -294,7 +274,7 @@
 </head>
 <body>
   <header>
-    <a href="https://stenoip.github.io/articles/article_29_03_2026(2).html"><img src="https://stenoip.github.io/oodles/scribbles/oodles_scribble_aprilfools+artemis_2026.png" alt="Oodles Metasearch Logo"></a>
+   <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Metasearch Logo">
   </header>
 
   <nav>
@@ -329,11 +309,14 @@
         <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
    
-     <div class="play-pong-container">
-        <a href="https://stenoip.github.io/oodles/ie11" class="play-pong-btn">
-          <div class="ball"></div>
-          Now supporting Internet Explorer 11!
-        </a>
+     <div class="bulletin-board-container">
+        <p class="bulletin-text-title">Welcome to the 
+          <br>
+          bulletin board!</p>  
+       
+       <p class="bulletin-text">Nothing here yet</p> 
+       <img src="https://stenoip.github.io/oodles/bulletin_board.png" height="300px" width="100%">
+      
   </div>
   </div>
    
