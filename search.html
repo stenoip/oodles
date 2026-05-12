@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,9 +41,20 @@
 
     /*  HEADER */
     header {
-      
-      backdrop-filter: blur(6px);
-    }
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* Ensures it stays above search results */
+  background: rgba(255, 255, 255, 0.85); /* Semi-transparent for Aero look */
+  backdrop-filter: blur(12px) saturate(150%); /* The "Glass" effect */
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease;
+}
+
+/* Optional: Slightly change background when scrolling for better contrast */
+header.scrolled {
+  background: rgba(255, 255, 255, 0.98);
+}
 
     .top-bar {
       max-width: 1000px;
@@ -58,36 +70,38 @@
     }
 
     .search-area {
-      flex: 1;
-    }
+  display: flex;
+  align-items: center;
+  position: relative;
+}
 
-    .search-area input {
-      width: 100%;
-      max-width: 600px;
-      padding: 10px 16px;
-      font-size: 16px;
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      background: linear-gradient(to bottom, #ffffff 0%, #f7f9fc 100%);
-    }
+.search-area textarea {
+  width: 500px;
+  max-width: 600px;
+  min-height: 42px; /* Matches your current height */
+  max-height: 200px; /* Prevents it from taking over the screen */
+  padding: 10px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(to bottom, #ffffff 0%, #f7f9fc 100%);
+  resize: none; /* Disables the manual resize handle */
+  overflow-y: hidden; /* Hides scrollbar until max-height is reached */
+  transition: border-color 0.2s, box-shadow 0.2s, border-radius 0.2s;
+  line-height: 1.4;
+}
 
-    .search-area input::after {
-      content: "";
-      position: absolute;
-      top: 1px;
-      left: 10px;
-      right: 10px;
-      height: 40%;
-      background: linear-gradient(to bottom, rgba(255,255,255,0.7), transparent);
-      border-radius: 24px;
-      pointer-events: none;
-    }
-    
-    .search-area input:focus {
-      outline: none;
-      border-color: var(--blue);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
+/* When the box gets tall, make the corners less rounded for a "box" look */
+.search-area textarea.expanded {
+  border-radius: 16px;
+}
+
+.search-area textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 
     /*  NAV */
     nav {
@@ -602,7 +616,7 @@ button.large, input.large[type="button"], input.large[type="submit"] {
         <a href="index.html"> <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Logo"></a>
       </div>
       <div class="search-area">
-        <input type="text" id="currentQuery" placeholder="Search again...">
+        <textarea id="currentQuery" placeholder="Search again..." rows="2"></textarea>
       </div>
     </div>
 
@@ -615,20 +629,22 @@ button.large, input.large[type="button"], input.large[type="submit"] {
     <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">NEW! World Search</a>
     </nav>
 
-    <div class="ai-control-row">
-        <span class="ai-toggle-label">AI Overview</span>
-        <label class="switch" title="Toggle AI Overview On/Off">
-            <input type="checkbox" id="aiOverviewToggle"> 
-            <span class="slider"></span>
-        </label>
-    </div>
-    <hr class="divider">
+    
+  
   </header>
 
  <div class="container">
     
     <div id="goodCitizenMessage" class="good-citizen-message">
         Thank you for being a good internet citizen by choosing to turn off AI-Overviews. <a href="https://stenoip.github.io/blog/google_ai_overviews.html">Learn more</a>.
+    </div>
+    
+    <div class="ai-control-row">
+        <span class="ai-toggle-label">AI Overview</span>
+        <label class="switch" title="Toggle AI Overview On/Off">
+            <input type="checkbox" id="aiOverviewToggle"> 
+            <span class="slider"></span>
+        </label>
     </div>
 
     <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px;">
