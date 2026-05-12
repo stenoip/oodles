@@ -48,23 +48,6 @@ Example (Snippets are bad): The user asked for "latest 2026 fusion results" but 
 Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 2026]@@@@RANKING:[...]@@
 
 
-***TASK 5: Mode Detection (CRITICAL)***
-
-**Rule 1 — Short queries (1–3 words): ALWAYS @@MODE:[search]@@**
-Single words, acronyms, brand names, short noun phrases.
-e.g., "cbc", "nfl scores", "Paris" → @@MODE:[search]@@
-
-**Rule 2 — Question queries (contains Who/What/Where/When/Why/How, or ends with ?): ALWAYS @@MODE:[chat]@@**
-UNLESS the question explicitly asks for current events, news, local services, or shopping.
-e.g., "Who sailed to the West Indies?" → @@MODE:[chat]@@
-e.g., "Who is the current UK prime minister?" → @@MODE:[search]@@ (current event)
-e.g., "What restaurants are near me?" → @@MODE:[search]@@ (local)
-
-**Rule 3 — Everything else: @@MODE:[search]@@**
-If no rule above clearly applies, default to search.
-
-**CRITICAL: The presence of good search snippets does NOT override these rules.
-A historical or factual question is ALWAYS chat, even if snippets answer it well.**
 
 
 Output the @@MODE tag before the @@RANKING tag.
@@ -75,7 +58,39 @@ Your response must be:
 2. The optional @@TOOL[...]@@ tag.
 3. The @@RANKING[...]@@ tag at the very end.
 `;
-// --- END AI CONFIGURATION ---
+// END AI CONFIGURATION 
+
+
+/*
+  THE ADAPTIVE HELP-Bot
+  Uses a scoring system to decide between 'chat' and 'search'.
+  This is more efficient than fixed keyword matching.
+ */
+function determineQueryMode(query) {
+    const q = query.trim().toLowerCase();
+    const words = q.split(/\s+/);
+    let chatScore = 0;
+
+    // Rule 1: Length Logic
+    if (words.length <= 2) return 'search'; // Tiny queries are always search
+    if (words.length >= 7) chatScore += 2;  // Complex sentences favor chat
+
+    // Rule 2: Chat Favoured
+    var interrogatives = ['who', 'how', 'why', 'is', 'should', 'can', 'explain', 'tell', 'what'];
+    if (interrogatives.includes(words[0])) chatScore += 3;
+    if (q.endsWith('?')) chatScore += 2;
+
+    // Rule 3: Search Favored - Negative Weight
+    // These words signal a request for a directory or specific data point, not a conversation.
+    var searchPragmatics = ['source', 'website', 'login', 'news', 'weather', 'stock', 'price', 'buy', 'vs', 'lyrics', 'map', 'near'];
+    searchPragmatics.forEach(term => {
+        if (q.includes(term)) chatScore -= 4;
+    });
+
+    // Rule 4: Threshold Check
+    // If chatScore is 3 or higher, we pivot to Chat Mode.
+    return (chatScore >= 3) ? 'chat' : 'search';
+}
 
 // --- BUILT-IN TOOL CONFIGURATION ---
 var BUILT_IN_TOOLS = {
@@ -115,16 +130,16 @@ function createRawSearchText(items) {
 }
 
 
-/**
- * Executes the AI Logic:
- * 1. Generates the Text Summary (Displayed only if enabled)
- * 2. Detects if a tool is needed (Displays tool)
- * 3. Generates the Ranking (Applied ALWAYS)
- * * !!! This function hits the backend Groq API and should be called sparingly. !!!
- */
+
+ // Executes the AI Logic:
+
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
     renderBuiltInTool(null); 
+    
+    //  STEP 1: DETERMINISTIC MODE DETECTION 
+    // We decide the mode locally to ensure efficiency and consistency.
+    const detectedMode = determineQueryMode(query);
     
     // Only show standard loading if we aren't already actively in chat mode
     if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
@@ -141,7 +156,7 @@ async function processAIResults(query, searchItems) {
         conversationParts.push(...window.chatConversationHistory.slice(-6));
     }
     
-    // Formulate the current turn, feeding the search results into the user prompt
+    // Formulate the current turn
     var userTextWithContext = `User Query: ${query}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
     conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
 
@@ -165,22 +180,18 @@ async function processAIResults(query, searchItems) {
         var aiRawText = data.text;
         lastAIRawText = aiRawText;
 
-        // --- 1. EXTRACT DATA ---
+        // --- STEP 2: EXTRACT DATA TAGS ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
         var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
+        // Note: modeRegex is kept for cleanup, but we use detectedMode for logic.
         var modeRegex = /@@MODE:\[(.*?)\]@@/;
 
         var toolMatch = aiRawText.match(toolRegex);
         var researchMatch = aiRawText.match(researchRegex);
         var rankingMatch = aiRawText.match(rankingRegex); 
-        var modeMatch = aiRawText.match(modeRegex);
 
-        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
-        var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
-        var detectedMode = modeMatch && modeMatch[1] ? modeMatch[1].trim() : 'search';
-
-        // Clean display text
+        // Clean display text of all metadata tags
         var cleanDisplayText = aiRawText
             .replace(rankingRegex, '')
             .replace(toolRegex, '')
@@ -189,19 +200,22 @@ async function processAIResults(query, searchItems) {
             .trim();
 
         // Update Conversation History for the next turn
-        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] }); // Keep history clean without raw data
+        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
         window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
 
-        // --- 2. CHECK ADAPTIVE CHAT MODE ---
-        // If the AI says it's a chat OR we are already locked into chat mode from a previous message
+        // --- STEP 3: ADAPTIVE ROUTING ---
+        // If our local logic says 'chat', or if the user is already in a chat session
         if (detectedMode === 'chat' || window.isChatModeActive) {
             if (typeof activateAdaptiveChat === 'function') {
                 activateAdaptiveChat(query, cleanDisplayText, searchItems);
-                return; // Exit here. Do not render standard AI Overview.
+                return; // Exit here; Adaptive Chat handles its own UI.
             }
         }
 
-        // --- 3. UPDATE UI: STANDARD SEARCH (If not chat) ---
+        // --- STEP 4: STANDARD SEARCH UI UPDATES ---
+        var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
+        var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
+
         renderBuiltInTool(detectedTool);
 
         if (isAIOverviewEnabled && overviewEl) {
@@ -225,7 +239,6 @@ async function processAIResults(query, searchItems) {
         renderBuiltInTool(null);
     }
 }
-
 
 
 var searchCache = {};
