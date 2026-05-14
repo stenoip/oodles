@@ -7,7 +7,7 @@ function buildChatUI() {
     var chatSection = document.getElementById('chatSection');
     if (!chatSection.innerHTML.trim()) {
         chatSection.innerHTML = `
-            <div id="chatContainer" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; display: flex; flex-direction: column; height: 65vh; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <div id="chatContainer" style="background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; display: flex; flex-direction: column; height: 65vh; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                 <div id="chatMessages" style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px;">
                     <div style="text-align: center; font-size: 12px; color: #966; margin-bottom: 10px;">Chatting with Praterich</div>
                 </div>
