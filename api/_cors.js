@@ -1,6 +1,6 @@
 var ALLOWED_ORIGINS = [
   'https://stenoip.github.io',
-  'http://localhost:1010'
+  'http://127.0.0.1:1010'
 ];
 
 function setCors(req, res) {
