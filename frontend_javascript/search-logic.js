@@ -1,97 +1,60 @@
-// frontend_javascript/search-logic.js
-
-// --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Metasearch, an AI developed by Stenoip Company.
-Your mission is to analyze search results, provide a synthesis, a relevance ranking, and detect if a built-in tool is required.
+Your mission is to analyze search results, provide a sophisticated synthesis, a relevance ranking, and handle autonomous investigation inside conversational environments.
 
-***TASK 1: Relevance Ranking (CRITICAL)***
+***TASK 1: Relevance Ranking***
 You must analyse the provided search snippets and decide which links are the most useful and relevant to the user's query.
 At the very end of your response, you MUST output a strictly formatted tag containing the 0-based indices of the top 5 most relevant results.
 Format: @@RANKING:[index1, index2, index3, index4, index5]@@
-Example: @@RANKING:[4, 0, 1, 9, 2]@@
 
 ***TASK 2: Synthesis (The Praterich Briefing)***
 Provide a sophisticated A.I. overview based on the snippets. 
-- **NO Conversational Filler:** Do not say "Good day," "Here are the results," or "I hope this helps."
-- **NO Source Attribution:** Do not say "According to the snippets" or "The first link suggests." Simply state the facts.
-- **The Style:** Write like a 19th-century British scholar or a high-society briefing. Use elegant, precise language (e.g., "noteworthy," "predominantly," "exceptional").
+- **NO Conversational Filler:** Do not say "Good day," or "Here are the results." Simply state the facts.
+- **NO Source Attribution:** Do not say "According to the snippets."
+- **The Style:** Write like a 19th-century British scholar. Use elegant, precise language.
 - **Formatting:** Use flowing prose. Do not use the Oxford comma. Use metric units.
 
-
-
-***TASK 3: Tool Detection (CRITICAL)***
-If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag.
-The detection should be based on mathematical expressions, unit conversions, colour code lookups, metronome requests, or translation requests.
-The tag MUST be outputted immediately before the @@RANKING tag.
+***TASK 3: Tool Detection***
+If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag immediately before the @@RANKING tag.
 Format: @@TOOL:[tool_name]@@
-Available tools (use the name exactly as listed):
-- calculator
-- unit_converter
-- colour_picker
-- metronome
-- translate
+Available tools: calculator, unit_converter, colour_picker, metronome, translate
 
-Example (Calculator needed): The user searched "what is 5+3". 
-Output: (Synthesis text...) @@TOOL:[calculator]@@@@RANKING:[...]@@
-Example (No tool needed): The user searched "best new movies".
-Output: (Synthesis text...) @@RANKING:[...]@@
-
-***TASK 4: Autonomous Search & Query Refinement (CRITICAL)***
-You possess the autonomy to conduct background web searches when context is missing or inadequate.
-1. **Empty Context/Chat Transitions:** If the context provided to you states "No web links found," you MUST immediately formulate an optimized query phrase to find relevant live web information.
-2. **Inadequate Snippets:** If the snippets provided are insufficient or do not contain the answer to the user's inquiry, you must suggest a refined search query.
-
-Format: @@RESEARCH:[your optimized search query phrase here]@@
-
-*Crucial Note:* When you emit the @@RESEARCH:[...]@@ tag during an empty context turn, the system will intercept it, execute a live metasearch behind the scenes, and present you with the results. Therefore, do not attempt to write a comprehensive synthesis text when the context is empty—simply output your intent or a brief acknowledgment alongside the tag.
-
-Output the @@MODE tag before the @@RANKING tag.
+***TASK 4: Autonomous Research & Chat Navigation (CRITICAL)***
+You have full authorization and autonomy to search the live web when context is absent or lacking.
+1. If the provided context specifies "No web links found.", you MUST immediately generate an optimized, search-engine friendly phrase to locate the necessary details.
+2. Format: @@RESEARCH:[your optimized search query phrase]@@
+3. Crucial Rule: When you output the @@RESEARCH:[...]@@ tag on an empty context turn, the underlying application will capture it, run a background live metasearch using your phrase, and present you with the live content. Do not attempt to guess or draft a full final briefing when context is missing—provide a brief acknowledgment of your inquiry or intent alongside your tag.
 
 Your personality is to be British, Lady-like and friendly.
-Your response must be:
-1. The text overview (or brief acknowledgment if initiating a search).
-2. The optional @@TOOL[...]@@ tag.
-3. The @@RESEARCH[...]@@ tag when searching or refining.
-4. The @@RANKING[...]@@ tag at the very end.
+Your response format must follow:
+1. Text overview/acknowledgment.
+2. Optional @@TOOL[...]@@ tag.
+3. Mandatory @@RESEARCH[...]@@ tag if initiating/refining a search.
+4. Mandatory @@RANKING[...]@@ tag at the very end.
 `;
-// END AI CONFIGURATION 
 
-
-/*
-  THE ADAPTIVE HELP-Bot
-  Uses a scoring system to decide between 'chat' and 'search'.
-  This is more efficient than fixed keyword matching.
- */
 function determineQueryMode(query) {
     const q = query.trim().toLowerCase();
     const words = q.split(/\s+/);
     let chatScore = 0;
 
-    // Rule 1: Length Logic
-    if (words.length <= 2) return 'search'; // Tiny queries are always search
-    if (words.length >= 7) chatScore += 2;  // Complex sentences favor chat
+    if (words.length <= 2) return 'search';
+    if (words.length >= 7) chatScore += 2; 
 
-    // Rule 2: Chat Favoured
     var interrogatives = ['who', 'how', 'why', 'is', 'should', 'can', 'explain', 'tell', 'what'];
     if (interrogatives.includes(words[0])) chatScore += 3;
     if (q.endsWith('?')) chatScore += 2;
 
-    // Rule 3: Search Favored - Negative Weight
-    // These words signal a request for a directory or specific data point, not a conversation.
     var searchPragmatics = ['source', 'website', 'login', 'news', 'weather', 'stock', 'price', 'buy', 'vs', 'lyrics', 'map', 'near'];
     searchPragmatics.forEach(term => {
         if (q.includes(term)) chatScore -= 4;
     });
 
-    // Rule 4: Threshold Check
-    // If chatScore is 3 or higher, we pivot to Chat Mode.
     return (chatScore >= 3) ? 'chat' : 'search';
 }
 
-// --- BUILT-IN TOOL CONFIGURATION ---
 var BUILT_IN_TOOLS = {
     'calculator': { url: 'https://stenoip.github.io/kompmasine.html' },
     'unit_converter': { url: 'https://stenoip.github.io/kompmasine.html' },
@@ -99,7 +62,6 @@ var BUILT_IN_TOOLS = {
     'metronome': { url: 'https://stenoip.github.io/metronome' },
     'translate': { url: 'https://stenoip.github.io/praterich/translate/translate' }
 };
-// --- END TOOL CONFIGURATION ---
 
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 var currentQuery = '';
@@ -107,36 +69,24 @@ var currentSearchType = 'web';
 var currentPage = 1; 
 var MAX_PAGE_SIZE = 50; 
 
-// --- GLOBAL STATE FOR CACHING AND OPTIMIZATION ---
 var isAIOverviewEnabled = false; 
-var lastAIRawText = null;       // Stores the raw text from the AI for caching
-var lastFetchedItems = null;    // Stores the raw search results for re-ranking/overview
-var aiTimeout = null;           // For debouncing the expensive AI call
-var allTabImagesCache = [];     // Stores images specifically for the 'All' tab modal
+var lastAIRawText = null;       
+var lastFetchedItems = null;    
+var aiTimeout = null;           
+var allTabImagesCache = [];     
 
-
-/**
- * Creates structured text containing full snippets for the AI model.
- */
 function createRawSearchText(items) {
     if (!items || items.length === 0) return 'No web links found.';
-    
-    // We include the Index so the AI can reference it in the RANKING tag
     return items.map(function(r, index) {
         var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
         return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
     }).join('\n---\n');
 }
 
-
-
- // Executes the AI Logic:
-
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
     renderBuiltInTool(null); 
     
-    // STEP 1: DETERMINISTIC MODE DETECTION 
     const detectedMode = determineQueryMode(query);
     
     if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
@@ -144,9 +94,8 @@ async function processAIResults(query, searchItems) {
     }
 
     var rawWebSearchText = createRawSearchText(searchItems);
-    
-    // Build Conversation Payload
     var conversationParts = [];
+    
     if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
         conversationParts.push(...window.chatConversationHistory.slice(-6));
     }
@@ -156,9 +105,7 @@ async function processAIResults(query, searchItems) {
 
     var requestBody = {
         contents: conversationParts,
-        system_instruction: {
-            parts: [{ text: ladyPraterichSystemInstruction }]
-        }
+        system_instruction: { parts: [{ text: ladyPraterichSystemInstruction }] }
     };
 
     try {
@@ -174,7 +121,6 @@ async function processAIResults(query, searchItems) {
         var aiRawText = data.text;
         lastAIRawText = aiRawText;
 
-        // Extract Data Tags
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
         var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
@@ -184,7 +130,6 @@ async function processAIResults(query, searchItems) {
         var researchMatch = aiRawText.match(researchRegex);
         var rankingMatch = aiRawText.match(rankingRegex); 
 
-        // Clean display text of all metadata tags
         var cleanDisplayText = aiRawText
             .replace(rankingRegex, '')
             .replace(toolRegex, '')
@@ -192,45 +137,52 @@ async function processAIResults(query, searchItems) {
             .replace(modeRegex, '')
             .trim();
 
-        // --- STEP 3: ADAPTIVE ROUTING ---
+        // Praterich Auto Search in chat mode
         if (detectedMode === 'chat' || window.isChatModeActive) {
             var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
-            // If Praterich generated a research query and we haven't given her results yet, she conducts a search!
+            // If Praterich generated a query phrase and she hasn't received search results yet, perform her search!
             if (suggestedQuery && (!searchItems || searchItems.length === 0)) {
-                // Update the typing UI indicator to show her active intent
                 const tempMsg = document.getElementById('tempChatMsg');
                 if (tempMsg && typeof escapeHtml === 'function') {
                     tempMsg.innerHTML = `<span class="ai-overview-loading" style="font-style: italic; color: #0277bd;">Praterich is searching for "${escapeHtml(suggestedQuery)}"...</span>`;
                 }
 
                 try {
-                    // Fetch results background-style for her customized query phrase
+                    // Fetch text items background-style for her customized phrase
                     var searchUrl = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(suggestedQuery)}&page=1&pageSize=10`;
                     var searchResp = await fetch(searchUrl);
                     var searchData = await searchResp.json();
 
-                    // Recursively re-run with her self-constructed search context results
+                    // Also fetch fresh images matching her search term for the chat layout gallery
+                    try {
+                        var imgUrl = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(suggestedQuery)}&type=image&page=1&pageSize=8`;
+                        var imgResp = await fetch(imgUrl);
+                        var imgData = await imgResp.json();
+                        allTabImagesCache = imgData.items || [];
+                    } catch (ie) { console.error("Background chat image fetch failed", ie); }
+
+                    // Re-run the generation loop with her newly collected search data context
                     return await processAIResults(query, searchData.items);
                 } catch (searchError) {
-                    console.error('Autonomous search execution failed:', searchError);
+                    console.error('Autonomous background execution failed:', searchError);
                 }
             }
+        }
 
-            // Update Conversation History on final output turn resolution
-            window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
-            window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+        // Update Conversation History (Only on the final resolution turn)
+        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
+        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
 
+        // --- STEP 3: ADAPTIVE ROUTING ---
+        if (detectedMode === 'chat' || window.isChatModeActive) {
             if (typeof activateAdaptiveChat === 'function') {
                 activateAdaptiveChat(query, cleanDisplayText, searchItems);
                 return; 
             }
         }
 
-        // --- STEP 4: STANDARD SEARCH UI UPDATES (Non-chat turns) ---
-        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
-        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
-
+        // --- STEP 4: STANDARD NON-CHAT SEARCH UI ---
         var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
         var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
@@ -258,24 +210,20 @@ async function processAIResults(query, searchItems) {
     }
 }
 
-
 var searchCache = {};
 
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
 
+    // MODIFIED: Intercept immediately if a conversational query hits from the top navigation bar
     if (determineQueryMode(query) === 'chat' || window.isChatModeActive) {
         window.isChatModeActive = true;
         processAIResults(query, []);
         return;
     }
 
-    // Create a unique key for this specific request
     const cacheKey = `${query}_${type}_${page}`;
-    
-    // Check if we already have this in the "Memory Palace"
     if (searchCache[cacheKey]) {
-        console.log("Retrieving from cache: ", cacheKey);
         renderCachedResults(searchCache[cacheKey], type);
         return; 
     }
@@ -294,15 +242,11 @@ async function executeSearch(query, type, page = 1) {
 
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
-        // Good citizen message is shown if AI is OFF and we are on text-heavy tabs (All, Web, Image)
         citizenMsgEl.style.display = (!isAIOverviewEnabled && (type === 'web' || type === 'image' || type === 'all')) ? 'block' : 'none';
     }
     
-    if (aiTimeout) {
-        clearTimeout(aiTimeout);
-    }
+    if (aiTimeout) clearTimeout(aiTimeout);
 
-    // --- ROUTING BASED ON TYPE ---
     if (type === 'all') {
         executeAllSearch(query);
     } else if (type === 'web') {
@@ -319,25 +263,24 @@ async function executeSearch(query, type, page = 1) {
                     processAIResults(query, data.items);
                 }, 500);
             }
+            searchCache[cacheKey] = data;
         } catch (error) {
             console.error('Web search error:', error);
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
         }
-
     } else if (type === 'image') {
         document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
         try {
-            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
+            var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize= MAX_PAGE_SIZE';
             var resp = await fetch(url);
             var data = await resp.json();
-            
             lastFetchedItems = data.items; 
             renderImageResults(data.items, data.total);
+            searchCache[cacheKey] = data;
         } catch (error) {
             console.error('Image search error:', error);
             document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
         }
-
     } else if (type === 'video') {
         const videoContainer = document.getElementById('videoResults');
         if (videoContainer) {
@@ -353,26 +296,19 @@ async function executeSearch(query, type, page = 1) {
             }
         }
     }
-    var resp = await fetch(url);
-    var data = await resp.json();
-    searchCache[cacheKey] = data; // Cache it!
-    renderLinkResults(data.items, data.total);
 }
 
-
-// --- UNIVERSAL "ALL" SEARCH LOGIC ---
 async function executeAllSearch(query) {
-    
+    // MODIFIED: Intercept early to prevent loading layout data for conversational inquiries
     if (determineQueryMode(query) === 'chat' || window.isChatModeActive) {
         window.isChatModeActive = true;
         processAIResults(query, []);
         return;
     }
-  
+
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
     
-    // 1. CLEAR PREVIOUS SERP STATE
     if (typeof SERP_MODULE !== 'undefined') {
         SERP_MODULE.clearAll();
     }
@@ -392,9 +328,7 @@ async function executeAllSearch(query) {
 
         lastFetchedItems = webData.items;
 
-        // 2. TRIGGER SERP MODULE RENDERING
         if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
-            // We use await here so the Featured Snippet can crawl the URL if needed
             await SERP_MODULE.renderFeaturedSnippet(webData.items, query); 
             SERP_MODULE.renderPopularProducts(webData.items);
             SERP_MODULE.renderKnowledgePanel(query);
@@ -405,7 +339,6 @@ async function executeAllSearch(query) {
         if (webData.items.length > 0) {
             processAIResults(query, webData.items);
         }
-
     } catch (error) {
         console.error('All Search Error:', error);
         allContainer.innerHTML = '<p class="small">Error retrieving results.</p>';
