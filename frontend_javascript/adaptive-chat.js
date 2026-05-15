@@ -43,8 +43,8 @@ function handleChatSubmit() {
     
     window.isChatModeActive = true;
     
-    // CHANGED: Instead of pre-fetching results for the raw user string,
-    // we bypass the standard search and let Praterich evaluate the query first.
+    // MODIFIED: Do not pre-fetch results for the raw user string.
+    // Give Praterich an empty context array so she must execute her own search.
     if (typeof processAIResults === 'function') {
         processAIResults(text, []);
     }
@@ -53,7 +53,6 @@ function handleChatSubmit() {
 function appendChatMessage(role, text, sources = null, images = null, isTemp = false) {
     const container = document.getElementById('chatMessages');
     
-    // Remove old temp loading message if appending a real response
     if (!isTemp) {
         const oldTemp = document.getElementById('tempChatMsg');
         if (oldTemp) oldTemp.remove();
@@ -74,7 +73,7 @@ function appendChatMessage(role, text, sources = null, images = null, isTemp = f
         msgDiv.style.color = 'white';
         msgDiv.style.borderBottomRightRadius = '4px';
         msgDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
-        msgDiv.innerText = text; // user text is safe
+        msgDiv.innerText = text;
     } else {
         msgDiv.style.alignSelf = 'flex-start';
         msgDiv.style.background = 'rgba(255, 255, 255, 0.95)';
@@ -87,7 +86,6 @@ function appendChatMessage(role, text, sources = null, images = null, isTemp = f
             ? text 
             : (typeof renderMarkdown === 'function' ? renderMarkdown(text) : text);
         
-        // --- Append Sources ---
         if (sources && sources.length > 0) {
             content += `
             <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e0e0e0; font-size: 0.85em;">
@@ -98,7 +96,6 @@ function appendChatMessage(role, text, sources = null, images = null, isTemp = f
             </div>`;
         }
         
-        // --- Append Images (Image Gallery) ---
         if (images && images.length > 0) {
             content += `
             <div style="margin-top: 10px; font-size: 0.85em;">
@@ -121,14 +118,12 @@ function appendChatMessage(role, text, sources = null, images = null, isTemp = f
 function activateAdaptiveChat(userQuery, aiResponseText, webItems) {
     window.isChatModeActive = true;
     
-    // Hide standard search elements
     var sectionsToHide = ['allSection', 'linksSection', 'imagesSection', 'videosSection', 'aiOverview', 'toolContainer'];
     sectionsToHide.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
     
-    // Show chat section
     const chatSection = document.getElementById('chatSection');
     if (chatSection) {
         chatSection.style.display = 'block';
@@ -136,27 +131,22 @@ function activateAdaptiveChat(userQuery, aiResponseText, webItems) {
     
     buildChatUI();
     
-    // Remove temporary loading message if present
     const tempMsg = document.getElementById('tempChatMsg');
     if (tempMsg) tempMsg.remove();
     
     const msgContainer = document.getElementById('chatMessages');
     
-    // If this is a fresh transition into chat from the top search bar, append the user's initial query visually
-    if (msgContainer.children.length <= 1) { // 1 because of the "Chatting with Praterich" label
+    if (msgContainer.children.length <= 1) { 
         appendChatMessage('user', userQuery);
     } else {
-        // Check if the last message was already the user's query (to prevent duplicates if they used the chat input)
         const lastMsg = msgContainer.lastElementChild;
         if (lastMsg && lastMsg.style.alignSelf !== 'flex-end') {
              appendChatMessage('user', userQuery);
         }
     }
     
-    // Determine sources and images to attach
     var sources = webItems || [];
     var images = typeof allTabImagesCache !== 'undefined' ? allTabImagesCache : [];
     
-    // Append the AI's response
     appendChatMessage('ai', aiResponseText, sources, images);
 }
