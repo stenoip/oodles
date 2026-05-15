@@ -137,11 +137,9 @@ async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
     renderBuiltInTool(null); 
     
-    //  STEP 1: DETERMINISTIC MODE DETECTION 
-    // We decide the mode locally to ensure efficiency and consistency.
+    // STEP 1: DETERMINISTIC MODE DETECTION 
     const detectedMode = determineQueryMode(query);
     
-    // Only show standard loading if we aren't already actively in chat mode
     if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
@@ -150,13 +148,10 @@ async function processAIResults(query, searchItems) {
     
     // Build Conversation Payload
     var conversationParts = [];
-    
-    // Push recent history if in chat mode to keep context (last 6 interactions)
     if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
         conversationParts.push(...window.chatConversationHistory.slice(-6));
     }
     
-    // Formulate the current turn
     var userTextWithContext = `User Query: ${query}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
     conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
 
@@ -180,11 +175,10 @@ async function processAIResults(query, searchItems) {
         var aiRawText = data.text;
         lastAIRawText = aiRawText;
 
-        // --- STEP 2: EXTRACT DATA TAGS ---
+        // Extract Data Tags
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
         var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
-        // Note: modeRegex is kept for cleanup, but we use detectedMode for logic.
         var modeRegex = /@@MODE:\[(.*?)\]@@/;
 
         var toolMatch = aiRawText.match(toolRegex);
@@ -199,20 +193,45 @@ async function processAIResults(query, searchItems) {
             .replace(modeRegex, '')
             .trim();
 
-        // Update Conversation History for the next turn
-        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
-        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
-
         // --- STEP 3: ADAPTIVE ROUTING ---
-        // If our local logic says 'chat', or if the user is already in a chat session
         if (detectedMode === 'chat' || window.isChatModeActive) {
+            var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
+
+            // If Praterich generated a research query and we haven't given her results yet, she conducts a search!
+            if (suggestedQuery && (!searchItems || searchItems.length === 0)) {
+                // Update the typing UI indicator to show her active intent
+                const tempMsg = document.getElementById('tempChatMsg');
+                if (tempMsg && typeof escapeHtml === 'function') {
+                    tempMsg.innerHTML = `<span class="ai-overview-loading" style="font-style: italic; color: #0277bd;">Praterich is searching for "${escapeHtml(suggestedQuery)}"...</span>`;
+                }
+
+                try {
+                    // Fetch results background-style for her customized query phrase
+                    var searchUrl = `${BACKEND_BASE}/metasearch?q=${encodeURIComponent(suggestedQuery)}&page=1&pageSize=10`;
+                    var searchResp = await fetch(searchUrl);
+                    var searchData = await searchResp.json();
+
+                    // Recursively re-run with her self-constructed search context results
+                    return await processAIResults(query, searchData.items);
+                } catch (searchError) {
+                    console.error('Autonomous search execution failed:', searchError);
+                }
+            }
+
+            // Update Conversation History on final output turn resolution
+            window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
+            window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+
             if (typeof activateAdaptiveChat === 'function') {
                 activateAdaptiveChat(query, cleanDisplayText, searchItems);
-                return; // Exit here; Adaptive Chat handles its own UI.
+                return; 
             }
         }
 
-        // --- STEP 4: STANDARD SEARCH UI UPDATES ---
+        // --- STEP 4: STANDARD SEARCH UI UPDATES (Non-chat turns) ---
+        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
+        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+
         var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
         var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
@@ -245,6 +264,12 @@ var searchCache = {};
 
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
+
+    if (determineQueryMode(query) === 'chat' || window.isChatModeActive) {
+        window.isChatModeActive = true;
+        processAIResults(query, []);
+        return;
+    }
 
     // Create a unique key for this specific request
     const cacheKey = `${query}_${type}_${page}`;
@@ -338,6 +363,13 @@ async function executeSearch(query, type, page = 1) {
 
 // --- UNIVERSAL "ALL" SEARCH LOGIC ---
 async function executeAllSearch(query) {
+    
+    if (determineQueryMode(query) === 'chat' || window.isChatModeActive) {
+        window.isChatModeActive = true;
+        processAIResults(query, []);
+        return;
+    }
+  
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
     
