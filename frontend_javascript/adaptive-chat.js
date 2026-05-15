@@ -43,9 +43,11 @@ function handleChatSubmit() {
     
     window.isChatModeActive = true;
     
-    // Trigger the global search which feeds fresh results back to the AI
-    // We use 'all' so it gathers new links and images for the chat context
-    executeSearch(text, 'all', 1);
+    // CHANGED: Instead of pre-fetching results for the raw user string,
+    // we bypass the standard search and let Praterich evaluate the query first.
+    if (typeof processAIResults === 'function') {
+        processAIResults(text, []);
+    }
 }
 
 function appendChatMessage(role, text, sources = null, images = null, isTemp = false) {
