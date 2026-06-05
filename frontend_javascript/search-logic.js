@@ -20,8 +20,6 @@ Provide a sophisticated A.I. overview based on the snippets.
 - **The Style:** Write like a 19th-century British scholar or a high-society briefing. Use elegant, precise language (e.g., "noteworthy," "predominantly," "exceptional").
 - **Formatting:** Use flowing prose. Do not use the Oxford comma. Use metric units.
 
-
-
 ***TASK 3: Tool Detection (CRITICAL)***
 If the user's query clearly indicates a need for a specific built-in tool, you MUST include a tool detection tag.
 The detection should be based on mathematical expressions, unit conversions, colour code lookups, metronome requests, or translation requests.
@@ -44,12 +42,6 @@ If you determine that the provided snippets are insufficient, irrelevant, or do 
 Format: @@RESEARCH:[new search query]@@
 The tag MUST be outputted before the @@RANKING tag.
 
-Example (Snippets are bad): The user asked for "latest 2026 fusion results" but snippets only show 2024.
-Output: (Synthesis text...) @@RESEARCH:[breakthroughs in nuclear fusion March 2026]@@@@RANKING:[...]@@
-
-
-
-
 Output the @@MODE tag before the @@RANKING tag.
 
 Your personality is to be British, Lady-like and friendly.
@@ -58,41 +50,27 @@ Your response must be:
 2. The optional @@TOOL[...]@@ tag.
 3. The @@RANKING[...]@@ tag at the very end.
 `;
-// END AI CONFIGURATION 
 
-
-/*
-  THE ADAPTIVE HELP-Bot
-  Uses a scoring system to decide between 'chat' and 'search'.
-  This is more efficient than fixed keyword matching.
- */
 function determineQueryMode(query) {
     const q = query.trim().toLowerCase();
     const words = q.split(/\s+/);
     let chatScore = 0;
 
-    // Rule 1: Length Logic
-    if (words.length <= 2) return 'search'; // Tiny queries are always search
-    if (words.length >= 7) chatScore += 2;  // Complex sentences favor chat
+    if (words.length <= 2) return 'search'; 
+    if (words.length >= 7) chatScore += 2;  
 
-    // Rule 2: Chat Favoured
     var interrogatives = ['who', 'how', 'why', 'is', 'should', 'can', 'explain', 'tell', 'what'];
     if (interrogatives.includes(words[0])) chatScore += 3;
     if (q.endsWith('?')) chatScore += 2;
 
-    // Rule 3: Search Favored - Negative Weight
-    // These words signal a request for a directory or specific data point, not a conversation.
     var searchPragmatics = ['source', 'website', 'login', 'news', 'weather', 'stock', 'price', 'buy', 'vs', 'lyrics', 'map', 'near'];
     searchPragmatics.forEach(term => {
         if (q.includes(term)) chatScore -= 4;
     });
 
-    // Rule 4: Threshold Check
-    // If chatScore is 3 or higher, we pivot to Chat Mode.
     return (chatScore >= 3) ? 'chat' : 'search';
 }
 
-// --- BUILT-IN TOOL CONFIGURATION ---
 var BUILT_IN_TOOLS = {
     'calculator': { url: 'https://stenoip.github.io/kompmasine.html' },
     'unit_converter': { url: 'https://stenoip.github.io/kompmasine.html' },
@@ -100,71 +78,55 @@ var BUILT_IN_TOOLS = {
     'metronome': { url: 'https://stenoip.github.io/metronome' },
     'translate': { url: 'https://stenoip.github.io/praterich/translate/translate' }
 };
-// --- END TOOL CONFIGURATION ---
 
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
-var MAX_PAGE_SIZE = 50; 
+var MAX_PAGE_SIZE = 20; // Reduced page size slightly for quicker infinite scroll payloads
 
-// --- GLOBAL STATE FOR CACHING AND OPTIMIZATION ---
 var isAIOverviewEnabled = false; 
-var lastAIRawText = null;       // Stores the raw text from the AI for caching
-var lastFetchedItems = null;    // Stores the raw search results for re-ranking/overview
-var aiTimeout = null;           // For debouncing the expensive AI call
-var allTabImagesCache = [];     // Stores images specifically for the 'All' tab modal
+var lastAIRawText = null;       
+var lastFetchedItems = null;    
+var aiTimeout = null;           
+var allTabImagesCache = [];     
 
+// Cache ecosystem
+var searchCache = {}; 
+var isLoadingMore = false; 
+var hasMoreResults = true;
 
-/**
- * Creates structured text containing full snippets for the AI model.
- */
 function createRawSearchText(items) {
     if (!items || items.length === 0) return 'No web links found.';
-    
-    // We include the Index so the AI can reference it in the RANKING tag
     return items.map(function(r, index) {
         var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
         return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
     }).join('\n---\n');
 }
 
-
-
- // Executes the AI Logic:
-
 async function processAIResults(query, searchItems) {
     var overviewEl = document.getElementById('aiOverview'); 
     renderBuiltInTool(null); 
     
-    //  STEP 1: DETERMINISTIC MODE DETECTION 
-    // We decide the mode locally to ensure efficiency and consistency.
     const detectedMode = determineQueryMode(query);
     
-    // Only show standard loading if we aren't already actively in chat mode
     if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
         overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
     }
 
     var rawWebSearchText = createRawSearchText(searchItems);
-    
-    // Build Conversation Payload
     var conversationParts = [];
     
-    // Push recent history if in chat mode to keep context (last 6 interactions)
     if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
         conversationParts.push(...window.chatConversationHistory.slice(-6));
     }
     
-    // Formulate the current turn
     var userTextWithContext = `User Query: ${query}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
     conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
 
     var requestBody = {
         contents: conversationParts,
-        system_instruction: {
-            parts: [{ text: ladyPraterichSystemInstruction }]
-        }
+        system_instruction: { parts: [{ text: ladyPraterichSystemInstruction }] }
     };
 
     try {
@@ -180,18 +142,15 @@ async function processAIResults(query, searchItems) {
         var aiRawText = data.text;
         lastAIRawText = aiRawText;
 
-        // --- STEP 2: EXTRACT DATA TAGS ---
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
         var researchRegex = /@@RESEARCH:\[(.*?)\]@@/;
-        // Note: modeRegex is kept for cleanup, but we use detectedMode for logic.
         var modeRegex = /@@MODE:\[(.*?)\]@@/;
 
         var toolMatch = aiRawText.match(toolRegex);
         var researchMatch = aiRawText.match(researchRegex);
         var rankingMatch = aiRawText.match(rankingRegex); 
 
-        // Clean display text of all metadata tags
         var cleanDisplayText = aiRawText
             .replace(rankingRegex, '')
             .replace(toolRegex, '')
@@ -199,20 +158,18 @@ async function processAIResults(query, searchItems) {
             .replace(modeRegex, '')
             .trim();
 
-        // Update Conversation History for the next turn
-        window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
-        window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+        if (window.chatConversationHistory) {
+            window.chatConversationHistory.push({ role: "user", parts: [{ text: query }] });
+            window.chatConversationHistory.push({ role: "model", parts: [{ text: cleanDisplayText }] });
+        }
 
-        // --- STEP 3: ADAPTIVE ROUTING ---
-        // If our local logic says 'chat', or if the user is already in a chat session
         if (detectedMode === 'chat' || window.isChatModeActive) {
             if (typeof activateAdaptiveChat === 'function') {
                 activateAdaptiveChat(query, cleanDisplayText, searchItems);
-                return; // Exit here; Adaptive Chat handles its own UI.
+                return;
             }
         }
 
-        // --- STEP 4: STANDARD SEARCH UI UPDATES ---
         var detectedTool = toolMatch && toolMatch[1] ? toolMatch[1].trim() : null;
         var suggestedQuery = researchMatch && researchMatch[1] ? researchMatch[1].trim() : null;
 
@@ -233,87 +190,78 @@ async function processAIResults(query, searchItems) {
         console.error('AI Processing Error:', error);
         if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
             overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
-        } else if (window.isChatModeActive) {
-            appendChatMessage('ai', 'Sorry, I encountered an error while thinking. Please try again.', null, null);
         }
         renderBuiltInTool(null);
     }
 }
 
-
-var searchCache = {};
-
+/**
+ * Optimised route executing searches dynamically with local RAM caching.
+ */
 async function executeSearch(query, type, page = 1) {
     if (!query) return;
-
-    // Create a unique key for this specific request
-    const cacheKey = `${query}_${type}_${page}`;
-    
-    // Check if we already have this in the "Memory Palace"
-    if (searchCache[cacheKey]) {
-        console.log("Retrieving from cache: ", cacheKey);
-        renderCachedResults(searchCache[cacheKey], type);
-        return; 
-    }
 
     currentQuery = query;
     currentSearchType = type;
     currentPage = page;
+    hasMoreResults = true; 
     document.getElementById('currentQuery').value = query;
 
     var overviewEl = document.getElementById('aiOverview');
     if (overviewEl) overviewEl.innerHTML = ''; 
-    
     renderBuiltInTool(null); 
     lastAIRawText = null; 
     lastFetchedItems = null;
 
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
-        // Good citizen message is shown if AI is OFF and we are on text-heavy tabs (All, Web, Image)
         citizenMsgEl.style.display = (!isAIOverviewEnabled && (type === 'web' || type === 'image' || type === 'all')) ? 'block' : 'none';
     }
     
-    if (aiTimeout) {
-        clearTimeout(aiTimeout);
+    if (aiTimeout) clearTimeout(aiTimeout);
+
+    // Dynamic Tab/Page Memory Palace Check
+    const cacheKey = `${query}_${type}`;
+    if (page === 1 && searchCache[cacheKey]) {
+        console.log("Instant Switch From Local Cache:", cacheKey);
+        renderCachedResults(searchCache[cacheKey], type);
+        return;
     }
 
-    // --- ROUTING BASED ON TYPE ---
     if (type === 'all') {
         executeAllSearch(query);
     } else if (type === 'web') {
-        document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
+        if(page === 1) document.getElementById('linkResults').innerHTML = '<p class="small">Searching web links...</p>';
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
             var resp = await fetch(url);
             var data = await resp.json();
-            renderLinkResults(data.items, data.total);
+            
+            searchCache[cacheKey] = data; 
+            renderLinkResults(data.items, data.total, false);
             lastFetchedItems = data.items;
 
             if (page === 1) {
-                aiTimeout = setTimeout(() => {
-                    processAIResults(query, data.items);
-                }, 500);
+                aiTimeout = setTimeout(() => { processAIResults(query, data.items); }, 500);
             }
         } catch (error) {
             console.error('Web search error:', error);
             document.getElementById('linkResults').innerHTML = '<p class="small">Error loading web links.</p>';
         }
-
     } else if (type === 'image') {
-        document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
+        if(page === 1) document.getElementById('imageResults').innerHTML = '<p class="small">Searching images...</p>';
         try {
             var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
             var resp = await fetch(url);
             var data = await resp.json();
             
+            searchCache[cacheKey] = data;
             lastFetchedItems = data.items; 
-            renderImageResults(data.items, data.total);
+            renderImageResults(data.items, data.total, false);
         } catch (error) {
             console.error('Image search error:', error);
             document.getElementById('imageResults').innerHTML = '<p class="small">Error loading images.</p>';
         }
-
     } else if (type === 'video') {
         const videoContainer = document.getElementById('videoResults');
         if (videoContainer) {
@@ -322,6 +270,7 @@ async function executeSearch(query, type, page = 1) {
                 var url = BACKEND_BASE + '/video-search?query=' + encodeURIComponent(query);
                 var resp = await fetch(url);
                 var data = await resp.json();
+                searchCache[cacheKey] = data;
                 renderVideoResults(data);
             } catch (error) {
                 console.error('Video search error:', error);
@@ -329,54 +278,186 @@ async function executeSearch(query, type, page = 1) {
             }
         }
     }
-    var resp = await fetch(url);
-    var data = await resp.json();
-    searchCache[cacheKey] = data; // Cache it!
-    renderLinkResults(data.items, data.total);
 }
 
+/**
+ * Renders data straight out of local cache during fast tab toggles
+ */
+function renderCachedResults(cachedData, type) {
+    if (type === 'web') {
+        renderLinkResults(cachedData.items, cachedData.total, false);
+        lastFetchedItems = cachedData.items;
+        if (lastFetchedItems.length > 0) processAIResults(currentQuery, lastFetchedItems);
+    } else if (type === 'image') {
+        lastFetchedItems = cachedData.items;
+        renderImageResults(cachedData.items, cachedData.total, false);
+    } else if (type === 'video') {
+        renderVideoResults(cachedData);
+    } else if (type === 'all') {
+        renderAllResults(currentQuery, cachedData.web, cachedData.img, cachedData.vid);
+    }
+}
 
-// --- UNIVERSAL "ALL" SEARCH LOGIC ---
+/**
+ * PROGRESSIVE LOADING ARCHITECTURE
+ * Kicks off all requests simultaneously and streams elements instantly to the view layer.
+ */
 async function executeAllSearch(query) {
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
     
-    // 1. CLEAR PREVIOUS SERP STATE
     if (typeof SERP_MODULE !== 'undefined') {
         SERP_MODULE.clearAll();
     }
     
-    allContainer.innerHTML = '<p class="small">Gathering the best of the web, images and video...</p>';
+    // Inject structural UI frames immediately so elements render sequentially 
+    allContainer.innerHTML = `
+        <div id="all-web-top-holder"><p class="small">Gathering web links...</p></div>
+        <div id="all-image-holder"></div>
+        <div id="all-video-holder"></div>
+        <div id="all-web-bottom-holder"></div>
+        <div id="all-more-btn-holder" style="text-align:center; margin-top:15px; display:none;">
+            <button class="frutiger-aero-tab" onclick="switchTab('web', true)">See more results</button>
+        </div>
+    `;
+
+    var webPayload = null, imgPayload = null, vidPayload = null;
+    const cacheKey = `${query}_all`;
+
+    // 1. Async Streaming Web Block
+    fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=10`)
+        .then(res => res.json())
+        .then(async (webData) => {
+            webPayload = webData;
+            lastFetchedItems = webData.items;
+            
+            if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
+                await SERP_MODULE.renderFeaturedSnippet(webData.items, query); 
+                SERP_MODULE.renderPopularProducts(webData.items);
+                SERP_MODULE.renderKnowledgePanel(query);
+            }
+
+            const topEl = document.getElementById('all-web-top-holder');
+            const bottomEl = document.getElementById('all-web-bottom-holder');
+            const btnEl = document.getElementById('all-more-btn-holder');
+
+            if (webData.items && webData.items.length > 0) {
+                topEl.innerHTML = webData.items.slice(0, 3).map(renderSingleLink).join('');
+                bottomEl.innerHTML = webData.items.slice(3, 8).map(renderSingleLink).join('');
+                if(btnEl) btnEl.style.display = 'block';
+                
+                processAIResults(query, webData.items);
+            } else {
+                topEl.innerHTML = '<p class="small">No web links found.</p>';
+            }
+            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
+        }).catch(err => {
+            document.getElementById('all-web-top-holder').innerHTML = '<p class="small">Error loading links.</p>';
+        });
+
+    // 2. Async Streaming Image Strip
+    fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=8`)
+        .then(res => res.json())
+        .then(imgData => {
+            imgPayload = imgData;
+            const imgEl = document.getElementById('all-image-holder');
+            if (imgData.items && imgData.items.length > 0) {
+                allTabImagesCache = imgData.items;
+                imgEl.innerHTML = `
+                    <div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                        <h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ${escapeHtml(query)}</h4>
+                        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
+                            ${imgData.items.map((img, idx) => `
+                                <img src="${img.thumbnail}" 
+                                     onclick="openImageModalFromAll(${idx})" 
+                                     title="${escapeHtml(img.title)}"
+                                     style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
+        }).catch(err => console.error("Img cross-stream fail", err));
+
+    // 3. Async Streaming Video Card
+    fetch(`${BACKEND_BASE}/video-search?query=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(vidData => {
+            vidPayload = vidData;
+            const vidEl = document.getElementById('all-video-holder');
+            if (vidData && vidData.length > 0) {
+                const v = vidData[0];
+                vidEl.innerHTML = `
+                    <div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">
+                        <div style="flex: 0 0 auto;">
+                            <iframe src="https://www.youtube.com/embed/${v.id.videoId}" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>
+                        </div>
+                        <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">
+                            <h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>
+                            <a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">
+                                ${v.snippet.title}
+                            </a>
+                            <p class="small" style="margin-top:5px; opacity:0.8;">${v.snippet.channelTitle}</p>
+                        </div>
+                    </div>`;
+            }
+            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
+        }).catch(err => console.error("Video stream fail", err));
+}
+
+function saveAllCache(key, web, img, vid) {
+    if (web && img && vid) {
+        searchCache[key] = { web: web, img: img, vid: vid };
+    }
+}
+
+/**
+ * INFINITE SCROLL CORE LOGIC
+ * Triggered near screen-bottom threshold.
+ */
+async function loadMoreInfiniteResults() {
+    if (isLoadingMore || !hasMoreResults || currentSearchType === 'all' || currentSearchType === 'video') return;
+
+    isLoadingMore = true;
+    currentPage++;
+
+    const targetId = currentSearchType === 'web' ? 'linkResults' : 'imageResults';
+    const container = document.getElementById(targetId);
+
+    let scrollLoader = document.createElement('div');
+    scrollLoader.id = 'infinite-scroll-loader';
+    scrollLoader.innerHTML = `<p class="small" style="text-align:center; padding:15px; color:#0288d1;">Loading more results matches...</p>`;
+    if (container) container.appendChild(scrollLoader);
 
     try {
-        var [webResp, imgResp, vidResp] = await Promise.all([
-            fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=10`),
-            fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=8`),
-            fetch(`${BACKEND_BASE}/video-search?query=${encodeURIComponent(query)}`)
-        ]);
-
-        var webData = await webResp.json();
-        var imgData = await imgResp.json();
-        var vidData = await vidResp.json();
-
-        lastFetchedItems = webData.items;
-
-        // 2. TRIGGER SERP MODULE RENDERING
-        if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
-            // We use await here so the Featured Snippet can crawl the URL if needed
-            await SERP_MODULE.renderFeaturedSnippet(webData.items, query); 
-            SERP_MODULE.renderPopularProducts(webData.items);
-            SERP_MODULE.renderKnowledgePanel(query);
+        let url = '';
+        if (currentSearchType === 'web') {
+            url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage + '&pageSize=' + MAX_PAGE_SIZE;
+        } else if (currentSearchType === 'image') {
+            url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(currentQuery) + '&type=image&page=' + currentPage + '&pageSize=' + MAX_PAGE_SIZE;
         }
 
-        renderAllResults(query, webData, imgData, vidData);
+        let resp = await fetch(url);
+        let data = await resp.json();
 
-        if (webData.items.length > 0) {
-            processAIResults(query, webData.items);
+        const loaderEl = document.getElementById('infinite-scroll-loader');
+        if (loaderEl) loaderEl.remove();
+
+        if (data.items && data.items.length > 0) {
+            lastFetchedItems = lastFetchedItems.concat(data.items);
+            if (currentSearchType === 'web') {
+                renderLinkResults(data.items, data.total, true);
+            } else if (currentSearchType === 'image') {
+                renderImageResults(data.items, data.total, true);
+            }
+        } else {
+            hasMoreResults = false;
         }
-
-    } catch (error) {
-        console.error('All Search Error:', error);
-        allContainer.innerHTML = '<p class="small">Error retrieving results.</p>';
+    } catch (e) {
+        console.error("Infinite scroll compilation error:", e);
+        const loaderEl = document.getElementById('infinite-scroll-loader');
+        if (loaderEl) loaderEl.remove();
+    } finally {
+        isLoadingMore = false;
     }
 }
