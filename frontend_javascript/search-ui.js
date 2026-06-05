@@ -14,9 +14,6 @@ function renderMarkdown(text) {
     return text;
 }
 
-/**
- * Renders the built-in tool iframe based on the AI's detected tool name.
- */
 function renderBuiltInTool(toolName) {
     var toolContainerEl = document.getElementById('toolContainer');
     if (!toolContainerEl || !toolName) {
@@ -28,16 +25,12 @@ function renderBuiltInTool(toolName) {
     }
 
     const tool = BUILT_IN_TOOLS[toolName];
-    
     if (tool) {
         let finalUrl = tool.url;
-
-        // --- LOGIC TO APPEND QUERY FOR RELEVANT TOOLS ---
         const toolsToPassQuery = ['calculator', 'unit_converter', 'translate'];
         if (toolsToPassQuery.includes(toolName) && currentQuery) {
             finalUrl += '?q=' + encodeURIComponent(currentQuery);
         }
-        // --------------------------------------------------
         
         toolContainerEl.innerHTML = `
             <div class="built-in-tool-frame">
@@ -46,16 +39,11 @@ function renderBuiltInTool(toolName) {
         `;
         toolContainerEl.style.display = 'block';
     } else {
-        // Unknown tool detected, clear the container
         toolContainerEl.innerHTML = '';
         toolContainerEl.style.display = 'none';
     }
 }
 
-/**
- * Re-applies the UI logic using the cached AI response, without a network call.
- * This is the optimized function for handling the AI toggle.
- */
 function applyAIResultsFromCache(aiRawText, searchItems) {
     if (!aiRawText || !searchItems) return;
     
@@ -76,23 +64,18 @@ function applyAIResultsFromCache(aiRawText, searchItems) {
     
     if (isAIOverviewEnabled && overviewEl) {
         overviewEl.innerHTML = renderMarkdown(cleanDisplayText);
-        // Re-render the re-search link from cache
         if (suggestedQuery) renderReSearchLink(suggestedQuery);
     } else if (overviewEl) {
         overviewEl.innerHTML = '';
     }
 }
 
-/**
- * Re-orders the search items based on AI indices and re-renders the list.
- */
 function applySmartRanking(originalItems, indicesString) {
     try {
         var prioritizedIndices = JSON.parse(`[${indicesString}]`);
         var reorderedItems = [];
         var usedIndices = new Set();
 
-        // 1. Push the AI's top picks
         prioritizedIndices.forEach(function(index) {
             if (originalItems[index]) {
                 reorderedItems.push(originalItems[index]);
@@ -100,22 +83,17 @@ function applySmartRanking(originalItems, indicesString) {
             }
         });
 
-        // 2. Push the remaining items (preserving original order)
         originalItems.forEach(function(item, index) {
             if (!usedIndices.has(index)) {
                 reorderedItems.push(item);
             }
         });
 
-        // 3. Update the global cache to match the new order 
-        // (Helps prevent layout jumps if they toggle the AI off and on)
         lastFetchedItems = reorderedItems;
 
-        // 4. Re-render based on the active tab
         if (currentSearchType === 'web' || currentSearchType === 'links') {
-             renderLinkResults(reorderedItems, reorderedItems.length);
+             renderLinkResults(reorderedItems, reorderedItems.length, false);
         } else if (currentSearchType === 'all') {
-            // Surgically update just the web result sections in the "All" tab
             var topWebEl = document.querySelector('.all-web-top');
             var bottomWebEl = document.querySelector('.all-web-bottom');
             
@@ -127,11 +105,9 @@ function applySmartRanking(originalItems, indicesString) {
             }
         }
 
-        // 5. Add a visual indicator that sorting happened
         var targetId = (currentSearchType === 'all') ? 'allResults' : 'linkResults';
         var resultsEl = document.getElementById(targetId);
 
-        // Remove old notice if it exists so we don't duplicate it on AI toggles
         var existingNotice = document.getElementById('smart-sort-notice');
         if (existingNotice) existingNotice.remove();
 
@@ -151,34 +127,20 @@ function applySmartRanking(originalItems, indicesString) {
             <span><b>Smart Sorted:</b> Praterich has analyzed these results.</span>
         `;
         
-        // Insert notice at the top
         if (resultsEl) resultsEl.prepend(notice);
-
     } catch (e) {
         console.warn('Ranking parse error:', e);
     }
 }
 
-// Render universally fetched items
+// Fallback logic for synchronous/cached renders on 'All' tab
 function renderAllResults(query, webData, imgData, vidData) {
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
 
     let combinedHtml = '';
-
-    // 1. Top 3 Web Results
     combinedHtml += `<div class="all-web-top">${webData.items.slice(0, 3).map(renderSingleLink).join('')}</div>`;
 
-    // --- NEW: AD INSERTION FOR "ALL" SECTION ---
-    // We use the first ad slot and the helper from ad.js
-    if (typeof createAdUnitHtml === 'function') {
-        combinedHtml += createAdUnitHtml(ADSENSE_AD_SLOT_1);
-        // Trigger the AdSense push after a short delay to ensure DOM is ready
-        setTimeout(pushAds, AD_PUSH_DELAY_MS);
-    }
-    // --------------------------------------------
-
-    // 2. Image Carousel
     if (imgData.items && imgData.items.length > 0) {
         allTabImagesCache = imgData.items;
         combinedHtml += `
@@ -186,58 +148,43 @@ function renderAllResults(query, webData, imgData, vidData) {
                 <h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ${escapeHtml(query)}</h4>
                 <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
                     ${imgData.items.map((img, idx) => `
-                        <img src="${img.thumbnail}" 
-                             onclick="openImageModalFromAll(${idx})" 
-                             title="${escapeHtml(img.title)}"
-                             style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                        <img src="${img.thumbnail}" onclick="openImageModalFromAll(${idx})" title="${escapeHtml(img.title)}" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                     `).join('')}
                 </div>
             </div>`;
     }
 
-    // 3. Featured Video 
     if (vidData && vidData.length > 0) {
         const v = vidData[0];
         combinedHtml += `
-            <div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">
+            <div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px;">
                 <div style="flex: 0 0 auto;">
-                    <iframe src="https://www.youtube.com/embed/${v.id.videoId}" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>
+                    <iframe src="https://www.youtube.com/embed/${v.id.videoId}" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px;" allowfullscreen></iframe>
                 </div>
                 <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">
                     <h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>
-                    <a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">
-                        ${v.snippet.title}
-                    </a>
-                    <p class="small" style="margin-top:5px; opacity:0.8;">${v.snippet.channelTitle}</p>
+                    <a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" style="font-weight:bold; color: #0288d1;">${v.snippet.title}</a>
                 </div>
             </div>`;
     }
 
-    // 4. Remaining Web Results
     combinedHtml += `<div class="all-web-bottom">${webData.items.slice(3, 8).map(renderSingleLink).join('')}</div>`;
-    
-    // 5. "More" Link
     combinedHtml += `<div style="text-align:center; margin-top:15px;"><button class="frutiger-aero-tab" onclick="switchTab('web', true)">See more results</button></div>`;
 
     allContainer.innerHTML = combinedHtml;
 }
 
-// Helper to render individual link blocks consistently
 function renderSingleLink(r) {
     var sourceBadge = r.source ? `<span style="color: #006400; font-weight: bold; margin-left: 5px;">[${escapeHtml(r.source)}]</span>` : '';
     return `
         <div class="result-block">
             <a href="${r.url}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
-            <div class="small">
-                ${escapeHtml(r.url)} ${sourceBadge}
-            </div>
+            <div class="small">${escapeHtml(r.url)} ${sourceBadge}</div>
             <div>${escapeHtml(r.snippet || '')}</div>
         </div>`;
 }
 
-// Special Modal opener for the "All" tab that uses the separate image cache
 function openImageModalFromAll(index) {
-    // Temporarily swap the global items to the image cache so the modal logic works
     const tempItems = lastFetchedItems;
     lastFetchedItems = allTabImagesCache;
     openImageModal(index);
@@ -249,7 +196,6 @@ function switchTab(tabName, executeNewSearch) {
     var normalizedTab = tabName;
     var newSearchType = tabName;
 
-    // Handle normalization of tab names
     if (tabName === 'web' || tabName === 'links') {
         normalizedTab = 'links';
         newSearchType = 'web';
@@ -266,35 +212,28 @@ function switchTab(tabName, executeNewSearch) {
 
     currentSearchType = newSearchType;
 
-    // --- CHAT VISIBILITY LOGIC ---
-    // If we are switching to ANY tab that is NOT "all", hide the chat.
     if (normalizedTab !== 'all') {
         window.isChatModeActive = false;
         const chatSectionEl = document.getElementById('chatSection');
         if (chatSectionEl) chatSectionEl.style.display = 'none';
     }
-    // ------------------------------
 
-    // Update Tab UI: Use optional chaining (?.) or null checks to prevent the TypeError
     document.querySelectorAll('nav a.frutiger-aero-tab').forEach(function(a) {
         a.classList.remove('active');
     });
 
-    // Hide all result sections
     const sections = ['allSection', 'linksSection', 'imagesSection', 'videosSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // Show the selected section and activate the tab
     var activeTab = document.getElementById('tab-' + normalizedTab);
     var activeSection = document.getElementById(normalizedTab + 'Section');
     
     if (activeTab) activeTab.classList.add('active');
     if (activeSection) activeSection.style.display = 'block';
 
-    // Handle Good Citizen Message visibility
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
     if (citizenMsgEl) {
         if (!isAIOverviewEnabled && (newSearchType === 'web' || newSearchType === 'image' || newSearchType === 'all')) {
@@ -304,7 +243,6 @@ function switchTab(tabName, executeNewSearch) {
         }
     }
     
-    // Clear tool and AI content when switching tabs if not triggering a search
     if (!executeNewSearch) {
         renderBuiltInTool(null);
         var overviewEl = document.getElementById('aiOverview');
@@ -312,11 +250,11 @@ function switchTab(tabName, executeNewSearch) {
         if (aiTimeout) clearTimeout(aiTimeout);
     }
 
-    // Trigger the search if requested and a query exists
-    if (executeNewSearch && currentQuery) {
+    if (currentQuery) {
+        // Leverages smart execution via RAM Cache verification
         executeSearch(currentQuery, newSearchType, 1);
     }
-cleanupUIForTabs(normalizedTab);
+    cleanupUIForTabs(normalizedTab);
 }
 
 function cleanupUIForTabs(activeTab) {
@@ -324,73 +262,70 @@ function cleanupUIForTabs(activeTab) {
     var snippetContainer = document.getElementById('featuredSnippetContainer');
     var productContainer = document.getElementById('popularProductsContainer');
 
-    // SERP features generally only belong on the "All" (web) tab
     if (activeTab !== 'all') {
         if (kpContainer) kpContainer.style.display = 'none';
         if (snippetContainer) snippetContainer.style.display = 'none';
         if (productContainer) productContainer.style.display = 'none';
     } else {
-        // Only show if they actually have content
         if (kpContainer && kpContainer.innerHTML !== '') kpContainer.style.display = 'block';
         if (snippetContainer && snippetContainer.innerHTML !== '') snippetContainer.style.display = 'block';
     }
 }
 
-function changePage(delta) {
-    const newPage = currentPage + delta;
-    if (newPage >= 1) {
-        // Clear AI cache and timer when paginating to ensure a clean state
-        lastAIRawText = null; 
-        lastFetchedItems = null;
-        if (aiTimeout) clearTimeout(aiTimeout);
-        
-        window.location.href = 'search.html?q=' + encodeURIComponent(currentQuery) + '&type=' + currentSearchType + '&page=' + newPage;
-    }
-}
-
-function renderLinkResults(items, total) {
+/**
+ * MODIFIED: Appends lists dynamically or rewrites them based on Scroll Trigger.
+ */
+function renderLinkResults(items, total, isAppend = false) {
     var resultsEl = document.getElementById('linkResults');
-    
-    if (typeof window.renderLinkResultsWithAds === 'function') {
-        const resultsHtml = window.renderLinkResultsWithAds(items, total, currentPage, MAX_PAGE_SIZE);
-        resultsEl.innerHTML = resultsHtml + renderPaginationControls(total);
-    } else {
-        if (!items || items.length === 0) {
-            resultsEl.innerHTML = '<p class="small">No web links found.</p>' + renderPaginationControls(total);
-            return;
-        }
-        
-        const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
-
-        resultsEl.innerHTML = `
-            <p class="small">Found ${total} links. Showing page ${currentPage} of ${maxPages}.</p>
-            ` + items.map(renderSingleLink).join('') + renderPaginationControls(total);
-    }
-}
-
-function renderImageResults(items, total) {
-    var resultsEl = document.getElementById('imageResults');
     if (!items || items.length === 0) {
-        resultsEl.innerHTML = '<p class="small">No images found.</p>' + renderPaginationControls(total);
+        if(!isAppend) resultsEl.innerHTML = '<p class="small">No web links found.</p>';
         return;
     }
 
-    const maxPages = Math.ceil(total / MAX_PAGE_SIZE);
+    const generatedHtml = items.map(renderSingleLink).join('');
+    
+    if (isAppend) {
+        // Appends to the DOM instantly
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = generatedHtml;
+        resultsEl.appendChild(wrapper);
+    } else {
+        resultsEl.innerHTML = `<p class="small">Found ${total} links. Scroll down to look up more seamlessly.</p>` + generatedHtml;
+    }
+}
 
-    resultsEl.innerHTML = items.map(function(r, index) {
+/**
+ * MODIFIED: Image loader supporting Infinite Append.
+ */
+function renderImageResults(items, total, isAppend = false) {
+    var resultsEl = document.getElementById('imageResults');
+    if (!items || items.length === 0) {
+        if(!isAppend) resultsEl.innerHTML = '<p class="small">No images found.</p>';
+        return;
+    }
+
+    // Offset indices configuration for infinite layout arrays
+    const indexOffset = isAppend ? (lastFetchedItems.length - items.length) : 0;
+
+    const generatedHtml = items.map(function(r, index) {
+        const trueIdx = indexOffset + index;
         return `
-            <div class="image-result-item" onclick="openImageModal(${index})">
+            <div class="image-result-item" onclick="openImageModal(${trueIdx})">
                 <div class="img-wrapper">
                     <img src="${r.thumbnail}" alt="${escapeHtml(r.title)}" loading="lazy"/>
                 </div>
-                <div class="img-hover-overlay">
-                    <span>${r.width || '?'} x ${r.height || '?'}</span>
-                </div>
-            </div>
-        `;
-    }).join('') +
-        `<p class="small" style="grid-column: 1 / -1; margin-top: 10px;">Found ${total} images. Showing page ${currentPage} of ${maxPages}.</p>` +
-        renderPaginationControls(total); 
+                <div class="img-hover-overlay"><span>${r.width || '?'} x ${r.height || '?'}</span></div>
+            </div>`;
+    }).join('');
+
+    if (isAppend) {
+        var wrapper = document.createElement('div');
+        wrapper.style.display = 'contents'; 
+        wrapper.innerHTML = generatedHtml;
+        resultsEl.appendChild(wrapper);
+    } else {
+        resultsEl.innerHTML = generatedHtml;
+    }
 }
 
 function renderVideoResults(items) {
@@ -402,52 +337,20 @@ function renderVideoResults(items) {
 
     resultsEl.innerHTML = items.map(item => `
         <div class="video-card-aero" style="background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(5px); border-radius: 10px; padding: 5px; margin-bottom: 15px;">
-            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" 
-                    style="border-radius: 5px; width: 100%; aspect-ratio: 16/9; border:none;" 
-                    allowfullscreen></iframe>
+            <iframe src="https://www.youtube.com/embed/${item.id.videoId}" style="border-radius: 5px; width: 100%; aspect-ratio: 16/9; border:none;" allowfullscreen></iframe>
             <div style="padding: 10px;">
-                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; margin-bottom:4px; color: #0d47a1;">
-                    ${item.snippet.title}
-                </a>
+                <a href="https://www.youtube.com/watch?v=${item.id.videoId}" target="_blank" class="small" style="font-weight:bold; display:block; color: #0d47a1;">${item.snippet.title}</a>
                 <span class="small" style="opacity:0.8;">${item.snippet.channelTitle}</span>
             </div>
         </div>
     `).join('');
 }
 
-function renderPaginationControls(totalResults) {
-    // Pagination is only usually for single-type lists, not "All"
-    if (currentSearchType === 'all') return ''; 
-    
-    const maxPages = Math.ceil(totalResults / MAX_PAGE_SIZE);
-    let controls = '<div style="text-align: center; margin-top: 20px;">';
-
-    if (currentPage > 1) {
-        controls += `<button class="frutiger-aero-tab" onclick="changePage(-1)">← Previous</button>`;
-    } else {
-        controls += `<button class="frutiger-aero-tab" style="opacity: 0.5; cursor: not-allowed;" disabled>← Previous</button>`;
-    }
-
-    controls += `<span style="margin: 0 15px; font-weight: bold;">Page ${currentPage}</span>`;
-
-    if (currentPage < maxPages) {
-        controls += `<button class="frutiger-aero-tab" onclick="changePage(1)">Next →</button>`;
-    } else {
-        controls += `<button class="frutiger-aero-tab" style="opacity: 0.5; cursor: not-allowed;" disabled>Next →</button>`;
-    }
-
-    controls += '</div>';
-    return controls;
-}
-/**
- * Renders a red recommendation link if Praterich suggests a re-search.
- */
 function renderReSearchLink(suggestedQuery) {
     if (!suggestedQuery) return;
 
-    // Create the red link element
     var reSearchDiv = document.createElement('div');
-    reSearchDiv.id = 're-search-container'; // ID for easy removal
+    reSearchDiv.id = 're-search-container'; 
     reSearchDiv.style.marginBottom = '15px';
     reSearchDiv.style.padding = '10px';
     reSearchDiv.style.background = 'rgba(211, 47, 47, 0.05)';
@@ -463,19 +366,16 @@ function renderReSearchLink(suggestedQuery) {
     
     reSearchDiv.appendChild(link);
 
-    // Determine active section to prepend ABOVE the title
     const activeSectionId = currentSearchType === 'all' ? 'allSection' : (currentSearchType + 'Section');
     const targetSection = document.getElementById(activeSectionId);
     
     if (targetSection) {
-        // Remove old ones first
         const old = targetSection.querySelector('#re-search-container');
         if (old) old.remove();
         targetSection.prepend(reSearchDiv);
     }
 }
 
-// --- TOGGLE INITIALIZATION ---
 function setupAIOverviewToggle() {
     var toggle = document.getElementById('aiOverviewToggle');
     var citizenMsgEl = document.getElementById('goodCitizenMessage');
@@ -490,14 +390,12 @@ function setupAIOverviewToggle() {
 
     toggle.checked = isAIOverviewEnabled;
 
-    // Initial message state
     if (!isAIOverviewEnabled && (currentSearchType === 'web' || currentSearchType === 'all')) { 
         if (citizenMsgEl) citizenMsgEl.style.display = 'block';
     } else {
         if (citizenMsgEl) citizenMsgEl.style.display = 'none';
     }
     
-    // Initial display of AI results if cached and enabled (e.g. on page load)
     if (isAIOverviewEnabled && lastAIRawText && lastFetchedItems) {
         applyAIResultsFromCache(lastAIRawText, lastFetchedItems);
     } else if (overviewEl) {
@@ -508,32 +406,41 @@ function setupAIOverviewToggle() {
         isAIOverviewEnabled = this.checked;
         sessionStorage.setItem('aiOverviewState', isAIOverviewEnabled);
         
-        // UI Handling when toggling
         if (isAIOverviewEnabled) {
             if (citizenMsgEl) citizenMsgEl.style.display = 'none';
-            
-            // --- OPTIMIZED LOGIC: USE CACHE IF AVAILABLE ---
             if (currentQuery && (currentSearchType === 'web' || currentSearchType === 'all') && currentPage === 1) {
                 if (lastAIRawText && lastFetchedItems) { 
                     applyAIResultsFromCache(lastAIRawText, lastFetchedItems); 
                 } else {
-                    // Force a re-search if we have no data but turned AI on
                     executeSearch(currentQuery, currentSearchType, currentPage);
                 }
             }
         } else {
-            // Toggled OFF
             if (overviewEl) overviewEl.innerHTML = '';
             if (citizenMsgEl) citizenMsgEl.style.display = 'block';
         }
     });
 }
-// --- END TOGGLE LOGIC ---
+
+/**
+ * GOOGLE-STYLE INFINITE SCROLL SENSOR
+ * Tracks view parameters and fires off-screen network requests progressively.
+ */
+function setupInfiniteScrollDetection() {
+    window.addEventListener('scroll', function() {
+        // Triggers pagination fetch when scrolling 400px near the bottom
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 400) {
+            if (!isLoadingMore && hasMoreResults && currentSearchType !== 'all' && currentSearchType !== 'video') {
+                loadMoreInfiniteResults();
+            }
+        }
+    });
+}
 
 function initializeFromSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let query = urlParams.get('q');
-    let searchType = urlParams.get('type') || 'all'; // Default to 'all' now
+    let searchType = urlParams.get('type') || 'all'; 
     let page = parseInt(urlParams.get('page')) || 1; 
 
     if (!query) {
@@ -545,9 +452,9 @@ function initializeFromSession() {
     sessionStorage.removeItem('searchType');
 
     setupAIOverviewToggle();
+    setupInfiniteScrollDetection(); // Mount continuous scroll engine
 
     if (query) {
-        // We set the tab active without firing search, then fire search manually
         switchTab(searchType, false);
         executeSearch(query, searchType, page); 
     } else {
@@ -555,53 +462,44 @@ function initializeFromSession() {
     }
 }
 
-// Event Listeners initialization
 document.addEventListener('DOMContentLoaded', initializeFromSession);
 document.getElementById('currentQuery').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault(); 
         var query = this.value.trim();
-        
-        // Use the global variable instead of checking DOM classes
         var type = currentSearchType || 'all'; 
         
         lastAIRawText = null; 
         lastFetchedItems = null;
+        searchCache = {}; // Purge local session cache for clean queries
         if (aiTimeout) clearTimeout(aiTimeout);
         
         window.location.href = 'search.html?q=' + encodeURIComponent(query) + '&type=' + type + '&page=1'; 
     }
 });
 
-// --- IMAGE MODAL / WINDOW LOGIC ---
-
 function openImageModal(index) {
     if (!lastFetchedItems || !lastFetchedItems[index]) return;
     const item = lastFetchedItems[index];
 
-    // 1. Setup Data
     const fullImgUrl = item.url || item.media_url || item.thumbnail; 
     const title = item.title || 'Image Result';
     const sourceUrl = item.pageUrl || item.sourceUrl || '';
 
-    // 2. Fix "Dimensions Unknown" (Check multiple possible property names)
     const w = item.width || item.w || (item.details ? item.details.width : null);
     const h = item.height || item.h || (item.details ? item.details.height : null);
     const dims = (w && h) ? `${w} x ${h}` : 'Dimensions Unknown';
 
-    // 3. Populate HTML
     document.getElementById('modalImage').src = fullImgUrl;
     document.getElementById('modalTitle').innerText = title;
     document.getElementById('modalDims').innerText = dims;
     
-    // Display the Source Name + The URL for transparency
     const sourceName = item.source || 'Website';
     document.getElementById('modalSource').innerHTML = `
         <strong>Source:</strong> ${escapeHtml(sourceName)}<br>
         <span style="word-break: break-all; font-size: 0.85em; opacity: 0.8;">${escapeHtml(sourceUrl)}</span>
     `;
     
-    // 4. Setup Buttons
     const btnVisit = document.getElementById('btnVisit');
     btnVisit.onclick = function() { window.open(sourceUrl, '_blank'); };
 
@@ -611,16 +509,14 @@ function openImageModal(index) {
     const btnShare = document.getElementById('btnShare');
     btnShare.onclick = function() { shareImage(fullImgUrl, title, sourceUrl); };
 
-    // 5. Show Modal
     document.getElementById('imageModalOverlay').style.display = 'flex';
 }
 
 function closeImageModal() {
     document.getElementById('imageModalOverlay').style.display = 'none';
-    document.getElementById('modalImage').src = ''; // Clear to stop loading
+    document.getElementById('modalImage').src = ''; 
 }
 
-// Helper: Force Download
 async function forceDownload(url, filename) {
     try {
         const response = await fetch(url);
@@ -634,32 +530,28 @@ async function forceDownload(url, filename) {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
     } catch (e) {
-        // Fallback if CORS blocks the fetch
         window.open(url, '_blank');
     }
 }
 
-// Helper: Share Logic
 async function shareImage(imgUrl, title, pageUrl) {
     if (navigator.share) {
         try {
             await navigator.share({
                 title: title,
                 text: 'Check out this image found on Oodles Search!',
-                url: pageUrl // Sharing the page is usually more reliable than the raw image URL
+                url: pageUrl 
             });
         } catch (err) {
             console.log('Share canceled');
         }
     } else {
-        // Fallback: Copy to clipboard
         navigator.clipboard.writeText(pageUrl).then(() => {
             alert('Link copied to clipboard!');
         });
     }
 }
 
-// Close modal when clicking outside the window
 document.addEventListener('click', function(event) {
     const overlay = document.getElementById('imageModalOverlay');
     if (event.target === overlay) {
