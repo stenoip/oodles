@@ -33,16 +33,30 @@ function handleChatSubmit() {
     
     input.value = '';
     
+    // 1. Append the user's message to the chat container
     appendChatMessage('user', text);
+    
+    // 2. Display the initial thinking indicator
     appendChatMessage('ai', '<span class="ai-overview-loading" style="font-style: italic; color: #0277bd;">Praterich is thinking...</span>', null, null, true);
     
     window.isChatModeActive = true;
+    
+    // 3. Before fetching, check if the query text triggers search-heavy intent to show a searching indicator
+    var isSearchQuery = typeof determineQueryMode === 'function' ? determineQueryMode(text) === 'search' : false;
+    
+    if (isSearchQuery) {
+        updateChatIndicator(`Praterich is searching the web for: "${escapeHtml(text)}"...`);
+    }
     
     var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(text) + '&page=1&pageSize=10';
     fetch(url)
         .then(function(resp) { return resp.json(); })
         .then(function(data) {
             var items = (data && data.items) ? data.items : [];
+            
+            // 4. Update indicator right before processing the AI results to mirror the loop
+            updateChatIndicator("Praterich is analyzing the search findings...");
+            
             if (typeof processAIResults === 'function') {
                 processAIResults(text, items);
             }
@@ -53,6 +67,21 @@ function handleChatSubmit() {
                 processAIResults(text, []);
             }
         });
+}
+
+/**
+ * Helper function to safely update the temporary AI typing/searching indicator
+ */
+function updateChatIndicator(htmlContent) {
+    var tempMsg = document.getElementById('tempChatMsg');
+    if (tempMsg) {
+        var loadingSpan = tempMsg.querySelector('.ai-overview-loading');
+        if (loadingSpan) {
+            loadingSpan.innerHTML = htmlContent;
+        } else {
+            tempMsg.innerHTML = `<span class="ai-overview-loading" style="font-style: italic; color: #0277bd;">${htmlContent}</span>`;
+        }
+    }
 }
 
 function appendChatMessage(role, text, sources, images, isTemp) {
