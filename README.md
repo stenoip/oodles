@@ -1,37 +1,37 @@
 
 
-# Oodles Metasearch Engine
+# Get to know about Oodles Metasearch Engine
 
 ![Oodles Logo](https://stenoip.github.io/oodles/logo.png)
 
 ...
 
 
-Oodles is a full‑scale, general‑purpose metasearch engine that combines results from Bing, Yahoo and Brave into a single, unified search experience.
-It works like Google or Bing: type a query, get web results but with AI‑enhanced ranking,  and zero tracking.
+Oodles is a metasearch engine that combines results from Bing, Yahoo and Brave into a simple(beta) search experience.
+It works like Google or Bing: type a query, get web results but with AI‑enhanced ranking and zero tracking.
 
-Alongside its everyday search interface, Oodles also includes optional developer tools for deep crawling and custom index generation.
 
 
 ---
 
 
-### Who Oodles Is For
-Oodles Metasearch is for everyday users who want a Google‑like search engine without tracking and want multi‑source results without bias! It’s ideal for everyday users who simply want to type a question and get clean, fas, multi‑source results but it also appeals to people who care about **privacy** and **independence** in how they search. Because Oodles pulls results from Bing, Yahoo and Brave at the same time, it gives users a broader, more balanced view of the web instead of relying on one company’s algorithm. 
+### Oodles Homeport
+Oodles Homeport uses a special tool on the web called **localhost**!
 
-## What Oodles Metasearch Does
+Localhost acts as a private proxy on your own machine that strips all tracking cookies and identifying data before querying search engines. This forces Big Tech to see an anonymous, randomized request while ensuring your search history is logged nowhere.
 
+## Oodles Metasearch 
 
-* **Multi-Source Fetching:** Fetches results from Bing, Yahoo, and Brave simultaneously.
-* **AI Synthesis (Praterich):** Generates  search overviews and summarizes technical results.
-* **Smart Ranking:** AI-driven re-ranking that promotes the top 5 most relevant links above standard algorithmic results.
-* **SERP Detection:** Knowledge Panel, To-Go tools (like translator and calculator) for quick answers.
-* **Deep Image Crawler:** Up to 400 images!
+If you don't want to install anything (or you're too cheap to buy an actual laptop), you can still use **Oodles on the Web** (https://stenoip.github.io/oodles). It has A.I intregation, adaptive chat, optional AI overviews and more.
 
 
 
 
 
+
+## Is A.I bloat?
+
+Yes. We believe A.I is bloatware when 
 
 ---
 
@@ -47,34 +47,13 @@ As of 2026, we introduced Adaptive Search, which merges both worlds. When your q
 
 ---
 
-## How Oodles Works (developer info)
-
-### Search Flow
-* User submits a query via `index.html`.
-* `api/index.js` fetches results from multiple engines in parallel using `Promise.all`.
-* `frontend_javascript/search-logic.js` sends snippets to the Praterich AI for synthesis.
-* The AI detects if a tool (such as a calculator) is needed and provides a Smart Ranking to reorder results.
-
-### Indexing Flow
-* User provides a URL to the generator tool.
-* `api/metasearch.js` performs a deep crawl(our ants), visiting each page and extracting full content.
-* The backend bundles this into a downloadable `index.json` compatible with `api/search.js`.
-
-
-
-## Configuration
-
-* **AI Logic:** Modify `ladyPraterichSystemInstruction` in `search-logic.js` to change how the AI summarizes or ranks results.
-* **Built-in Tools:** Add new utility URLs to the `BUILT_IN_TOOLS` object in `search-logic.js`.
-* **Backend URL:** Update `BACKEND_BASE` in the frontend logic to point to your Vercel deployment.
 
 ---
 
 ## Credits
 
 Built by Stenoip Company.  2024-2026. LONG LIVE FRUTIGER AERO!
-* **Frontend:** Hosted on GitHub Pages.  
-* **Backend:** Powered by Vercel.  
+
 * **AI:** Powered by the Praterich model via Groq AI API.
 
 ---
