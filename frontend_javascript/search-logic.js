@@ -170,15 +170,32 @@ conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] })
             var searchMatch = aiRawText.match(searchRegex);
 
             // Intercept search tokens inside chat loops precisely like script.js
-            if (searchMatch && (detectedMode === 'chat' || window.isChatModeActive)) {
-                var searchQuery = searchMatch[1].trim();
-                var searchResultsText = await fetchWebSearch(searchQuery);
+            // Intercept search tokens inside chat loops precisely like script.js
+if (searchMatch && (detectedMode === 'chat' || window.isChatModeActive)) {
+    var searchQuery = searchMatch[1].trim();
+    
+    // 1. Show the search indicator in the UI
+    var overviewEl = document.getElementById('aiOverview');
+    if (overviewEl) {
+        overviewEl.innerHTML = `<p class="ai-overview-loading">Praterich is searching the web for: "${escapeHtml(searchQuery)}"...</p>`;
+    }
 
-                conversationParts.push({ role: "model", parts: [{ text: aiRawText }] });
-                conversationParts.push({ role: "user", parts: [{ text: '[TOOL_RESULT_FOR_PREVIOUS_TURN]\nWeb Search Results for "' + searchQuery + '":\n' + searchResultsText + '\n\nBased on these results, please provide your final response.' }] });
-            } else {
-                isFinalAnswer = true;
-            }
+    // 2. Fetch the search results
+    var searchResultsText = await fetchWebSearch(searchQuery);
+
+    // 3. Clear or update the indicator before looping back
+    if (overviewEl) {
+        overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing the new search findings...</p>';
+    }
+
+    conversationParts.push({ role: "model", parts: [{ text: aiRawText }] });
+    conversationParts.push({ 
+        role: "user", 
+        parts: [{ text: '[TOOL_RESULT_FOR_PREVIOUS_TURN]\nWeb Search Results for "' + searchQuery + '":\n' + searchResultsText + '\n\nBased on these results, please provide your final response.' }] 
+    });
+} else {
+    isFinalAnswer = true;
+}
         }
 
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
