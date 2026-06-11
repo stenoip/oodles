@@ -51,6 +51,18 @@ coding and the joy of HTML, CSS and JS.
 See our fun programs made by humans at Khan Academy: https://www.khanacademy.org/profile/kaid_1027634215520834248783660/projects
 
 
+
+## Any work in progress?
+
+
+YES YES YES! So many WIPs. It's a usable engine but there is a journey.
+
+  To be added: 
+  - SERP snippets
+  - Google Maps (or Ferkenne Maps)
+  - Customizable Search
+  - Open Source version for Oodles Homeport (devs will be able to change icons and rebrand)
+  
 ---
 
 
