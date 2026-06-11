@@ -24,13 +24,13 @@ function buildChatUI() {
                         '<button onclick="handleChatSubmit()" class="frutiger-aero-tab" style="margin: 0; padding: 0.5em 1.2em;">Send</button>' +
                     '</div>' +
                 '</div>' +
-                /* Right Column: Dedicated Sources Panel Matching Standard Result Theme */
-                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; min-width: 240px;">' +
+             
+                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; display: flex; flex-direction: column; height: 100%; min-width: 240px;">' +
                     '<h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">' +
                         'Consulted Sources' +
                     '</h3>' +
                     '<div id="chatSourcesList" style="flex: 1; overflow-y: auto; padding-right: 4px;">' +
-                        '<p class="small" style="font-style: italic; margin: 0;">No active sources referenced yet.</p>' +
+                        '<p class="small" style="font-style: italic; margin: 0;">No links.</p>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -190,7 +190,7 @@ function updateRightPanelSources(sources) {
         var url = src.url || src.link || "#";
         var snippet = src.snippet ? escapeHtml(src.snippet) : "No description snippet available.";
         
-        html += '<div class="result-block" style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05);">' +
+        html += '<div class="result-block">' +
                     '<div style="margin-bottom: 4px;">' +
                         '<a href="' + url + '" target="_blank" title="' + escapeHtml(title) + '" style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">' + 
                             escapeHtml(title) + 
