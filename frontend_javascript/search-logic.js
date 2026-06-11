@@ -1,7 +1,5 @@
-// frontend_javascript/search-logic.js
-
-// --- AI OVERVIEW & RANKING CONFIGURATION ---
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
+var OODLES_SEARCH_URL = "https://oodles-backend.vercel.app/metasearch";
 
 var ladyPraterichSystemInstruction = `
 You are Praterich for Oodles Metasearch, an AI developed by Stenoip Company.
@@ -41,6 +39,12 @@ Output: (Synthesis text...) @@RANKING:[...]@@
 If you determine that the provided snippets are insufficient, irrelevant, or do not contain the answer to the user's question, you MUST suggest a better, more specific search query.
 Format: @@RESEARCH:[new search query]@@
 The tag MUST be outputted before the @@RANKING tag.
+
+IMPORTANT CAPABILITY - CHAT MODE REAL-TIME WEB SEARCH:
+If you are running in chat mode and the user asks a question requiring deeper up-to-date knowledge, 
+OR if you are unsure of a fact, you can explicitly trigger an internal lookup loop by replying EXACTLY with this format and nothing else:
+the filter bot will tell you when  you are in chat mode
+@@SEARCH: [your search query]@@
 
 Output the @@MODE tag before the @@RANKING tag.
 
@@ -83,7 +87,7 @@ var BACKEND_BASE = 'https://oodles-backend.vercel.app';
 var currentQuery = '';
 var currentSearchType = 'web';
 var currentPage = 1; 
-var MAX_PAGE_SIZE = 20; // Reduced page size slightly for quicker infinite scroll payloads
+var MAX_PAGE_SIZE = 20; 
 
 var isAIOverviewEnabled = false; 
 var lastAIRawText = null;       
@@ -91,10 +95,28 @@ var lastFetchedItems = null;
 var aiTimeout = null;           
 var allTabImagesCache = [];     
 
-// Cache ecosystem
 var searchCache = {}; 
 var isLoadingMore = false; 
 var hasMoreResults = true;
+
+// Shared search function from the primary chatbot architecture
+async function fetchWebSearch(query) {
+    try {
+        var url = OODLES_SEARCH_URL + '?q=' + encodeURIComponent(query) + '&page=1&pageSize=6';
+        var resp = await fetch(url);
+        var data = await resp.json();
+        
+        if (!data.items || data.items.length === 0) return 'No web links found.';
+        
+        return data.items.map(function(r, index) {
+            var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
+            return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
+        }).join('\n---\n');
+    } catch (error) {
+        console.error('Oodles search error:', error);
+        return 'Web search failed or timed out. Please proceed with your existing knowledge.';
+    }
+}
 
 function createRawSearchText(items) {
     if (!items || items.length === 0) return 'No web links found.';
@@ -109,38 +131,64 @@ async function processAIResults(query, searchItems) {
     renderBuiltInTool(null); 
     
     const detectedMode = determineQueryMode(query);
-    
-    if (isAIOverviewEnabled && overviewEl && !window.isChatModeActive) {
-        overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing and ranking your results...</p>';
-    }
+var currentModeLabel = window.isChatModeActive ? 'chat' : detectedMode;
 
-    var rawWebSearchText = createRawSearchText(searchItems);
-    var conversationParts = [];
-    
-    if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
-        conversationParts.push(...window.chatConversationHistory.slice(-6));
-    }
-    
-    var userTextWithContext = `User Query: ${query}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
-    conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
+var rawWebSearchText = createRawSearchText(searchItems);
+var conversationParts = [];
 
-    var requestBody = {
-        contents: conversationParts,
-        system_instruction: { parts: [{ text: ladyPraterichSystemInstruction }] }
-    };
+if (window.chatConversationHistory && window.chatConversationHistory.length > 0) {
+    conversationParts.push(...window.chatConversationHistory.slice(-6));
+}
+
+// Injected system flag telling Praterich exactly what mode the filter bot detected
+var modeNotification = `[SYSTEM NOTIFICATION: The filter bot has classified this turn as "${currentModeLabel.toUpperCase()}" mode.]`;
+
+var userTextWithContext = `User Query: ${query}\n\n${modeNotification}\n\n[LATEST SEARCH RESULTS FOR CONTEXT]\n${rawWebSearchText}`;
+conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] });
+
+    var isFinalAnswer = false;
+    var turnCount = 0;
+    var aiRawText = "";
 
     try {
-        var response = await fetch(AI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-        });
+        while (!isFinalAnswer && turnCount < 3) {
+            turnCount++;
 
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            var requestBody = {
+                contents: conversationParts,
+                system_instruction: { parts: [{ text: ladyPraterichSystemInstruction }] }
+            };
 
-        var data = await response.json();
-        var aiRawText = data.text;
-        lastAIRawText = aiRawText;
+            var response = await fetch(AI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            var data = await response.json();
+            aiRawText = data.text;
+            lastAIRawText = aiRawText;
+
+            if (!aiRawText || aiRawText.trim() === '') {
+                throw new Error('Empty response from API.');
+            }
+
+            var searchRegex = /@@SEARCH:\s*(.*?)@@/s;
+            var searchMatch = aiRawText.match(searchRegex);
+
+            // Intercept search tokens inside chat loops precisely like script.js
+            if (searchMatch && (detectedMode === 'chat' || window.isChatModeActive)) {
+                var searchQuery = searchMatch[1].trim();
+                var searchResultsText = await fetchWebSearch(searchQuery);
+
+                conversationParts.push({ role: "model", parts: [{ text: aiRawText }] });
+                conversationParts.push({ role: "user", parts: [{ text: '[TOOL_RESULT_FOR_PREVIOUS_TURN]\nWeb Search Results for "' + searchQuery + '":\n' + searchResultsText + '\n\nBased on these results, please provide your final response.' }] });
+            } else {
+                isFinalAnswer = true;
+            }
+        }
 
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
         var toolRegex = /@@TOOL:\[(.*?)\]@@/;
@@ -220,7 +268,6 @@ async function executeSearch(query, type, page = 1) {
     
     if (aiTimeout) clearTimeout(aiTimeout);
 
-    // Dynamic Tab/Page Memory Palace Check
     const cacheKey = `${query}_${type}`;
     if (page === 1 && searchCache[cacheKey]) {
         console.log("Instant Switch From Local Cache:", cacheKey);
@@ -280,9 +327,6 @@ async function executeSearch(query, type, page = 1) {
     }
 }
 
-/**
- * Renders data straight out of local cache during fast tab toggles
- */
 function renderCachedResults(cachedData, type) {
     if (type === 'web') {
         renderLinkResults(cachedData.items, cachedData.total, false);
@@ -298,10 +342,6 @@ function renderCachedResults(cachedData, type) {
     }
 }
 
-/**
- * PROGRESSIVE LOADING ARCHITECTURE
- * Kicks off all requests simultaneously and streams elements instantly to the view layer.
- */
 async function executeAllSearch(query) {
     const allContainer = document.getElementById('allResults');
     if (!allContainer) return;
@@ -310,7 +350,6 @@ async function executeAllSearch(query) {
         SERP_MODULE.clearAll();
     }
     
-    // Inject structural UI frames immediately so elements render sequentially 
     allContainer.innerHTML = `
         <div id="all-web-top-holder"><p class="small">Gathering web links...</p></div>
         <div id="all-image-holder"></div>
@@ -324,7 +363,6 @@ async function executeAllSearch(query) {
     var webPayload = null, imgPayload = null, vidPayload = null;
     const cacheKey = `${query}_all`;
 
-    // 1. Async Streaming Web Block
     fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&page=1&pageSize=10`)
         .then(res => res.json())
         .then(async (webData) => {
@@ -355,7 +393,6 @@ async function executeAllSearch(query) {
             document.getElementById('all-web-top-holder').innerHTML = '<p class="small">Error loading links.</p>';
         });
 
-    // 2. Async Streaming Image Strip
     fetch(`${BACKEND_BASE}/metasearch?q=${encodeURIComponent(query)}&type=image&page=1&pageSize=8`)
         .then(res => res.json())
         .then(imgData => {
@@ -379,7 +416,6 @@ async function executeAllSearch(query) {
             saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
         }).catch(err => console.error("Img cross-stream fail", err));
 
-    // 3. Async Streaming Video Card
     fetch(`${BACKEND_BASE}/video-search?query=${encodeURIComponent(query)}`)
         .then(res => res.json())
         .then(vidData => {
@@ -411,10 +447,6 @@ function saveAllCache(key, web, img, vid) {
     }
 }
 
-/**
- * INFINITE SCROLL CORE LOGIC
- * Triggered near screen-bottom threshold.
- */
 async function loadMoreInfiniteResults() {
     if (isLoadingMore || !hasMoreResults || currentSearchType === 'all' || currentSearchType === 'video') return;
 
