@@ -31,24 +31,30 @@ If you don't want to install anything (or you're too cheap to buy an actual lapt
 
 ## Is A.I bloat?
 
-Yes. We believe A.I is bloatware when 
+Yes. We believe A.I is bloatware when forced unto consumer's without permission.
 
 ---
 
-## NEW! The Adaptive search engine
+# FAQ
 
+## Did A.I generate this project.
 
-Traditional search engines are powerful, but they’re rigid. They return fixed lists of links even when the user is clearly asking for an explanation, not a webpage. 
+No! As Stenoip Comapny, we are clear of what is A.I and want is not and we will not lie.
 
-Chatbots do the opposite: they generate answers, but they don’t give you real search results or multiple sources to verify anything. 
+Artifical Intelligence has been used to recommend, modify and point out errors. We have used A.I to create
+our crawlers to power the search. We must clarify that this project did not come from the datacentre but
+rather a hobby of having your own search engine.
 
-As of 2026, we introduced Adaptive Search, which merges both worlds. When your query looks like a normal search, Oodles shows you our classic results from Bing, Yahoo and Brave. When your query is conversational or open‑ended, it shifts into chat mode and responds like an **AI assistant**. This hybrid approach removes the limitations of both systems, giving you real search when you need it and real conversation when you want it **all in one place**.
+You may see A.I generated comments that were part of reviews and sessions to improve the project. We enjoy
+coding and the joy of HTML, CSS and JS.
+
+See our fun programs made by humans at Khan Academy: https://www.khanacademy.org/profile/kaid_1027634215520834248783660/projects
 
 
 ---
 
 
----
+
 
 ## Credits
 
