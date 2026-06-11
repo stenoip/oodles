@@ -41,7 +41,7 @@ If you don't want to install anything (or you're too cheap to buy an actual lapt
 
 ## Is A.I bloat?
 
-Yes. We believe A.I is bloatware when forced unto consumer's without permission.
+Yes. We believe A.I is bloatware when forced unto consumers without permission. Looking at you _Microslop_.
 
 ---
 
