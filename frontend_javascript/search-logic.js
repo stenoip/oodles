@@ -160,32 +160,55 @@ conversationParts.push({ role: "user", parts: [{ text: userTextWithContext }] })
             var searchMatch = aiRawText.match(searchRegex);
 
             // Intercept search tokens inside chat loops precisely like script.js
-            // Intercept search tokens inside chat loops precisely like script.js
-if (searchMatch && (detectedMode === 'chat' || window.isChatModeActive)) {
-    var searchQuery = searchMatch[1].trim();
-    
-    // 1. Show the search indicator in the UI
-    var overviewEl = document.getElementById('aiOverview');
-    if (overviewEl) {
-        overviewEl.innerHTML = `<p class="ai-overview-loading">Praterich is searching the web for: "${escapeHtml(searchQuery)}"...</p>`;
-    }
+            if (searchMatch && (detectedMode === 'chat' || window.isChatModeActive)) {
+                var searchQuery = searchMatch[1].trim();
+                
+                // 1. Show the search indicator in the UI
+                var overviewEl = document.getElementById('aiOverview');
+                if (overviewEl) {
+                    overviewEl.innerHTML = `<p class="ai-overview-loading">Praterich is searching the web for: "${escapeHtml(searchQuery)}"...</p>`;
+                }
+                if (typeof updateChatIndicator === 'function') {
+                    updateChatIndicator('Praterich is searching the web for: "' + escapeHtml(searchQuery) + '"...');
+                }
 
-    // 2. Fetch the search results
-    var searchResultsText = await fetchWebSearch(searchQuery);
+                // 2. Fetch the search results and dynamically update our searchItems reference
+                var searchResultsText = 'No web links found.';
+                try {
+                    var url = OODLES_SEARCH_URL + '?q=' + encodeURIComponent(searchQuery) + '&page=1&pageSize=10';
+                    var resp = await fetch(url);
+                    var data = await resp.json();
+                    
+                    if (data && data.items) {
+                        searchItems = data.items; // <-- CRITICAL: Updates the object reference for the Right Sources panel!
+                        if (data.items.length > 0) {
+                            searchResultsText = data.items.map(function(r, index) {
+                                var fullSnippet = r.snippet ? r.snippet.trim() : 'No snippet available.';
+                                return `[Index ${index}] Title: ${r.title}. Snippet: ${fullSnippet}`;
+                            }).join('\n---\n');
+                        }
+                    }
+                } catch (searchErr) {
+                    console.error('Oodles loop background search error:', searchErr);
+                    searchResultsText = 'Web search failed or timed out.';
+                }
 
-    // 3. Clear or update the indicator before looping back
-    if (overviewEl) {
-        overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing the new search findings...</p>';
-    }
+                // 3. Clear or update the indicator before looping back
+                if (overviewEl) {
+                    overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing the new search findings...</p>';
+                }
+                if (typeof updateChatIndicator === 'function') {
+                    updateChatIndicator("Praterich is analyzing the new search findings...");
+                }
 
-    conversationParts.push({ role: "model", parts: [{ text: aiRawText }] });
-    conversationParts.push({ 
-        role: "user", 
-        parts: [{ text: '[TOOL_RESULT_FOR_PREVIOUS_TURN]\nWeb Search Results for "' + searchQuery + '":\n' + searchResultsText + '\n\nBased on these results, please provide your final response.' }] 
-    });
-} else {
-    isFinalAnswer = true;
-}
+                conversationParts.push({ role: "model", parts: [{ text: aiRawText }] });
+                conversationParts.push({ 
+                    role: "user", 
+                    parts: [{ text: '[TOOL_RESULT_FOR_PREVIOUS_TURN]\nWeb Search Results for "' + searchQuery + '":\n' + searchResultsText + '\n\nBased on these results, please provide your final response.' }] 
+                });
+            } else {
+                isFinalAnswer = true;
+            }
         }
 
         var rankingRegex = /@@RANKING:\[(.*?)\]@@/;
