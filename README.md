@@ -10,6 +10,9 @@
 Oodles is a metasearch engine that combines results from Bing, Yahoo and Brave into a simple(beta) search experience.
 It works like Google or Bing: type a query, get web results but with AI‑enhanced ranking and zero tracking.
 
+We made Oodles because, it nice to boast that you have your own search engine. Also, we wanted to bring
+the power of SearXNG to the average consumer.
+
 
 
 ---
@@ -19,6 +22,13 @@ It works like Google or Bing: type a query, get web results but with AI‑enhanc
 Oodles Homeport uses a special tool on the web called **localhost**!
 
 Localhost acts as a private proxy on your own machine that strips all tracking cookies and identifying data before querying search engines. This forces Big Tech to see an anonymous, randomized request while ensuring your search history is logged nowhere.
+
+Installation is easy. No terminal, no Ubuntu, no 4 gigabytes of storage. Just a simpel exe file*.
+
+* _Yes, I said exe file. Not available on MacOS, Android-Aluminum, iOS and Linux distros yet...  Oh and definately not
+Chromebooks_
+
+
 
 ## Oodles Metasearch 
 
@@ -57,7 +67,7 @@ See our fun programs made by humans at Khan Academy: https://www.khanacademy.org
 
 YES YES YES! So many WIPs. It's a usable engine but there is a journey.
 
-  To be added: 
+  _To be added:_
   - SERP snippets
   - Google Maps (or Ferkenne Maps)
   - Customizable Search
