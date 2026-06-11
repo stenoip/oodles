@@ -1,5 +1,3 @@
-// frontend_javascript/adaptive-chat.js
-
 window.chatConversationHistory = [];
 window.isChatModeActive = false;
 
@@ -7,9 +5,9 @@ function buildChatUI() {
     var chatSection = document.getElementById('chatSection');
     if (!chatSection.innerHTML.trim()) {
         chatSection.innerHTML = 
-            '<div id="chatWrapper" style="display: flex; gap: 20px; width: 100%; height: 65vh; position: relative;">' +
-                /* Left Column: The Interactive Chat Workspace */
-                '<div id="chatContainer" style="flex: 2; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; min-width: 0;">' +
+            '<div id="chatWrapper" style="display: flex; gap: 40px; width: 100%; height: 75vh; align-items: flex-start; position: relative;">' +
+                /* Left Column: Fixed-width Chat Sidebar to keep text bubbles proportioned */
+                '<div id="chatContainer" style="width: 380px; flex-shrink: 0; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative;">' +
                     /* Action Control Header containing Hide Chat Button */
                     '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;">' +
                         '<div style="font-size: 12px; color: #966; font-weight: 500;">Chatting with Praterich</div>' +
@@ -24,13 +22,13 @@ function buildChatUI() {
                         '<button onclick="handleChatSubmit()" class="frutiger-aero-tab" style="margin: 0; padding: 0.5em 1.2em;">Send</button>' +
                     '</div>' +
                 '</div>' +
-             
-                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; display: flex; flex-direction: column; height: 100%; width: 500px;">' +
-                    '<h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">' +
+                /* Right Column: Full-width Results Canvas taking up the entire remaining empty space natively */
+                '<div id="chatSourcesPanel" style="flex: 1; display: flex; flex-direction: column; height: 100%; min-width: 0;">' +
+                    '<h3 style="margin: 0 0 20px 0; font-size: 16px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">' +
                         'Consulted Sources' +
                     '</h3>' +
-                    '<div id="chatSourcesList" style="flex: 1; overflow-y: auto; padding-right: 4px;">' +
-                        '<p class="small" style="font-style: italic; margin: 0;">No links.</p>' +
+                    '<div id="chatSourcesList" style="flex: 1; overflow-y: auto; padding-right: 15px;">' +
+                        '<p class="small" style="font-style: italic; margin: 0;">No active sources referenced yet.</p>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -56,27 +54,14 @@ function handleChatSubmit() {
     
     window.isChatModeActive = true;
     
-    var isSearchQuery = typeof determineQueryMode === 'function' ? determineQueryMode(text) === 'search' : false;
-    if (isSearchQuery) {
-        updateChatIndicator('Praterich is searching the web for: "' + escapeHtml(text) + '"...');
-    }
+    // Expressly inform the user she is preparing an optimized search string
+    updateChatIndicator('Praterich is searching...');
     
-    var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(text) + '&page=1&pageSize=10';
-    fetch(url)
-        .then(function(resp) { return resp.json(); })
-        .then(function(data) {
-            var items = (data && data.items) ? data.items : [];
-            updateChatIndicator("Praterich is analyzing the search findings...");
-            if (typeof processAIResults === 'function') {
-                processAIResults(text, items);
-            }
-        })
-        .catch(function(error) {
-            console.error('Chat context background retrieval error:', error);
-            if (typeof processAIResults === 'function') {
-                processAIResults(text, []);
-            }
-        });
+    // Go straight to the AI loop with an empty initial item set, forcing 
+    // Praterich to generate a context-aware query from history
+    if (typeof processAIResults === 'function') {
+        processAIResults(text, []);
+    }
 }
 
 function appendChatMessage(role, text, sources, images, isTemp) {
@@ -146,6 +131,17 @@ function activateAdaptiveChat(userQuery, aiResponseText, webItems) {
         if (el) el.style.display = 'none';
     }
     
+    // --- NEW: Expand layout to use the full empty right side of the screen ---
+    var sidebarCol = document.querySelector('.sidebar-column');
+    if (sidebarCol) sidebarCol.style.display = 'none';
+
+    var mainCol = document.querySelector('.main-column');
+    if (mainCol) mainCol.style.maxWidth = '100%';
+
+    var container = document.querySelector('.container');
+    if (container) container.style.maxWidth = '100%';
+    // -------------------------------------------------------------------------
+    
     var chatSection = document.getElementById('chatSection');
     if (chatSection) {
         chatSection.style.display = 'block';
@@ -174,6 +170,37 @@ function activateAdaptiveChat(userQuery, aiResponseText, webItems) {
     appendChatMessage('ai', aiResponseText, [], images);
 }
 
+function toggleChatView() {
+    window.isChatModeActive = false;
+    
+    var chatSection = document.getElementById('chatSection');
+    if (chatSection) chatSection.style.display = 'none';
+    
+    var sectionsToShow = ['allSection', 'linksSection', 'imagesSection', 'videosSection', 'aiOverview', 'toolContainer'];
+    for (var i = 0; i < sectionsToShow.length; i++) {
+        var el = document.getElementById(sectionsToShow[i]);
+        if (el) {
+            el.style.display = ''; 
+        }
+    }
+    
+    // --- NEW: Restore regular search result constraints when exiting chat ---
+    var sidebarCol = document.querySelector('.sidebar-column');
+    if (sidebarCol) sidebarCol.style.display = '';
+
+    var mainCol = document.querySelector('.main-column');
+    if (mainCol) mainCol.style.maxWidth = '800px';
+
+    var container = document.querySelector('.container');
+    if (container) container.style.maxWidth = '1000px';
+    // -------------------------------------------------------------------------
+    
+    if (typeof currentSearchType !== 'undefined') {
+        var activeTabEl = document.getElementById(currentSearchType + 'Section');
+        if (activeTabEl) activeTabEl.style.display = 'block';
+    }
+}
+
 function updateRightPanelSources(sources) {
     var sourcesListEl = document.getElementById('chatSourcesList');
     if (!sourcesListEl) return;
@@ -190,13 +217,14 @@ function updateRightPanelSources(sources) {
         var url = src.url || src.link || "#";
         var snippet = src.snippet ? escapeHtml(src.snippet) : "No description snippet available.";
         
-        html += '<div class="result-block">' +
-                    '<div style="margin-bottom: 4px;">' +
-                        '<a href="' + url + '" target="_blank" title="' + escapeHtml(title) + '" style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">' + 
+        /* Uses exact search result structure. Added margin-bottom to clear link reflections gracefully */
+        html += '<div class="result-block" style="margin-bottom: 35px;">' +
+                    '<div style="margin-bottom: 14px;">' +
+                        '<a href="' + url + '" target="_blank" title="' + escapeHtml(title) + '">' + 
                             escapeHtml(title) + 
                         '</a>' +
                     '</div>' +
-                    '<div class="small" style="line-height: 1.4; max-height: 3.6em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' + 
+                    '<div class="small" style="line-height: 1.5; color: var(--text-muted); text-align: justify;">' + 
                         snippet + 
                     '</div>' +
                 '</div>';
