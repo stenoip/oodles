@@ -25,7 +25,7 @@ Localhost acts as a private proxy on your own machine that strips all tracking c
 
 Installation is easy. No terminal, no Ubuntu, no 4 gigabytes of storage. Just a simpel exe file*.
 
-* _Yes, I said exe file. Not available on MacOS, Android-Aluminum, iOS and Linux distros yet...  Oh and definately not
+ *_Yes, I said exe file. Not available on MacOS, Android-Aluminum, iOS and Linux distros yet...  Oh and definately not
 Chromebooks_
 
 
