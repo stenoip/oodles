@@ -8,13 +8,13 @@ function buildChatUI() {
     if (!chatSection.innerHTML.trim()) {
         chatSection.innerHTML = 
             '<div id="chatWrapper" style="display: flex; gap: 20px; width: 100%; height: 65vh; position: relative;">' +
-                // Left Column: The Chat Box
+                /* Left Column: The Interactive Chat Workspace */
                 '<div id="chatContainer" style="flex: 2; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; display: flex; flex-direction: column; height: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; min-width: 0;">' +
-                    // Action Control Header containing Hide Chat Button
+                    /* Action Control Header containing Hide Chat Button */
                     '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 8px;">' +
                         '<div style="font-size: 12px; color: #966; font-weight: 500;">Chatting with Praterich</div>' +
                         '<button onclick="toggleChatView()" id="hideChatBtn" style="background: #b3e5fc; border: none; border-radius: 16px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: #0277bd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s;" title="Return to Search Results">' +
-                            '← Hide Chat' +
+                            '<- Hide Chat' +
                         '</button>' +
                     '</div>' +
                     '<div id="chatMessages" style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 10px; margin-bottom: 15px;">' +
@@ -24,13 +24,13 @@ function buildChatUI() {
                         '<button onclick="handleChatSubmit()" class="frutiger-aero-tab" style="margin: 0; padding: 0.5em 1.2em;">Send</button>' +
                     '</div>' +
                 '</div>' +
-                // New Right Column: Dedicated Sources Panel
-                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; min-width: 240px;">' +
-                    '<h3 style="margin: 0 0 12px 0; font-size: 15px; color: #0277bd; border-bottom: 2px solid #b3e5fc; padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">' +
-                        'Websites' +
+                /* Right Column: Dedicated Sources Panel Matching Standard Result Theme */
+                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; min-width: 240px;">' +
+                    '<h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">' +
+                        'Consulted Sources' +
                     '</h3>' +
-                    '<div id="chatSourcesList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">' +
-                        '<p style="font-size: 13px; color: #777; font-style: italic; margin: 0;">No active sources referenced yet.</p>' +
+                    '<div id="chatSourcesList" style="flex: 1; overflow-y: auto; padding-right: 4px;">' +
+                        '<p class="small" style="font-style: italic; margin: 0;">No active sources referenced yet.</p>' +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -56,11 +56,17 @@ function handleChatSubmit() {
     
     window.isChatModeActive = true;
     
+    var isSearchQuery = typeof determineQueryMode === 'function' ? determineQueryMode(text) === 'search' : false;
+    if (isSearchQuery) {
+        updateChatIndicator('Praterich is searching the web for: "' + escapeHtml(text) + '"...');
+    }
+    
     var url = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(text) + '&page=1&pageSize=10';
     fetch(url)
         .then(function(resp) { return resp.json(); })
         .then(function(data) {
             var items = (data && data.items) ? data.items : [];
+            updateChatIndicator("Praterich is analyzing the search findings...");
             if (typeof processAIResults === 'function') {
                 processAIResults(text, items);
             }
@@ -164,22 +170,16 @@ function activateAdaptiveChat(userQuery, aiResponseText, webItems) {
     var sources = webItems || [];
     var images = typeof allTabImagesCache !== 'undefined' ? allTabImagesCache : [];
     
-    // 1. Route the sources directly to the new right sidebar container instead of the chat bubble
     updateRightPanelSources(sources);
-    
-    // 2. Append the model text response clean and concise
     appendChatMessage('ai', aiResponseText, [], images);
 }
 
-/**
- * Populates and updates the dedicated Right Side Panel with active web citations
- */
 function updateRightPanelSources(sources) {
     var sourcesListEl = document.getElementById('chatSourcesList');
     if (!sourcesListEl) return;
     
     if (!sources || sources.length === 0) {
-        sourcesListEl.innerHTML = '<p style="font-size: 13px; color: #777; font-style: italic; margin: 0;">No context links loaded for this sequence.</p>';
+        sourcesListEl.innerHTML = '<p class="small" style="font-style: italic; margin: 0;">No active sources referenced yet.</p>';
         return;
     }
     
@@ -190,39 +190,46 @@ function updateRightPanelSources(sources) {
         var url = src.url || src.link || "#";
         var snippet = src.snippet ? escapeHtml(src.snippet) : "No description snippet available.";
         
-        html += '<div style="background: rgba(255, 255, 255, 0.8); border: 1px solid #e1f5fe; border-radius: 8px; padding: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); transition: transform 0.2s;">' +
-                    '<a href="' + url + '" target="_blank" style="color: #0288d1; font-weight: bold; font-size: 13px; text-decoration: none; display: block; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + escapeHtml(title) + '">' + 
-                        escapeHtml(title) + 
-                    '</a>' +
-                    '<p style="margin: 0; font-size: 11px; color: #555; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' + 
+        html += '<div class="result-block" style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.05);">' +
+                    '<div style="margin-bottom: 4px;">' +
+                        '<a href="' + url + '" target="_blank" title="' + escapeHtml(title) + '" style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">' + 
+                            escapeHtml(title) + 
+                        '</a>' +
+                    '</div>' +
+                    '<div class="small" style="line-height: 1.4; max-height: 3.6em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' + 
                         snippet + 
-                    '</p>' +
+                    '</div>' +
                 '</div>';
     }
     sourcesListEl.innerHTML = html;
 }
 
-/**
- * Toggles view modes out of Adaptive Chat and returns visibility back to initial SERP blocks
- */
+function updateChatIndicator(htmlContent) {
+    var tempMsg = document.getElementById('tempChatMsg');
+    if (tempMsg) {
+        var loadingSpan = tempMsg.querySelector('.ai-overview-loading');
+        if (loadingSpan) {
+            loadingSpan.innerHTML = htmlContent;
+        } else {
+            tempMsg.innerHTML = '<span class="ai-overview-loading" style="font-style: italic; color: #0277bd;">' + htmlContent + '</span>';
+        }
+    }
+}
+
 function toggleChatView() {
     window.isChatModeActive = false;
     
-    // Hide the complete adaptive chat module block
     var chatSection = document.getElementById('chatSection');
     if (chatSection) chatSection.style.display = 'none';
     
-    // Restore and present classic engine layout nodes
     var sectionsToShow = ['allSection', 'linksSection', 'imagesSection', 'videosSection', 'aiOverview', 'toolContainer'];
     for (var i = 0; i < sectionsToShow.length; i++) {
         var el = document.getElementById(sectionsToShow[i]);
         if (el) {
-            // Revert back to active search state tabs view configurations
             el.style.display = ''; 
         }
     }
     
-    // Re-trigger standard layout syncs if matching tabs are active
     if (typeof currentSearchType !== 'undefined') {
         var activeTabEl = document.getElementById(currentSearchType + 'Section');
         if (activeTabEl) activeTabEl.style.display = 'block';
