@@ -25,7 +25,7 @@ function buildChatUI() {
                     '</div>' +
                 '</div>' +
              
-                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; display: flex; flex-direction: column; height: 100%; min-width: 240px;">' +
+                '<div id="chatSourcesPanel" style="flex: 1; max-width: 360px; display: flex; flex-direction: column; height: 100%; min-width: 500px;">' +
                     '<h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;">' +
                         'Consulted Sources' +
                     '</h3>' +
