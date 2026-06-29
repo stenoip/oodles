@@ -69,7 +69,7 @@ var SERP_MODULE = {
                 }
             }
 
-            var html = '<div class="serp-dictionary-card" style="background: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.7); border-radius: 12px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); backdrop-filter: blur(4px);">';
+            var html = '<div class="serp-dictionary-card" style="background: rgba(255,255,255,0.45); padding: 18px; margin-bottom: 20px; ">';
             html += '<div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;">';
             html += '<h3 style="margin: 0; font-size: 22px; color: #01579b; text-transform: capitalize;">' + typeof escapeHtml === 'function' ? escapeHtml(word) : word + '</h3>';
             if (phonetic) {
