@@ -262,6 +262,7 @@ function executeAllSearch(query) {
                         } else {
                             SERP_MODULE.renderPopularProducts(webData.items);
                             SERP_MODULE.renderKnowledgePanel(query);
+                            SERP_MODULE.renderDictionaryCard(query);
                         }
                     }
                 }
