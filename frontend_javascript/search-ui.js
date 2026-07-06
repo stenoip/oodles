@@ -245,7 +245,7 @@ function renderLinkResults(items, total, isAppend) {
         wrapper.innerHTML = generatedHtml;
         resultsEl.appendChild(wrapper);
     } else {
-        resultsEl.innerHTML = '<p class="small">Found ' + total + ' links. Scroll down to look up more seamlessly.</p>' + generatedHtml;
+        resultsEl.innerHTML = '<p class="small">Found ' + total + ' links. </p>' + generatedHtml;
     }
 }
 
