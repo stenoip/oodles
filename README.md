@@ -7,8 +7,8 @@
 ...
 
 
-Oodles is a metasearch engine that combines results from Bing, Yahoo and Brave into a simple(beta) search experience.
-It works like Google or Bing: type a query, get web results but with AI‑enhanced ranking and zero tracking.
+Oodles is a metasearch engine that combines results from Bing, Yahoo and Brave into a simple search experience.
+It works like Google or Bing: type a query, get web results.
 
 We made Oodles because, it nice to boast that you have your own search engine. Also, we wanted to bring
 the power of SearXNG to the average consumer.
