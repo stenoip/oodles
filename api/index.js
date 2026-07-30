@@ -70,6 +70,7 @@ function normalizeImage(data) {
 
     if (!thumbnail || !originalUrl || !pageUrl) return null;
     return { 
+        title: (title || '').trim(),
         thumbnail: thumbnail, 
         originalUrl: originalUrl, 
         pageUrl: pageUrl, 
@@ -173,6 +174,7 @@ module.exports = async (req, res) => {
             var allImageResults = [];
             for (var j = 0; j < rawImages.length; j++) {
                 var imgItem = normalizeImage({
+                    title: rawImages[j].title,
                     thumbnail: rawImages[j].img_src || rawImages[j].thumbnail || rawImages[j].url,
                     originalUrl: rawImages[j].url,
                     pageUrl: rawImages[j].template || rawImages[j].url,
