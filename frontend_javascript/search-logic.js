@@ -1,5 +1,3 @@
-// frontend_javascript/search-logic.js
-
 var AI_API_URL = "https://praterich.vercel.app/api/praterich"; 
 var OODLES_SEARCH_URL = "https://oodles-backend.vercel.app/metasearch";
 var BACKEND_BASE = 'https://oodles-backend.vercel.app';
@@ -19,16 +17,119 @@ var searchCache = {};
 var isLoadingMore = false; 
 var hasMoreResults = true;
 
+// Helper: Safe HTML Escaping
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+
+function renderSingleLink(item) {
+    if (!item) return '';
+    var title = escapeHtml(item.title || 'Untitled');
+    var url = escapeHtml(item.url || '#');
+    var snippet = escapeHtml(item.snippet || 'No snippet available.');
+    var source = escapeHtml(item.source || 'web');
+
+    return '<div class="search-result-item" style="margin-bottom: 20px;">' +
+        '<div style="font-size: 12px; color: #5f6368; word-break: break-all;">' + url + '</div>' +
+        '<h3 style="margin: 2px 0 4px 0; font-size: 18px;"><a href="' + url + '" target="_blank" style="color: #1a0dab; text-decoration: none;">' + title + '</a></h3>' +
+        '<div style="font-size: 14px; color: #4d5156; line-height: 1.5;">' + snippet + '</div>' +
+        (source ? '<span style="font-size: 11px; color: #70757a; background: #f1f3f4; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">' + source + '</span>' : '') +
+    '</div>';
+}
+
+function renderLinkResults(items, total, append) {
+    var container = document.getElementById('linkResults');
+    if (!container) return;
+    if (!append) container.innerHTML = '';
+    
+    if (!items || items.length === 0) {
+        if (!append) container.innerHTML = '<p class="small">No web links found.</p>';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        html += renderSingleLink(items[i]);
+    }
+    
+    if (append) {
+        container.innerHTML += html;
+    } else {
+        container.innerHTML = html;
+    }
+}
+
+function renderImageResults(items, total, append) {
+    var container = document.getElementById('imageResults');
+    if (!container) return;
+    if (!append) container.innerHTML = '';
+    
+    if (!items || items.length === 0) {
+        if (!append) container.innerHTML = '<p class="small">No images found.</p>';
+        return;
+    }
+    
+    var html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px;">';
+    for (var i = 0; i < items.length; i++) {
+        var img = items[i];
+        var thumb = escapeHtml(img.thumbnail || img.originalUrl);
+        var pageUrl = escapeHtml(img.pageUrl || img.originalUrl || '#');
+        html += '<a href="' + pageUrl + '" target="_blank" style="display: block; border-radius: 8px; overflow: hidden; border: 1px solid #ccc;">' +
+                    '<img src="' + thumb + '" style="width: 100%; height: 120px; object-fit: cover; display: block;" />' +
+                '</a>';
+    }
+    html += '</div>';
+    
+    if (append) {
+        container.innerHTML += html;
+    } else {
+        container.innerHTML = html;
+    }
+}
+
+function renderVideoResults(items) {
+    var container = document.getElementById('videoResults');
+    if (!container) return;
+    if (!items || items.length === 0) {
+        container.innerHTML = '<p class="small">No videos found.</p>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        var v = items[i];
+        var videoId = v.id ? (v.id.videoId || v.id) : '';
+        var title = v.snippet ? escapeHtml(v.snippet.title) : 'Video';
+        var channel = v.snippet ? escapeHtml(v.snippet.channelTitle) : '';
+        html += '<div style="margin-bottom: 15px;">' +
+            '<iframe src="https://www.youtube.com/embed/' + videoId + '" style="width: 100%; max-width: 400px; aspect-ratio: 16/9; border-radius: 8px;" allowfullscreen></iframe>' +
+            '<h4>' + title + '</h4>' +
+            '<p class="small">' + channel + '</p>' +
+        '</div>';
+    }
+    container.innerHTML = html;
+}
+
 function createRawSearchText(items) {
-    if (!items) { return 'No web links found.'; }
-    if (items.length === 0) { return 'No web links found.'; }
+    if (!items) { 
+        return 'No web links found.'; 
+    }
+    if (items.length === 0) { 
+        return 'No web links found.'; 
+    }
     
     var textArr = [];
     for (var i = 0; i < items.length; i++) {
         var r = items[i];
         var fullSnippet = 'No snippet available.';
         if (r.snippet) { fullSnippet = r.snippet.trim(); }
-        textArr.push('[Index ' + i + '] Title: ' + r.title + '. Snippet: ' + fullSnippet);
+        textArr.push('[Index ' + i + '] Title: ' + (r.title || 'Untitled') + '. Snippet: ' + fullSnippet);
     }
     return textArr.join('\n---\n');
 }
@@ -45,7 +146,7 @@ function processAIResults(query, searchItems) {
 
     if (overviewEl) {
         if (isAIOverviewEnabled) {
-            overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing the your results...</p>';
+            overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing your results...</p>';
         }
     }
 
@@ -107,25 +208,17 @@ function executeSearch(query, type, page) {
     if (citizenMsgEl) {
         var showCitizen = false;
         if (!isAIOverviewEnabled) {
-            if (type === 'web') { showCitizen = true; }
-            else if (type === 'image') { showCitizen = true; }
-            else if (type === 'all') { showCitizen = true; }
+            if (type === 'web' || type === 'image' || type === 'all') { showCitizen = true; }
         }
-        if (showCitizen) {
-            citizenMsgEl.style.display = 'block';
-        } else {
-            citizenMsgEl.style.display = 'none';
-        }
+        citizenMsgEl.style.display = showCitizen ? 'block' : 'none';
     }
     
     if (aiTimeout) { clearTimeout(aiTimeout); }
 
     var cacheKey = query + '_' + type;
-    if (page === 1) {
-        if (searchCache[cacheKey]) {
-            renderCachedResults(searchCache[cacheKey], type);
-            return;
-        }
+    if (page === 1 && searchCache[cacheKey]) {
+        renderCachedResults(searchCache[cacheKey], type);
+        return;
     }
 
     if (type === 'all') {
@@ -140,15 +233,13 @@ function executeSearch(query, type, page) {
             .then(function(resp) { return resp.json(); })
             .then(function(data) {
                 searchCache[cacheKey] = data; 
-                renderLinkResults(data.items, data.total, false);
+                renderLinkResults(data.items, data.total, page > 1);
                 lastFetchedItems = data.items;
 
-                if (page === 1) {
-                    if (isAIOverviewEnabled) {
-                        aiTimeout = setTimeout(function() {
-                            processAIResults(query, data.items);
-                        }, 500);
-                    }
+                if (page === 1 && isAIOverviewEnabled) {
+                    aiTimeout = setTimeout(function() {
+                        processAIResults(query, data.items);
+                    }, 500);
                 }
             })
             .catch(function(error) {
@@ -167,7 +258,7 @@ function executeSearch(query, type, page) {
             .then(function(data) {
                 searchCache[cacheKey] = data;
                 lastFetchedItems = data.items; 
-                renderImageResults(data.items, data.total, false);
+                renderImageResults(data.items, data.total, page > 1);
             })
             .catch(function(error) {
                 console.error('Image search error:', error);
@@ -197,12 +288,8 @@ function renderCachedResults(cachedData, type) {
     if (type === 'web') {
         renderLinkResults(cachedData.items, cachedData.total, false);
         lastFetchedItems = cachedData.items;
-        if (lastFetchedItems) {
-            if (lastFetchedItems.length > 0) {
-                if (isAIOverviewEnabled) {
-                    processAIResults(currentQuery, lastFetchedItems);
-                }
-            }
+        if (lastFetchedItems && lastFetchedItems.length > 0 && isAIOverviewEnabled) {
+            processAIResults(currentQuery, lastFetchedItems);
         }
     } else if (type === 'image') {
         lastFetchedItems = cachedData.items;
@@ -218,10 +305,8 @@ function executeAllSearch(query) {
     var allContainer = document.getElementById('allResults');
     if (!allContainer) { return; }
     
-    if (typeof SERP_MODULE !== 'undefined') {
-        if (SERP_MODULE.clearAll) {
-            SERP_MODULE.clearAll();
-        }
+    if (typeof SERP_MODULE !== 'undefined' && SERP_MODULE.clearAll) {
+        SERP_MODULE.clearAll();
     }
     
     allContainer.innerHTML = 
@@ -243,28 +328,19 @@ function executeAllSearch(query) {
         .then(function(res) { return res.json(); })
         .then(function(webData) {
             webPayload = webData;
-            lastFetchedItems = webData.items;
+            lastFetchedItems = webData.items || [];
             
-            if (typeof SERP_MODULE !== 'undefined') {
-                if (webData.items) {
-                    if (webData.items.length > 0) {
-                        var p = SERP_MODULE.renderFeaturedSnippet(webData.items, query);
-                        if (p) {
-                            if (p.then) {
-                                p.then(function() {
-                                    SERP_MODULE.renderPopularProducts(webData.items);
-                                    SERP_MODULE.renderKnowledgePanel(query);
-                                });
-                            } else {
-                                SERP_MODULE.renderPopularProducts(webData.items);
-                                SERP_MODULE.renderKnowledgePanel(query);
-                            }
-                        } else {
-                            SERP_MODULE.renderPopularProducts(webData.items);
-                            SERP_MODULE.renderKnowledgePanel(query);
-                            SERP_MODULE.renderDictionaryCard(query);
-                        }
-                    }
+            if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
+                var p = SERP_MODULE.renderFeaturedSnippet ? SERP_MODULE.renderFeaturedSnippet(webData.items, query) : null;
+                if (p && typeof p.then === 'function') {
+                    p.then(function() {
+                        if (SERP_MODULE.renderPopularProducts) SERP_MODULE.renderPopularProducts(webData.items);
+                        if (SERP_MODULE.renderKnowledgePanel) SERP_MODULE.renderKnowledgePanel(query);
+                    });
+                } else {
+                    if (SERP_MODULE.renderPopularProducts) SERP_MODULE.renderPopularProducts(webData.items);
+                    if (SERP_MODULE.renderKnowledgePanel) SERP_MODULE.renderKnowledgePanel(query);
+                    if (SERP_MODULE.renderDictionaryCard) SERP_MODULE.renderDictionaryCard(query);
                 }
             }
 
@@ -272,33 +348,30 @@ function executeAllSearch(query) {
             var bottomEl = document.getElementById('all-web-bottom-holder');
             var btnEl = document.getElementById('all-more-btn-holder');
 
-            if (webData.items) {
-                if (webData.items.length > 0) {
-                    var topLinksHtml = '';
-                    for (var wTop = 0; wTop < 3; wTop++) {
-                        if (webData.items[wTop]) { topLinksHtml += renderSingleLink(webData.items[wTop]); }
-                    }
-                    if (topEl) { topEl.innerHTML = topLinksHtml; }
-                    
-                    var botLinksHtml = '';
-                    for (var wBot = 3; wBot < 8; wBot++) {
-                        if (webData.items[wBot]) { botLinksHtml += renderSingleLink(webData.items[wBot]); }
-                    }
-                    if (bottomEl) { bottomEl.innerHTML = botLinksHtml; }
-                    
-                    if (btnEl) { btnEl.style.display = 'block'; }
-                    
-                    if (isAIOverviewEnabled) {
-                        processAIResults(query, webData.items);
-                    }
-                } else {
-                    if (topEl) { topEl.innerHTML = '<p class="small">No web links found.</p>'; }
+            if (webData.items && webData.items.length > 0) {
+                var topLinksHtml = '';
+                for (var wTop = 0; wTop < 3; wTop++) {
+                    if (webData.items[wTop]) { topLinksHtml += renderSingleLink(webData.items[wTop]); }
+                }
+                if (topEl) { topEl.innerHTML = topLinksHtml; }
+                
+                var botLinksHtml = '';
+                for (var wBot = 3; wBot < 8; wBot++) {
+                    if (webData.items[wBot]) { botLinksHtml += renderSingleLink(webData.items[wBot]); }
+                }
+                if (bottomEl) { bottomEl.innerHTML = botLinksHtml; }
+                
+                if (btnEl) { btnEl.style.display = 'block'; }
+                
+                if (isAIOverviewEnabled) {
+                    processAIResults(query, webData.items);
                 }
             } else {
                 if (topEl) { topEl.innerHTML = '<p class="small">No web links found.</p>'; }
             }
             saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
         }).catch(function(err) {
+            console.error("Web all-stream error:", err);
             var errTopEl = document.getElementById('all-web-top-holder');
             if (errTopEl) { errTopEl.innerHTML = '<p class="small">Error loading links.</p>'; }
         });
@@ -309,19 +382,18 @@ function executeAllSearch(query) {
         .then(function(imgData) {
             imgPayload = imgData;
             var imgEl = document.getElementById('all-image-holder');
-            if (imgData.items) {
-                if (imgData.items.length > 0) {
-                    allTabImagesCache = imgData.items;
-                    var stripHtml = '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
-                        '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
-                        '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
-                    for (var imgIdx = 0; imgIdx < imgData.items.length; imgIdx++) {
-                        var imgObj = imgData.items[imgIdx];
-                        stripHtml += '<img src="' + imgObj.thumbnail + '" onclick="openImageModalFromAll(' + imgIdx + ')" title="' + escapeHtml(imgObj.title) + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">';
-                    }
-                    stripHtml += '</div></div>';
-                    if (imgEl) { imgEl.innerHTML = stripHtml; }
+            if (imgData.items && imgData.items.length > 0) {
+                allTabImagesCache = imgData.items;
+                var stripHtml = '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
+                    '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
+                    '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
+                for (var imgIdx = 0; imgIdx < imgData.items.length; imgIdx++) {
+                    var imgObj = imgData.items[imgIdx];
+                    var imgTitle = escapeHtml(imgObj.title || query || 'Image');
+                    stripHtml += '<img src="' + escapeHtml(imgObj.thumbnail) + '" onclick="if(typeof openImageModalFromAll===\'function\') openImageModalFromAll(' + imgIdx + ')" title="' + imgTitle + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">';
                 }
+                stripHtml += '</div></div>';
+                if (imgEl) { imgEl.innerHTML = stripHtml; }
             }
             saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
         }).catch(function(err) {
@@ -334,23 +406,24 @@ function executeAllSearch(query) {
         .then(function(vidData) {
             vidPayload = vidData;
             var vidEl = document.getElementById('all-video-holder');
-            if (vidData) {
-                if (vidData.length > 0) {
-                    var v = vidData[0];
-                    if (vidEl) {
-                        vidEl.innerHTML = '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">' +
-                            '<div style="flex: 0 0 auto;">' +
-                                '<iframe src="https://www.youtube.com/embed/' + v.id.videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>' +
-                            '</div>' +
-                            '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
-                                '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
-                                '<a href="https://www.youtube.com/watch?v=' + v.id.videoId + '" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">' +
-                                    escapeHtml(v.snippet.title) +
-                                '</a>' +
-                                '<p class="small" style="margin-top:5px; opacity:0.8;">' + escapeHtml(v.snippet.channelTitle) + '</p>' +
-                            '</div>' +
-                        '</div>';
-                    }
+            if (vidData && vidData.length > 0) {
+                var v = vidData[0];
+                var videoId = v.id ? (v.id.videoId || v.id) : '';
+                var vTitle = v.snippet ? escapeHtml(v.snippet.title) : 'Featured Video';
+                var vChannel = v.snippet ? escapeHtml(v.snippet.channelTitle) : '';
+                if (vidEl) {
+                    vidEl.innerHTML = '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">' +
+                        '<div style="flex: 0 0 auto;">' +
+                            '<iframe src="https://www.youtube.com/embed/' + videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>' +
+                        '</div>' +
+                        '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
+                            '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
+                            '<a href="https://www.youtube.com/watch?v=' + videoId + '" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">' +
+                                vTitle +
+                            '</a>' +
+                            '<p class="small" style="margin-top:5px; opacity:0.8;">' + vChannel + '</p>' +
+                        '</div>' +
+                    '</div>';
                 }
             }
             saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
@@ -360,43 +433,31 @@ function executeAllSearch(query) {
 }
 
 function saveAllCache(key, web, img, vid) {
-    if (web) {
-        if (img) {
-            if (vid) {
-                searchCache[key] = { web: web, img: img, vid: vid };
-            }
-        }
+    if (web && img && vid) {
+        searchCache[key] = { web: web, img: img, vid: vid };
     }
 }
 
 function loadMoreInfiniteResults() {
-    if (isLoadingMore) { return; }
-    if (!hasMoreResults) { return; }
-    if (currentSearchType === 'all') { return; }
-    if (currentSearchType === 'video') { return; }
+    if (isLoadingMore || !hasMoreResults) { return; }
+    if (currentSearchType === 'all' || currentSearchType === 'video') { return; }
 
     isLoadingMore = true;
     currentPage++;
 
-    var targetId = 'imageResults';
-    if (currentSearchType === 'web') {
-        targetId = 'linkResults';
-    }
+    var targetId = currentSearchType === 'web' ? 'linkResults' : 'imageResults';
     var container = document.getElementById(targetId);
 
     var scrollLoader = document.createElement('div');
     scrollLoader.id = 'infinite-scroll-loader';
-    scrollLoader.innerHTML = '<p class="small" style="text-align:center; padding:15px; color:#0288d1;">Loading more results matches...</p>';
+    scrollLoader.innerHTML = '<p class="small" style="text-align:center; padding:15px; color:#0288d1;">Loading more results...</p>';
     if (container) {
         container.appendChild(scrollLoader);
     }
 
-    var urlMore = '';
-    if (currentSearchType === 'web') {
-        urlMore = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(currentQuery) + '&page=' + currentPage + '&pageSize=' + MAX_PAGE_SIZE;
-    } else if (currentSearchType === 'image') {
-        urlMore = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(currentQuery) + '&type=image&page=' + currentPage + '&pageSize=' + MAX_PAGE_SIZE;
-    }
+    var urlMore = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(currentQuery) + 
+                  (currentSearchType === 'image' ? '&type=image' : '') + 
+                  '&page=' + currentPage + '&pageSize=' + MAX_PAGE_SIZE;
 
     fetch(urlMore)
         .then(function(res) { return res.json(); })
@@ -404,23 +465,19 @@ function loadMoreInfiniteResults() {
             var loaderEl = document.getElementById('infinite-scroll-loader');
             if (loaderEl) { loaderEl.remove(); }
 
-            if (data.items) {
-                if (data.items.length > 0) {
-                    lastFetchedItems = lastFetchedItems.concat(data.items);
-                    if (currentSearchType === 'web') {
-                        renderLinkResults(data.items, data.total, true);
-                    } else if (currentSearchType === 'image') {
-                        renderImageResults(data.items, data.total, true);
-                    }
-                } else {
-                    hasMoreResults = false;
+            if (data.items && data.items.length > 0) {
+                lastFetchedItems = (lastFetchedItems || []).concat(data.items);
+                if (currentSearchType === 'web') {
+                    renderLinkResults(data.items, data.total, true);
+                } else if (currentSearchType === 'image') {
+                    renderImageResults(data.items, data.total, true);
                 }
             } else {
                 hasMoreResults = false;
             }
         })
         .catch(function(e) {
-            console.error("Infinite scroll compilation error:", e);
+            console.error("Infinite scroll error:", e);
             var errLoaderEl = document.getElementById('infinite-scroll-loader');
             if (errLoaderEl) { errLoaderEl.remove(); }
         })
