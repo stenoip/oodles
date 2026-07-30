@@ -19,7 +19,7 @@ var DEFAULT_PAGE_SIZE = 10;
 var MAX_PAGE_SIZE = 50; 
 
 
-var SEARXNG_API_URL = process.env.SEARXNG_API_URL || 'https://searx.be';
+var SEARXNG_API_URL = process.env.SEARXNG_API_URL || 'https://searx.party';
 
 
 function withTimeout(promise, ms, label) {
