@@ -77,16 +77,16 @@ header.scrolled {
 .search-area textarea {
   width: 500px;
   max-width: 600px;
-  min-height: 42px; /* Matches your current height */
-  max-height: 200px; /* Prevents it from taking over the screen */
-  padding: 10px 16px;
-  font-size: 16px;
+  min-height: 36px; 
+  max-height: 200px;
+  padding: 6px 16px; 
+  font-size: 15px;
   font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 24px;
   background: linear-gradient(to bottom, #ffffff 0%, #f7f9fc 100%);
-  resize: none; /* Disables the manual resize handle */
-  overflow-y: hidden; /* Hides scrollbar until max-height is reached */
+  resize: none;
+  overflow-y: hidden;
   transition: border-color 0.2s, box-shadow 0.2s, border-radius 0.2s;
   line-height: 1.4;
 }
@@ -210,35 +210,44 @@ header.scrolled {
 /*  IMAGE GRID */
 
 #imageResults {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px;
+  padding: 15px 0;
+  width: 100%;
 }
 
 .image-result-item {
   position: relative;
   cursor: pointer;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible; /* Allows the 3D shadow reflection to show */
   background: var(--bg-page, #fff);
   border: 1px solid var(--border, #dadce0);
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   transition: transform 0.2s, box-shadow 0.2s;
+  
+  /* Apply the Frutiger Aero 3D tilt to the container item rather than just the raw img */
+  transform: perspective(800px) rotateX(10deg);
+  transform-origin: bottom;
+  margin-bottom: 30px; /* Leave space for the reflection shadow */
 }
 
 .image-result-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 4px 4px 12px rgba(0,0,0,0.2);
-  z-index: 2;
+  transform: translateY(-4px) perspective(800px) rotateX(0deg);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  z-index: 10;
 }
 
 .image-result-item img {
   width: 100%;
-  height: auto;
+  height: 150px;       /* Keeps grid card heights uniform */
+  object-fit: cover;   /* Clean cropping for mixed aspect ratios */
   display: block;
-  border-radius: 8px;
+  border-radius: 7px;
+  
+  /* Apply reflection to the image component inside the item */
+  -webkit-box-reflect: below 2px linear-gradient(transparent 50%, rgba(0,0,0,0.2) 100%);
 }
 
 .img-hover-overlay {
@@ -615,7 +624,7 @@ button.large, input.large[type="button"], input.large[type="submit"] {
         <a href="index.html"> <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Logo"></a>
       </div>
       <div class="search-area">
-        <textarea id="currentQuery" placeholder="Search again..." rows="2"></textarea>
+        <textarea id="currentQuery" placeholder="Search again..." rows="1"></textarea>
       </div>
     </div>
 
