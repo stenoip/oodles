@@ -13,20 +13,18 @@ Oodles Search and the Oodleant-Crawlers are trademarks of Stenoip Company
 var fetch = require('node-fetch');
 var setCors = require('./_cors').setCors;
 
-// Config
-var TIMEOUT_MS = 8000; 
+// Config - Raised timeout to 15s to accommodate slower image engine responses
+var TIMEOUT_MS = 15000; 
 var DEFAULT_PAGE_SIZE = 10;
 var MAX_PAGE_SIZE = 50; 
 
-
 var SEARXNG_API_URL = process.env.SEARXNG_API_URL;
-
 
 function withTimeout(promise, ms, label) {
     var t;
     var timeout = new Promise(function(resolve, reject) {
         t = setTimeout(function() {
-            reject(new Error(label + ' timed out'));
+            reject(new Error(label + ' timed out after ' + ms + 'ms'));
         }, ms);
     });
     return Promise.race([
@@ -63,12 +61,13 @@ function normalize(data) {
 }
 
 function normalizeImage(data) {
-    var thumbnail = data.thumbnail;
-    var originalUrl = data.originalUrl;
-    var pageUrl = data.pageUrl;
+    var title = data.title;
+    var thumbnail = data.thumbnail || data.originalUrl;
+    var originalUrl = data.originalUrl || data.thumbnail;
+    var pageUrl = data.pageUrl || originalUrl || '#';
     var source = data.source;
 
-    if (!thumbnail || !originalUrl || !pageUrl) return null;
+    if (!thumbnail && !originalUrl) return null;
     return { 
         title: (title || '').trim(),
         thumbnail: thumbnail, 
@@ -106,7 +105,8 @@ function paginate(items, page, pageSize) {
 // SearXNG Fetchers
 function fetchSearxng(query, category) {
     if (!category) category = 'general';
-    var url = SEARXNG_API_URL + '/search?q=' + encodeURIComponent(query) + '&format=json&categories=' + category;
+    var baseUrl = (SEARXNG_API_URL || '').replace(/\/+$/, '');
+    var url = baseUrl + '/search?q=' + encodeURIComponent(query) + '&format=json&categories=' + category;
     
     return fetch(url, { 
         headers: { 
@@ -115,13 +115,13 @@ function fetchSearxng(query, category) {
         } 
     }).then(function(resp) {
         if (!resp.ok) {
-            throw new Error('SearXNG error: ' + resp.status + ' for query: ' + query);
+            throw new Error('SearXNG returned HTTP ' + resp.status + ' for category: ' + category);
         }
         return resp.json();
     });
 }
 
-//  Main handler 
+// Main handler 
 module.exports = async (req, res) => {
     setCors(res);
     if (req.method === 'OPTIONS') {
@@ -204,6 +204,6 @@ module.exports = async (req, res) => {
 
     } catch (err) {
         console.error('SearXNG Proxy error:', err);
-        res.status(500).json({ error: 'Oodlebot search failed via SearXNG' });
+        res.status(500).json({ error: 'Oodlebot search failed via SearXNG', details: err.message });
     }
 };
