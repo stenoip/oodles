@@ -136,11 +136,12 @@ header.scrolled {
     }
 
     /*  MAIN  */
-    .container {
-      max-width: 1000px;
-      margin: 24px 0;
-      padding: 0 24px;
-    }
+    ..container {
+  width: 100%;
+  max-width: 1400px; 
+  margin: 24px auto; 
+  padding: 0 24px;
+}
 
     .results-section {
       margin-bottom: 32px;
@@ -657,9 +658,9 @@ button.large, input.large[type="button"], input.large[type="submit"] {
         </label>
     </div>
 
-    <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px;">
+    <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px; width: 100%;">
         
-        <div class="main-column" style="flex: 1; min-width: 300px; max-width: 800px;">
+        <div class="main-column" style="flex: 1; min-width: 300px; max-width: 100%;">
             
             <div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
             
@@ -695,8 +696,8 @@ button.large, input.large[type="button"], input.large[type="submit"] {
             </div>
         </div>
 
-        <div class="sidebar-column" style="width: 320px;">
-            <div id="knowledgePanelContainer" style="display:none;"></div>
+        <div class="sidebar-column" style="flex: 0 0 auto;">
+            <div id="knowledgePanelContainer" style="display:none; width: 320px;"></div>
         </div>
 
     </div>
