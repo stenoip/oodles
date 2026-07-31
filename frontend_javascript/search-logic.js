@@ -17,7 +17,6 @@ var searchCache = {};
 var isLoadingMore = false; 
 var hasMoreResults = true;
 
-// Helper: Safe HTML Escaping
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str)
@@ -27,7 +26,6 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
-
 
 function renderSingleLink(item) {
     if (!item) return '';
@@ -117,10 +115,7 @@ function renderVideoResults(items) {
 }
 
 function createRawSearchText(items) {
-    if (!items) { 
-        return 'No web links found.'; 
-    }
-    if (items.length === 0) { 
+    if (!items || items.length === 0) { 
         return 'No web links found.'; 
     }
     
@@ -144,10 +139,8 @@ function processAIResults(query, searchItems) {
         system_instruction: { parts: [{ text: "You are Praterich, an AI for Oodles Metasearch. Your mission is to provide a brief, well-written synthesis of the provided search results. Do not output any ranking arrays or tool tags." }] }
     };
 
-    if (overviewEl) {
-        if (isAIOverviewEnabled) {
-            overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing your results...</p>';
-        }
+    if (overviewEl && isAIOverviewEnabled) {
+        overviewEl.innerHTML = '<p class="ai-overview-loading">Praterich is analyzing your results...</p>';
     }
 
     fetch(AI_API_URL, {
@@ -165,22 +158,18 @@ function processAIResults(query, searchItems) {
         var aiRawText = data.text;
         lastAIRawText = aiRawText;
 
-        if (isAIOverviewEnabled) {
-            if (overviewEl) {
-                var finalHTML = aiRawText;
-                if (typeof renderMarkdown === 'function') {
-                    finalHTML = renderMarkdown(aiRawText);
-                }
-                overviewEl.innerHTML = finalHTML;
+        if (isAIOverviewEnabled && overviewEl) {
+            var finalHTML = aiRawText;
+            if (typeof renderMarkdown === 'function') {
+                finalHTML = renderMarkdown(aiRawText);
             }
+            overviewEl.innerHTML = finalHTML;
         }
     })
     .catch(function(error) {
         console.error('AI Processing Error:', error);
-        if (isAIOverviewEnabled) {
-            if (overviewEl) {
-                overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
-            }
+        if (isAIOverviewEnabled && overviewEl) {
+            overviewEl.innerHTML = '<p class="ai-overview-error">An error occurred while analyzing results.</p>';
         }
     });
 }
@@ -235,21 +224,20 @@ function executeSearch(query, type, page) {
         }
         var urlWeb = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
         fetch(urlWeb)
-    .then(function(resp) { return resp.json(); })
-    .then(function(data) {
-        searchCache[cacheKey] = data; 
-        renderLinkResults(data.items, data.total, page > 1);
-        lastFetchedItems = data.items;
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                searchCache[cacheKey] = data; 
+                renderLinkResults(data.items, data.total, page > 1);
+                lastFetchedItems = data.items;
 
-        // Render Pagination Bar
-        renderPagination(data.total, data.page, data.pageSize);
+                renderPagination(data.total, data.page, data.pageSize);
 
-        if (page === 1 && isAIOverviewEnabled) {
-            aiTimeout = setTimeout(function() {
-                processAIResults(query, data.items);
-            }, 500);
-        }
-    })
+                if (page === 1 && isAIOverviewEnabled) {
+                    aiTimeout = setTimeout(function() {
+                        processAIResults(query, data.items);
+                    }, 500);
+                }
+            })
             .catch(function(error) {
                 console.error('Web search error:', error);
                 var errEl = document.getElementById('linkResults');
@@ -262,15 +250,14 @@ function executeSearch(query, type, page) {
         }
         var urlImg = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
         fetch(urlImg)
-    .then(function(resp) { return resp.json(); })
-    .then(function(data) {
-        searchCache[cacheKey] = data;
-        lastFetchedItems = data.items; 
-        renderImageResults(data.items, data.total, page > 1);
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                searchCache[cacheKey] = data;
+                lastFetchedItems = data.items; 
+                renderImageResults(data.items, data.total, page > 1);
 
-        // Render Pagination Bar
-        renderPagination(data.total, data.page, data.pageSize);
-    })
+                renderPagination(data.total, data.page, data.pageSize);
+            })
             .catch(function(error) {
                 console.error('Image search error:', error);
                 var errEl2 = document.getElementById('imageResults');
@@ -308,7 +295,7 @@ function renderCachedResults(cachedData, type) {
     } else if (type === 'video') {
         renderVideoResults(cachedData);
     } else if (type === 'all') {
-        renderAllResults(currentQuery, cachedData.web, cachedData.img, cachedData.vid);
+        executeAllSearch(currentQuery);
     }
 }
 
@@ -329,19 +316,24 @@ function executeAllSearch(query) {
             '<button class="frutiger-aero-tab" onclick="switchTab(\'web\', true)">See more results</button>' +
         '</div>';
 
-    var webPayload = null;
-    var imgPayload = null;
-    var vidPayload = null;
     var cacheKey = query + '_all';
-
     var urlWebAll = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=1&pageSize=10';
-    fetch(urlWebAll)
-        .then(function(res) { return res.json(); })
-        .then(function(webData) {
-            webPayload = webData;
+    var urlImgAll = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=1&pageSize=8';
+    var urlVidAll = BACKEND_BASE + '/video-search?query=' + encodeURIComponent(query);
+
+    Promise.all([
+        fetch(urlWebAll).then(function(res) { return res.json(); }).catch(function(err) { console.error("Web all-stream error:", err); return null; }),
+        fetch(urlImgAll).then(function(res) { return res.json(); }).catch(function(err) { console.error("Img cross-stream fail:", err); return null; }),
+        fetch(urlVidAll).then(function(res) { return res.json(); }).catch(function(err) { console.error("Video stream fail:", err); return null; })
+    ]).then(function(results) {
+        var webData = results[0];
+        var imgData = results[1];
+        var vidData = results[2];
+
+        if (webData && webData.items) {
             lastFetchedItems = webData.items || [];
             
-            if (typeof SERP_MODULE !== 'undefined' && webData.items && webData.items.length > 0) {
+            if (typeof SERP_MODULE !== 'undefined' && webData.items.length > 0) {
                 var p = SERP_MODULE.renderFeaturedSnippet ? SERP_MODULE.renderFeaturedSnippet(webData.items, query) : null;
                 if (p && typeof p.then === 'function') {
                     p.then(function() {
@@ -359,7 +351,7 @@ function executeAllSearch(query) {
             var bottomEl = document.getElementById('all-web-bottom-holder');
             var btnEl = document.getElementById('all-more-btn-holder');
 
-            if (webData.items && webData.items.length > 0) {
+            if (webData.items.length > 0) {
                 var topLinksHtml = '';
                 for (var wTop = 0; wTop < 3; wTop++) {
                     if (webData.items[wTop]) { topLinksHtml += renderSingleLink(webData.items[wTop]); }
@@ -380,76 +372,57 @@ function executeAllSearch(query) {
             } else {
                 if (topEl) { topEl.innerHTML = '<p class="small">No web links found.</p>'; }
             }
-            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
-        }).catch(function(err) {
-            console.error("Web all-stream error:", err);
+        } else {
             var errTopEl = document.getElementById('all-web-top-holder');
             if (errTopEl) { errTopEl.innerHTML = '<p class="small">Error loading links.</p>'; }
-        });
+        }
 
-    var urlImgAll = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=1&pageSize=8';
-    fetch(urlImgAll)
-        .then(function(res) { return res.json(); })
-        .then(function(imgData) {
-            imgPayload = imgData;
+        if (imgData && imgData.items && imgData.items.length > 0) {
             var imgEl = document.getElementById('all-image-holder');
-            if (imgData.items && imgData.items.length > 0) {
-                allTabImagesCache = imgData.items;
-                var stripHtml = '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
-                    '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
-                    '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
-                for (var imgIdx = 0; imgIdx < imgData.items.length; imgIdx++) {
-                    var imgObj = imgData.items[imgIdx];
-                    var imgTitle = escapeHtml(imgObj.title || query || 'Image');
-                    stripHtml += '<img src="' + escapeHtml(imgObj.thumbnail) + '" onclick="if(typeof openImageModalFromAll===\'function\') openImageModalFromAll(' + imgIdx + ')" title="' + imgTitle + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">';
-                }
-                stripHtml += '</div></div>';
-                if (imgEl) { imgEl.innerHTML = stripHtml; }
+            allTabImagesCache = imgData.items;
+            var stripHtml = '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
+                '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
+                '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
+            for (var imgIdx = 0; imgIdx < imgData.items.length; imgIdx++) {
+                var imgObj = imgData.items[imgIdx];
+                var imgTitle = escapeHtml(imgObj.title || query || 'Image');
+                stripHtml += '<img src="' + escapeHtml(imgObj.thumbnail) + '" onclick="if(typeof openImageModalFromAll===\'function\') openImageModalFromAll(' + imgIdx + ')" title="' + imgTitle + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;">';
             }
-            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
-        }).catch(function(err) {
-            console.error("Img cross-stream fail", err);
-        });
+            stripHtml += '</div></div>';
+            if (imgEl) { imgEl.innerHTML = stripHtml; }
+        }
 
-    var urlVidAll = BACKEND_BASE + '/video-search?query=' + encodeURIComponent(query);
-    fetch(urlVidAll)
-        .then(function(res) { return res.json(); })
-        .then(function(vidData) {
-            vidPayload = vidData;
+        if (vidData && vidData.length > 0) {
             var vidEl = document.getElementById('all-video-holder');
-            if (vidData && vidData.length > 0) {
-                var v = vidData[0];
-                var videoId = v.id ? (v.id.videoId || v.id) : '';
-                var vTitle = v.snippet ? escapeHtml(v.snippet.title) : 'Featured Video';
-                var vChannel = v.snippet ? escapeHtml(v.snippet.channelTitle) : '';
-                if (vidEl) {
-                    vidEl.innerHTML = '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">' +
-                        '<div style="flex: 0 0 auto;">' +
-                            '<iframe src="https://www.youtube.com/embed/' + videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>' +
-                        '</div>' +
-                        '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
-                            '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
-                            '<a href="https://www.youtube.com/watch?v=' + videoId + '" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">' +
-                                vTitle +
-                            '</a>' +
-                            '<p class="small" style="margin-top:5px; opacity:0.8;">' + vChannel + '</p>' +
-                        '</div>' +
-                    '</div>';
-                }
+            var v = vidData[0];
+            var videoId = v.id ? (v.id.videoId || v.id) : '';
+            var vTitle = v.snippet ? escapeHtml(v.snippet.title) : 'Featured Video';
+            var vChannel = v.snippet ? escapeHtml(v.snippet.channelTitle) : '';
+            if (vidEl) {
+                vidEl.innerHTML = '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px; border: 1px solid rgba(179, 229, 252, 0.8);">' +
+                    '<div style="flex: 0 0 auto;">' +
+                        '<iframe src="https://www.youtube.com/embed/' + videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" allowfullscreen></iframe>' +
+                    '</div>' +
+                    '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
+                        '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
+                        '<a href="https://www.youtube.com/watch?v=' + videoId + '" target="_blank" style="font-weight:bold; text-decoration: none; color: #0288d1; font-size: 1.1em;">' +
+                            vTitle +
+                        '</a>' +
+                        '<p class="small" style="margin-top:5px; opacity:0.8;">' + vChannel + '</p>' +
+                    '</div>' +
+                '</div>';
             }
-            saveAllCache(cacheKey, webPayload, imgPayload, vidPayload);
-        }).catch(function(err) {
-            console.error("Video stream fail", err);
-        });
+        }
+
+        searchCache[cacheKey] = { web: webData, img: imgData, vid: vidData };
+    });
 }
 
-// Helper to trigger page jump and scroll to top
 function goToPage(page) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     executeSearch(currentQuery, currentSearchType, page);
 }
 
-// Renders page numbers (1-10 window)
 function renderPagination(total, currentPage, pageSize) {
     var container = document.getElementById('paginationContainer');
     if (!container) return;
@@ -462,7 +435,6 @@ function renderPagination(total, currentPage, pageSize) {
     var totalPages = Math.ceil(total / pageSize);
     var maxPagesToShow = 10;
 
-    // Calculate window range
     var startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     var endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
 
@@ -472,14 +444,12 @@ function renderPagination(total, currentPage, pageSize) {
 
     var html = '';
 
-    // Previous Button
     if (currentPage > 1) {
         html += '<button class="pagination-btn" onclick="goToPage(' + (currentPage - 1) + ')">&laquo; Prev</button>';
     } else {
         html += '<button class="pagination-btn disabled" disabled>&laquo; Prev</button>';
     }
 
-    // Numerical Page Buttons (1 to 10)
     for (var p = startPage; p <= endPage; p++) {
         if (p === currentPage) {
             html += '<button class="pagination-btn active">' + p + '</button>';
@@ -488,7 +458,6 @@ function renderPagination(total, currentPage, pageSize) {
         }
     }
 
-    // Next Button
     if (currentPage < totalPages) {
         html += '<button class="pagination-btn" onclick="goToPage(' + (currentPage + 1) + ')">Next &raquo;</button>';
     } else {
@@ -497,7 +466,6 @@ function renderPagination(total, currentPage, pageSize) {
 
     container.innerHTML = html;
 }
-
 
 function saveAllCache(key, web, img, vid) {
     if (web && img && vid) {
