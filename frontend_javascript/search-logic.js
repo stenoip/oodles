@@ -249,7 +249,7 @@ function executeSearch(query, type, page) {
                 processAIResults(query, data.items);
             }, 500);
         }
-    });
+    })
             .catch(function(error) {
                 console.error('Web search error:', error);
                 var errEl = document.getElementById('linkResults');
@@ -270,7 +270,7 @@ function executeSearch(query, type, page) {
 
         // Render Pagination Bar
         renderPagination(data.total, data.page, data.pageSize);
-    });
+    })
             .catch(function(error) {
                 console.error('Image search error:', error);
                 var errEl2 = document.getElementById('imageResults');
