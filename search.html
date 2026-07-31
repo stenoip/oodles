@@ -579,16 +579,65 @@ button.large, input.large[type="button"], input.large[type="submit"] {
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
+#paginationContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 30px 0 20px 0;
+  flex-wrap: wrap;
+}
 
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border, #dadce0);
+  background: #ffffff;
+  color: #1a0dab;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(.disabled):not(.active) {
+  background: #f1f3f4;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  transform: translateY(-1px);
+}
+
+.pagination-btn.active {
+  background: #1a73e8;
+  color: #ffffff;
+  border-color: #1a73e8;
+  font-weight: bold;
+  cursor: default;
+  box-shadow: 0 2px 5px rgba(26, 115, 232, 0.3);
+}
+
+.pagination-btn.disabled {
+  color: #9aa0a6;
+  border-color: #f1f3f4;
+  background: #f8f9fa;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+    
    /* Apply to links and images */
 .result-block a, 
 #imageResults img {
   display: inline-block;
   position: relative;
   
-  /* 1. Create the shadow by reflecting the object */
-  /* 2. Offset it so it starts at the bottom */
-  /* 3. Apply a mask to make it look like a dark shadow silhouette */
+
   -webkit-box-reflect: below -2px 
     linear-gradient(transparent 10%, rgba(0,0,0,0.4) 90%);
   
@@ -695,6 +744,9 @@ button.large, input.large[type="button"], input.large[type="submit"] {
                 </div>
             </div>
         </div>
+
+      
+      <div id="paginationContainer"></div>
 
         <div class="sidebar-column" style="flex: 0 0 auto;">
             <div id="knowledgePanelContainer" style="display:none; width: 320px;"></div>
