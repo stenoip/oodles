@@ -200,6 +200,11 @@ function executeSearch(query, type, page) {
 
     var overviewEl = document.getElementById('aiOverview');
     if (overviewEl) { overviewEl.innerHTML = ''; }
+
+    var pagEl = document.getElementById('paginationContainer');
+    if (pagEl) { 
+        pagEl.innerHTML = ''; 
+    }
     
     lastAIRawText = null; 
     lastFetchedItems = null;
@@ -230,18 +235,21 @@ function executeSearch(query, type, page) {
         }
         var urlWeb = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
         fetch(urlWeb)
-            .then(function(resp) { return resp.json(); })
-            .then(function(data) {
-                searchCache[cacheKey] = data; 
-                renderLinkResults(data.items, data.total, page > 1);
-                lastFetchedItems = data.items;
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+        searchCache[cacheKey] = data; 
+        renderLinkResults(data.items, data.total, page > 1);
+        lastFetchedItems = data.items;
 
-                if (page === 1 && isAIOverviewEnabled) {
-                    aiTimeout = setTimeout(function() {
-                        processAIResults(query, data.items);
-                    }, 500);
-                }
-            })
+        // Render Pagination Bar
+        renderPagination(data.total, data.page, data.pageSize);
+
+        if (page === 1 && isAIOverviewEnabled) {
+            aiTimeout = setTimeout(function() {
+                processAIResults(query, data.items);
+            }, 500);
+        }
+    });
             .catch(function(error) {
                 console.error('Web search error:', error);
                 var errEl = document.getElementById('linkResults');
@@ -254,12 +262,15 @@ function executeSearch(query, type, page) {
         }
         var urlImg = BACKEND_BASE + '/metasearch?q=' + encodeURIComponent(query) + '&type=image&page=' + page + '&pageSize=' + MAX_PAGE_SIZE;
         fetch(urlImg)
-            .then(function(resp) { return resp.json(); })
-            .then(function(data) {
-                searchCache[cacheKey] = data;
-                lastFetchedItems = data.items; 
-                renderImageResults(data.items, data.total, page > 1);
-            })
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+        searchCache[cacheKey] = data;
+        lastFetchedItems = data.items; 
+        renderImageResults(data.items, data.total, page > 1);
+
+        // Render Pagination Bar
+        renderPagination(data.total, data.page, data.pageSize);
+    });
             .catch(function(error) {
                 console.error('Image search error:', error);
                 var errEl2 = document.getElementById('imageResults');
@@ -431,6 +442,62 @@ function executeAllSearch(query) {
             console.error("Video stream fail", err);
         });
 }
+
+// Helper to trigger page jump and scroll to top
+function goToPage(page) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    executeSearch(currentQuery, currentSearchType, page);
+}
+
+// Renders page numbers (1-10 window)
+function renderPagination(total, currentPage, pageSize) {
+    var container = document.getElementById('paginationContainer');
+    if (!container) return;
+
+    if (!total || total <= pageSize) {
+        container.innerHTML = '';
+        return;
+    }
+
+    var totalPages = Math.ceil(total / pageSize);
+    var maxPagesToShow = 10;
+
+    // Calculate window range
+    var startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    var endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    var html = '';
+
+    // Previous Button
+    if (currentPage > 1) {
+        html += '<button class="pagination-btn" onclick="goToPage(' + (currentPage - 1) + ')">&laquo; Prev</button>';
+    } else {
+        html += '<button class="pagination-btn disabled" disabled>&laquo; Prev</button>';
+    }
+
+    // Numerical Page Buttons (1 to 10)
+    for (var p = startPage; p <= endPage; p++) {
+        if (p === currentPage) {
+            html += '<button class="pagination-btn active">' + p + '</button>';
+        } else {
+            html += '<button class="pagination-btn" onclick="goToPage(' + p + ')">' + p + '</button>';
+        }
+    }
+
+    // Next Button
+    if (currentPage < totalPages) {
+        html += '<button class="pagination-btn" onclick="goToPage(' + (currentPage + 1) + ')">Next &raquo;</button>';
+    } else {
+        html += '<button class="pagination-btn disabled" disabled>Next &raquo;</button>';
+    }
+
+    container.innerHTML = html;
+}
+
 
 function saveAllCache(key, web, img, vid) {
     if (web && img && vid) {
