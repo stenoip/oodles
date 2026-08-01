@@ -709,50 +709,52 @@ button.large, input.large[type="button"], input.large[type="submit"] {
 
     <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px; width: 100%;">
         
-        <div class="main-column" style="flex: 1; min-width: 300px; max-width: 100%;">
-            
-            <div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
-            
-            <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
+    <!-- MAIN COLUMN -->
+    <div class="main-column" style="flex: 1; min-width: 300px; max-width: 100%;">
+        
+        <div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
+        
+        <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
 
-            <div class="results-section" id="aiOverview"></div>
+        <div class="results-section" id="aiOverview"></div>
 
-            <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
-            
-            <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
+        <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
+        
+        <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
 
-            <div class="results-section" id="allSection">
-              <div id="dictionaryContainer" style="display: none;"></div>  
-              <h3>Search Results</h3>
-                <div id="allResults"><p class="small">Searching everything...</p></div>
-            </div>
-            
-            <div class="results-section" id="linksSection">
-                <h3>Links</h3>
-                <div id="linkResults"><p class="small">Enter a search query.</p></div>
-            </div>
+        <div class="results-section" id="allSection">
+          <div id="dictionaryContainer" style="display: none;"></div>  
+          <h3>Search Results</h3>
+            <div id="allResults"><p class="small">Searching everything...</p></div>
+        </div>
+        
+        <div class="results-section" id="linksSection">
+            <h3>Links</h3>
+            <div id="linkResults"><p class="small">Enter a search query.</p></div>
+        </div>
 
-            <div class="results-section" id="imagesSection" style="display:none;">
-                <h3>Images</h3>
-                <div id="imageResults"><p class="small">Select a query from links.</p></div>
-            </div>
+        <div class="results-section" id="imagesSection" style="display:none;">
+            <h3>Images</h3>
+            <div id="imageResults"><p class="small">Select a query from links.</p></div>
+        </div>
 
-            <div class="results-section" id="videosSection" style="display:none;">
-                <h3>Videos</h3>
-                <div id="videoResults" class="video-grid">
-                    <p class="small">Enter a query to find videos.</p>
-                </div>
+        <div class="results-section" id="videosSection" style="display:none;">
+            <h3>Videos</h3>
+            <div id="videoResults" class="video-grid">
+                <p class="small">Enter a query to find videos.</p>
             </div>
         </div>
 
-      
-      <div id="paginationContainer"></div>
-
-        <div class="sidebar-column" style="flex: 0 0 auto;">
-            <div id="knowledgePanelContainer" style="display:none; width: 320px;"></div>
-        </div>
+       
+        <div id="paginationContainer"></div>
 
     </div>
+
+    <!--  SIDEBAR COLUMN -->
+    <div class="sidebar-column" style="flex: 0 0 auto;">
+        <div id="knowledgePanelContainer" style="display:none; width: 320px;"></div>
+    </div>
+
 </div>
 
   <footer>© Stenoip Company • Oodles Metasearch</footer>
