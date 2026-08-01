@@ -40,6 +40,7 @@ function renderAllResults(query, webData, imgData, vidData) {
 
     var combinedHtml = '';
     
+    // Top 3 Links
     var topLinksHtml = '';
     for (var wTop = 0; wTop < 3; wTop++) {
         if (webData.items[wTop]) {
@@ -48,37 +49,42 @@ function renderAllResults(query, webData, imgData, vidData) {
     }
     combinedHtml += '<div class="all-web-top">' + topLinksHtml + '</div>';
 
-    if (imgData.items) {
-        if (imgData.items.length > 0) {
-            allTabImagesCache = imgData.items;
-            combinedHtml += '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
-                '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
-                '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
-            
-            for (var i = 0; i < imgData.items.length; i++) {
-                var img = imgData.items[i];
-                combinedHtml += '<img src="' + img.thumbnail + '" onclick="openImageModalFromAll(' + i + ')" title="' + escapeHtml(img.title) + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">';
-            }
-            
-            combinedHtml += '</div></div>';
+    // Image Strip
+    if (imgData.items && imgData.items.length > 0) {
+        allTabImagesCache = imgData.items;
+        combinedHtml += '<div class="all-image-strip" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 4px 10px rgba(0,0,0,0.05);">' +
+            '<h4 class="small" style="margin-top:0; margin-bottom: 10px; color: #0277bd;">Images for ' + escapeHtml(query) + '</h4>' +
+            '<div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">';
+        
+        for (var i = 0; i < imgData.items.length; i++) {
+            var img = imgData.items[i];
+            combinedHtml += '<img src="' + img.thumbnail + '" onclick="openImageModalFromAll(' + i + ')" title="' + escapeHtml(img.title) + '" style="height: 120px; border-radius: 8px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">';
         }
+        
+        combinedHtml += '</div></div>';
     }
 
-    if (vidData) {
-        if (vidData.length > 0) {
-            var v = vidData[0];
-            combinedHtml += '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px;">' +
-                '<div style="flex: 0 0 auto;">' +
-                    '<iframe src="https://www.youtube.com/embed/' + v.id.videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px;" allowfullscreen></iframe>' +
-                '</div>' +
-                '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
-                    '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
-                    '<a href="https://www.youtube.com/watch?v=' + v.id.videoId + '" target="_blank" style="font-weight:bold; color: #0288d1;">' + escapeHtml(v.snippet.title) + '</a>' +
-                '</div>' +
-            '</div>';
-        }
+    // Featured Video
+    if (vidData && vidData.length > 0) {
+        var v = vidData[0];
+        combinedHtml += '<div class="all-video-featured" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 15px; background: linear-gradient(to right, rgba(225, 245, 254, 0.6), rgba(255, 255, 255, 0.4)); padding: 15px; border-radius: 12px;">' +
+            '<div style="flex: 0 0 auto;">' +
+                '<iframe src="https://www.youtube.com/embed/' + v.id.videoId + '" style="width: 240px; aspect-ratio: 16/9; border-radius: 8px;" allowfullscreen></iframe>' +
+            '</div>' +
+            '<div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; justify-content: center;">' +
+                '<h4 style="margin:0 0 5px 0; font-size:15px; color: #01579b;">Featured Video</h4>' +
+                '<a href="https://www.youtube.com/watch?v=' + v.id.videoId + '" target="_blank" style="font-weight:bold; color: #0288d1;">' + escapeHtml(v.snippet.title) + '</a>' +
+            '</div>' +
+        '</div>';
     }
 
+    // INJECT AD UNIT HERE (Between Video and Bottom Links)
+    if (typeof createAdUnitHtml === 'function') {
+        // Uses Ad Slot 1 defined in ad.js
+        combinedHtml += createAdUnitHtml(ADSENSE_AD_SLOT_1);
+    }
+
+    // Bottom Links (4 to 8)
     var bottomLinksHtml = '';
     for (var wBot = 3; wBot < 8; wBot++) {
         if (webData.items[wBot]) {
@@ -89,6 +95,11 @@ function renderAllResults(query, webData, imgData, vidData) {
     combinedHtml += '<div style="text-align:center; margin-top:15px;"><button class="frutiger-aero-tab" onclick="switchTab(\'web\', true)">See more results</button></div>';
 
     allContainer.innerHTML = combinedHtml;
+
+    // Trigger AdSense push after HTML insertion
+    if (typeof pushAds === 'function') {
+        setTimeout(pushAds, AD_PUSH_DELAY_MS);
+    }
 }
 
 function renderSingleLink(r) {
@@ -226,15 +237,21 @@ function cleanupUIForTabs(activeTab) {
 
 function renderLinkResults(items, total, isAppend) {
     var resultsEl = document.getElementById('linkResults');
-    if (!items) {
-        if (!isAppend) { resultsEl.innerHTML = '<p class="small">No web links found.</p>'; }
-        return;
-    }
-    if (items.length === 0) {
-        if (!isAppend) { resultsEl.innerHTML = '<p class="small">No web links found.</p>'; }
+    if (!items || items.length === 0) {
+        if (!isAppend) { 
+            resultsEl.innerHTML = '<p class="small">No web links found.</p>'; 
+        }
         return;
     }
 
+    // If we're on the main page load (not infinite scroll appending) and ad logic exists, use ad logic
+    if (!isAppend && typeof window.renderLinkResultsWithAds === 'function') {
+        // Uses the function from ad.js (assuming page = 1, maxPageSize = items.length)
+        resultsEl.innerHTML = window.renderLinkResultsWithAds(items, total, 1, items.length);
+        return;
+    }
+
+    // Fallback/Append rendering logic
     var generatedHtml = '';
     for (var i = 0; i < items.length; i++) {
         generatedHtml += renderSingleLink(items[i]);
