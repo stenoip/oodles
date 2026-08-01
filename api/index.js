@@ -168,20 +168,21 @@ module.exports = async (req, res) => {
             return;
 
         } else if (type === 'image') {
-            var imgData = await withTimeout(fetchSearxng(q, 'images'), TIMEOUT_MS, 'SearXNG Image Search');
-            
-            var rawImages = imgData.results || [];
-            var allImageResults = [];
-            for (var j = 0; j < rawImages.length; j++) {
-                var imgItem = normalizeImage({
-                    title: rawImages[j].title,
-                    thumbnail: rawImages[j].img_src || rawImages[j].thumbnail || rawImages[j].url,
-                    originalUrl: rawImages[j].url,
-                    pageUrl: rawImages[j].template || rawImages[j].url,
-                    source: rawImages[j].engine || 'searxng-images'
-                });
-                if (imgItem) allImageResults.push(imgItem);
-            }
+    var imgData = await withTimeout(fetchSearxng(q, 'images'), TIMEOUT_MS, 'SearXNG Image Search');
+    
+    var rawImages = imgData.results || [];
+    var allImageResults = [];
+    for (var j = 0; j < rawImages.length; j++) {
+        var imgItem = normalizeImage({
+            title: rawImages[j].title,
+            thumbnail: rawImages[j].thumbnail_src || rawImages[j].img_src || rawImages[j].thumbnail || rawImages[j].url,
+            originalUrl: rawImages[j].img_src || rawImages[j].url,
+           
+            pageUrl: rawImages[j].url || rawImages[j].source_url || rawImages[j].img_src,
+            source: rawImages[j].engine || 'searxng-images'
+        });
+        if (imgItem) allImageResults.push(imgItem);
+    }
 
             allImageResults = dedupe(allImageResults);
 
