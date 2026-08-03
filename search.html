@@ -1,810 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Oodles Metasearch Results</title>
-<link rel="icon" href="favicon.ico" type="image/png">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-/* ------------------------------------------- */
-/* FRUTIGER AERO STYLES - OODLES SEARCH         */
-/* ------------------------------------------- */
-@font-face {
-    font-family: 'FrutigerCustom';
-    src: url('Frutiger.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
+  <link rel="icon" href="favicon.ico" type="image/png">
 
-:root {
-      --blue: #1a73e8;
-      --blue-hover: #174ea6;
-      --text-main: #202124;
-      --text-muted: #5f6368;
-      --border: #dadce0;
-      --bg-page: #ffffff;
-    }
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css">
 
-    * {
-      box-sizing: border-box;
-    }
 
-    body {
-  /* This creates a soft, metallic horizon look */
-  background: rgb(255, 255, 255);
-  background-attachment: fixed;
-  color: #202124; /* Dark text for readability */
-  font-family: 'FrutigerCustom', Arial, sans-serif;
-}
-    
-
-    /*  HEADER */
-    header {
-  position: sticky;
-  top: 0;
-  z-index: 1000; /* Ensures it stays above search results */
-  background: rgba(255, 255, 255, 0.85); /* Semi-transparent for Aero look */
-  backdrop-filter: blur(12px) saturate(150%); /* The "Glass" effect */
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
-  transition: background 0.3s ease;
-}
-
-/* Optional: Slightly change background when scrolling for better contrast */
-header.scrolled {
-  background: rgba(255, 255, 255, 0.98);
-}
-
-    .top-bar {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .logo-area img {
-      height: 40px;
-    }
-
-    .search-area {
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.search-area textarea {
-  width: 500px;
-  max-width: 600px;
-  min-height: 36px; 
-  max-height: 200px;
-  padding: 6px 16px; 
-  font-size: 15px;
-  font-family: inherit;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  background: linear-gradient(to bottom, #ffffff 0%, #f7f9fc 100%);
-  resize: none;
-  overflow-y: hidden;
-  transition: border-color 0.2s, box-shadow 0.2s, border-radius 0.2s;
-  line-height: 1.4;
-}
-
-/* When the box gets tall, make the corners less rounded for a "box" look */
-.search-area textarea.expanded {
-  border-radius: 16px;
-}
-
-.search-area textarea:focus {
-  outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-    /*  NAV */
-    nav {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 0 24px;
-      display: flex;
-      gap: 24px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .frutiger-aero-tab {
-      padding: 12px 0;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-decoration: none;
-      border-bottom: 3px solid transparent;
-      cursor: pointer;
-    }
-
-    .frutiger-aero-tab:hover {
-      color: var(--blue);
-    }
-
-    nav a.active {
-      color: var(--blue);
-      border-bottom-color: var(--blue);
-    }
-
-    hr.divider {
-      display: none;
-    }
-
-    /*  MAIN  */
-    .container {
-  width: 100%;
-  max-width: 1400px; 
-  margin: 24px auto; 
-  padding: 0 24px;
-}
-
-    .results-section {
-      margin-bottom: 32px;
-    }
-
-    .results-section h3 {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--text-muted);
-      margin: 0 0 16px;
-    }
-
-    .result-block {
-      margin-bottom: 20px;
-    }
-
-    .result-block a {
-      font-size: 18px;
-      color: #1a0dab;
-      text-decoration: none;
-    }
-
-    .result-block a:hover {
-      text-decoration: underline;
-    }
-
-    .small {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    /*  IMAGE RESULTS  */
-    #imageResults img {
-      max-width: 150px;
-      margin: 6px;
-      border-radius: 8px;
-      box-shadow: 6px 6px 10px rgba(0,0,0,0.4);
-    }
-
-    /*  AI OVERVIEW */
-    .ai-overview-loading,
-    .ai-overview-error {
-      color: var(--text-muted);
-      padding: 8px 0;
-    }
-
-    #aiOverview p,
-    #aiOverview ul,
-    #aiOverview ol {
-      line-height: 1.6;
-      font-size: 14px;
-    }
-
-    /* FOOTER  */
-    footer {
-      max-width: 1000px;
-      margin: 40px auto 24px;
-      padding: 16px 24px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-muted);
-      border-top: 1px solid var(--border);
-    }
-
-   
-    
-/*  IMAGE GRID */
-
-#imageResults {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px;
-  justify-content: center;
-}
-
-.image-result-item {
-  position: relative;
-  cursor: pointer;
-  border-radius: 8px;
-  background: var(--bg-page, #fff);
-  border: 1px solid var(--border, #dadce0);
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
-  transition: transform 0.2s, box-shadow 0.2s;
-  
-  /* Mobile scaling: 2 items per row */
-  flex: 1 1 calc(50% - 10px);
-  max-width: 45%; 
-}
-
-.image-result-item img {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 8px;
-}
-
-
-@media (min-width: 601px) {
-  #imageResults {
-    gap: 16px;
-    padding: 15px 0;
-    justify-content: flex-start; 
-  }
-
-  .image-result-item {
-
-    flex: 1 1 calc(20% - 16px); 
-    min-width: 150px;            
-    max-width: 220px;            
-    margin-bottom: 40px;
-    
-    transform: perspective(600px) rotateX(12deg);
-    transform-origin: bottom;
-  }
-
-  .image-result-item:hover {
-    transform: translateY(-4px) perspective(600px) rotateX(0deg);
-    box-shadow: 4px 8px 16px rgba(0,0,0,0.2);
-    z-index: 10;
-  }
-
-  .image-result-item img {
-    height: 140px;
-    object-fit: cover;
-    -webkit-box-reflect: below 2px linear-gradient(transparent 60%, rgba(0,0,0,0.2) 100%);
-  }
-}
-
-/* VIDEO GRID*/
-
-.video-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-}
-
-.video-card-aero {
-  background: var(--bg-page, #fff);
-  border: 1px solid var(--border, #dadce0);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.15);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.video-card-aero:hover {
-  transform: translateY(-2px);
-  box-shadow: 4px 4px 12px rgba(0,0,0,0.2);
-}
-
-.video-card-aero iframe {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border: none;
-  display: block;
-}
-/*UNIVERSAL AERO BUTTON STYLE */
-button:not([id]):not([class]),
-input[type="button"]:not([id]):not([class]),
-input[type="submit"]:not([id]):not([class]) {
-  all: unset; /* Remove default styles */
-  display: inline-block;
-  text-align: center;
-  user-select: none;
-  cursor: pointer;
-  position: relative;
-  transition: all 300ms ease;
-  
-  /* Apply Aero style */
-  --hue: 0;        
-  --sat: 0;       
-  --glow-intensity: 0.8; 
-  --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
-  --bg: oklch(75% var(--sat) var(--hue) / 0.8);
-  --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
-  --bottom-glow: radial-gradient(farthest-corner at bottom center, rgba(255,255,255,var(--glow-intensity)), transparent);
-
-  background-color: var(--bg);
-  background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
-  border: 1px solid var(--bg);
-  border-radius: 0;
-  box-shadow: 0 4px 4px rgba(0,0,0,0.4);
-  color: var(--fg);
-  font-weight: 700;
-  text-shadow: 0 2px 0.5em rgba(0,0,0,0.2);
-  padding: 0.75em 2em;
-  font-size: 1rem;
-}
-
-/* Top highlight */
-button:not([id]):not([class])::after,
-input[type="button"]:not([id]):not([class])::after,
-input[type="submit"]:not([id]):not([class])::after {
-  content: "";
-  position: absolute;
-  top: 4%;
-  left: 0.75em;
-  width: calc(100% - 1.5em);
-  height: 40%;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0.1));
-  border-radius: inherit;
-  pointer-events: none;
-  transition: background 400ms ease;
-}
-
-/* Hover & Focus */
-button:not([id]):not([class]):hover,
-button:not([id]):not([class]):focus,
-input[type="button"]:not([id]):not([class]):hover,
-input[type="submit"]:not([id]):not([class]):focus {
-  box-shadow: 0 6px 8px rgba(0,0,0,0.4);
-  transform: translateY(-1px);
-}
-
-/* Active */
-button:not([id]):not([class]):active,
-input[type="button"]:not([id]):not([class]):active,
-input[type="submit"]:not([id]):not([class]):active {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-  transform: translateY(1px);
-}
-
-/* Size variations */
-button.small, input.small[type="button"], input.small[type="submit"] {
-  padding: 0.5em 1.5em;
-  font-size: 0.875rem;
-}
-
-button.medium, input.medium[type="button"], input.medium[type="submit"] {
-  padding: 0.75em 2em;
-  font-size: 1rem;
-}
-
-button.large, input.large[type="button"], input.large[type="submit"] {
-  padding: 1em 3em;
-  font-size: 1.125rem;
-}
-
-/*MODAL / WINDOW */
-
-.image-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-} 
-
-.frutiger-window {
-
-  font-size: 9pt;
-  width: 90%;
-  max-width: 900px;
-  max-height: 90vh;
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  border-radius: 2px; 
-  box-shadow:
-    2px 2px 10px 1px rgba(0, 0, 0, 0.7),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.98);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 9999;
-  background: #e6eaf6; /* soft grey-white surface */
-}
-
-/* Glass layers */
-.frutiger-window::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 6px;
-  background:
-    linear-gradient(transparent 20%, rgba(255, 255, 255, 0.7) 40%, transparent 41%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2)),
-    #b0b8c6;
-  opacity: 0.6;
-}
-
-.frutiger-window::after {
-  content: "";
-  position: absolute;
-  z-index: -10;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
-}
-
-/* Title bar */
-.window-title-bar {
-  padding: 6px;
-  padding-top: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 6px 6px 0 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.99),
-    inset 1px 0 0 rgba(255, 255, 255, 0.99),
-    inset -1px 0 0 rgba(255, 255, 255, 0.99);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.33) 70px, transparent 100px),
-    linear-gradient(225deg, rgba(255, 255, 255, 0.33) 70px, transparent 100px),
-    linear-gradient(54deg, rgba(0,0,0,0.13) 0 4%, rgba(102,102,102,0.07) 6%, rgba(0,0,0,0.13) 8% 10%);
-}
-
-/* Title text */
-.window-title-text {
-  color: #000;
-  text-shadow:
-    0 0 10px #fff, 0 0 10px #fff, 0 0 10px #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  padding-top: 6px;
-}
-
-/* Close button */
-.window-close-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 0; /* remove pill corners */
-  background: #d54f36;
-  color: white;
-  border: 1px solid rgba(0,0,0,0.3);
-  cursor: pointer;
-  font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
-  transition: all 0.2s;
-}
-
-.window-close-btn:hover {
-  background: #ff5030;
-  box-shadow: 0 0 7px 3px rgba(255,80,48,0.7);
-}
-
-/* Modal body */
-.window-content {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-  padding: 10px;
-  background: #f0f0f0;
-  border: 1px solid rgba(0,0,0,0.7);
-  border-radius: 0 0 6px 6px;
-  overflow: hidden;
-}
-
-    
-
-/* Sidebar & image */
-.modal-image-container {
-  flex: 2;
-  background: #fff;
-  border-radius: 4px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-}
-
-.modal-sidebar {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  min-width: 200px;
-}
-
-/* Action buttons */
-.action-btn {
-  background: #b0b8c6;
-  border: 1px solid rgba(0,0,0,0.5);
-  color: #000;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-  padding: 8px;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: #d4dbe6;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-
-
-
-/* RESPONSIVE ADJUSTMENTS                        */
-
-@media (max-width: 600px) {
-  .window-content {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .modal-sidebar {
-    min-width: 100%;
-  }
-  .image-result-item {
-    flex: 1 1 45%;
-  }
-  .video-card-aero {
-    flex: 1 1 100%;
-  }
-}
-    
-    /* ANT Animation FEATURE   */
-    #ant-walker {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 60px;
-      height: 60px;
-      z-index: 10000;
-      transform: translateX(-100%);
-      display: none; /* JS controls visibility */
-      pointer-events: none;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-    }
-
-#paginationContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin: 30px 0 20px 0;
-  flex-wrap: wrap;
-}
-
-.pagination-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border, #dadce0);
-  background: #ffffff;
-  color: #1a0dab;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  text-decoration: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(.disabled):not(.active) {
-  background: #f1f3f4;
-  border-color: #1a73e8;
-  color: #1a73e8;
-  transform: translateY(-1px);
-}
-
-.pagination-btn.active {
-  background: #1a73e8;
-  color: #ffffff;
-  border-color: #1a73e8;
-  font-weight: bold;
-  cursor: default;
-  box-shadow: 0 2px 5px rgba(26, 115, 232, 0.3);
-}
-
-.pagination-btn.disabled {
-  color: #9aa0a6;
-  border-color: #f1f3f4;
-  background: #f8f9fa;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-    
-   /* Apply to links and images */
-.result-block a, 
-#imageResults img {
-  display: inline-block;
-  position: relative;
-  
-
-  -webkit-box-reflect: below -2px 
-    linear-gradient(transparent 10%, rgba(0,0,0,0.4) 90%);
-  
-  /* 4. This flattens the reflection into a 'shadow' on the plane */
-  transform: perspective(500px) rotateX(20deg);
-  transform-origin: bottom;
-}
-
-/* Specific styling for images to ensure they don't overlap shadows */
-#imageResults img {
-  margin-bottom: 40px; /* Space for the shadow plane */
-}
-
-    
-    /*  MOBILE */
-    @media (max-width: 600px) {
-      .top-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      nav {
-        gap: 16px;
-        overflow-x: auto;
-      }
-
-    }
-
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
+
   <header>
-    <div class="top-bar">
-      <div class="logo-area">
-        <a href="index.html"> <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Logo"></a>
+    <div class="top-header">
+      <div class="top-header__left-sec">
+        <span class="material-icons-outlined menu-bar-icon"> menu </span>
+        <a href="index.html" id="google-logo" title="Go to Oodles Home">
+          <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Logo" />
+        </a>
+        <div class="search-container">
+          <div class="search-container__left-sec">
+            <span class="material-icons search-container__left-sec--srch-icon"> search </span>
+            <input
+              type="text"
+              name="search"
+              id="currentQuery"
+              autocomplete="off"
+              placeholder="Search again..."
+            />
+          </div>
+
+          <div class="search-container__right-sec">
+            <span class="material-icons" onclick="document.getElementById('currentQuery').value=''"> close </span>
+            <div class="material-icons">mic</div>
+            <span class="material-icons"> search </span>
+          </div>
+        </div>
       </div>
-      <div class="search-area">
-        <textarea id="currentQuery" placeholder="Search again..." rows="1"></textarea>
+
+      <div class="top-header__right-sec">
+        <div class="top-header__right-sec--apps">
+          <svg class="gb_We" focusable="false" viewBox="0 0 24 24">
+            <path d="M6,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM16,6c0,1.1 0.9,2 2,2s2,-0.9 2,-2 -0.9,-2 -2,-2 -2,0.9 -2,2zM12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"></path>
+          </svg>
+        </div>
+
+        <div class="top-header__right-sec--user-acc">
+          <img src="https://lh3.googleusercontent.com/ogw/ADGmqu_wdWJPIUjYUsJmXS6LT_Nxgzb34iCho1mrNsbH=s83-c-mo" alt="User Profile" />
+        </div>
       </div>
     </div>
 
-    
-
-    
-  
+    <div class="bottom-header">
+      <nav>
+        <div class="bottom-header__left-sec">
+          <ul>
+            <li class="active-page" id="tab-all">
+              <a href="#" onclick="switchTab('all', true)">
+                <span class="material-icons">search</span>All
+              </a>
+            </li>
+            <li id="tab-links">
+              <a href="#" onclick="switchTab('links', true)">
+                <span class="material-icons-outlined">article</span>Links
+              </a>
+            </li>
+            <li id="tab-images">
+              <a href="#" onclick="switchTab('images', true)">
+                <span class="material-icons-outlined">image</span>Images
+              </a>
+            </li>
+            <li id="tab-videos">
+              <a href="#" onclick="switchTab('videos', true)">
+                <span class="material-icons-outlined">smart_display</span>Videos
+              </a>
+            </li>
+            <li>
+              <a href="https://stenoip.github.io/" target="_blank">
+                <span class="material-icons-outlined">public</span>SWC Portal
+              </a>
+            </li>
+            <li>
+              <a href="https://stenoip.github.io/oodles/world-search" target="_blank">
+                <span class="material-icons-outlined">language</span>World Search
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="bottom-header__right-sec">
+          <ul>
+            <li><a href="#">Tools</a></li>
+          </ul>
+        </div>
+      </nav>
+    </div>
   </header>
-  <nav>
-    <a href="#" id="tab-all" class="frutiger-aero-tab active" onclick="switchTab('all', true)">All</a>
-      <a href="#" id="tab-links" class="frutiger-aero-tab active" onclick="switchTab('links', true)">Links</a>
-      <a href="#" id="tab-images" class="frutiger-aero-tab" onclick="switchTab('images', true)">Images</a>
-      <a href="#" class="frutiger-aero-tab" onclick="switchTab('videos', true)">Video</a>
-      <a href="https://stenoip.github.io/" class="frutiger-aero-tab" target="_blank">SWC Web Portal</a>
-    <a href="https://stenoip.github.io/oodles/world-search" class="frutiger-aero-tab" target="_blank">NEW! World Search</a>
-    </nav>
 
- <div class="container">
-    
-    <div id="goodCitizenMessage" class="good-citizen-message">
+  <main>
+    <div class="main-container">
+      <div class="search-delay">
+        About 17,000,000 results (0.35 seconds)
+      </div>
+
+      <div id="goodCitizenMessage" class="good-citizen-message" style="display:none; margin-bottom: 15px;">
         Thank you for being a good internet citizen by choosing to turn off AI-Overviews. <a href="https://stenoip.github.io/blog/google_ai_overviews.html">Learn more</a>.
-    </div>
-    
-    <div class="ai-control-row">
-        <span class="ai-toggle-label">AI Overview</span>
+      </div>
+
+      <div class="ai-control-row" style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+        <span class="ai-toggle-label" style="font-size: 0.9em; color: var(--gray-i);">AI Overview</span>
         <label class="switch" title="Toggle AI Overview On/Off">
-            <input type="checkbox" id="aiOverviewToggle"> 
-            <span class="slider"></span>
+          <input type="checkbox" id="aiOverviewToggle"> 
+          <span class="slider"></span>
         </label>
+      </div>
+
+      <div id="chatSection" class="results-section" style="display:none;"></div>
+      <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
+      <div id="aiOverview" class="results-section"></div>
+      <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
+      <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
+
+      <div id="allSection" class="results-section">
+        <div id="dictionaryContainer" style="display: none;"></div>
+        <div id="allResults">
+          <div class="result-item">
+            <p>Searching everything...</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="linksSection" class="results-section" style="display:none;">
+        <div id="linkResults">
+          <div class="result-item">
+            <p>Enter a search query.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="imagesSection" class="results-section" style="display:none;">
+        <div id="imageResults">
+          <p>Select a query from links.</p>
+        </div>
+      </div>
+
+      <div id="videosSection" class="results-section" style="display:none;">
+        <div id="videoResults" class="video-grid">
+          <p>Enter a query to find videos.</p>
+        </div>
+      </div>
+
+      <div id="paginationContainer">
+        <section class="pages-nav">
+          <table>
+            <tr>
+              <td>G</td>
+              <td><a href="#" id="first-o">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td><a href="#">o</a></td>
+              <td>g</td>
+              <td>l</td>
+              <td>e</td>
+              <td><a href="#">></a></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td><a href="#">1</a></td>
+              <td><a href="#">2</a></td>
+              <td><a href="#">3</a></td>
+              <td><a href="#">4</a></td>
+              <td><a href="#">5</a></td>
+              <td><a href="#">6</a></td>
+              <td><a href="#">7</a></td>
+              <td><a href="#">8</a></td>
+              <td><a href="#">9</a></td>
+              <td><a href="#">10</a></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td><a href="#">Next</a></td>
+            </tr>
+          </table>
+        </section>
+      </div>
     </div>
 
-    <div class="search-layout-wrapper" style="display: flex; flex-wrap: wrap; gap: 20px; width: 100%;">
-        
-    <!-- MAIN COLUMN -->
-    <div class="main-column" style="flex: 1; min-width: 300px; max-width: 100%;">
-        
-        <div class="results-section" id="chatSection" style="display:none; padding: 0; background: transparent; box-shadow: none;"></div>
-        
-        <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
+    <div class="right-sidebar" id="knowledgePanelContainer" style="display:none;"></div>
+  </main>
 
-        <div class="results-section" id="aiOverview"></div>
-
-        <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
-        
-        <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
-
-        <div class="results-section" id="allSection">
-          <div id="dictionaryContainer" style="display: none;"></div>  
-          <h3>Search Results</h3>
-            <div id="allResults"><p class="small">Searching everything...</p></div>
-        </div>
-        
-        <div class="results-section" id="linksSection">
-            <h3>Links</h3>
-            <div id="linkResults"><p class="small">Enter a search query.</p></div>
-        </div>
-
-        <div class="results-section" id="imagesSection" style="display:none;">
-            <h3>Images</h3>
-            <div id="imageResults"><p class="small">Select a query from links.</p></div>
-        </div>
-
-        <div class="results-section" id="videosSection" style="display:none;">
-            <h3>Videos</h3>
-            <div id="videoResults" class="video-grid">
-                <p class="small">Enter a query to find videos.</p>
-            </div>
-        </div>
-
-       
-        <div id="paginationContainer"></div>
-
+  <footer>
+    <div class="top-footer-container">
+      <div class="top-footer">
+        <span>United States</span>
+        <span class="material-icons"> lens </span>
+        <span>Yonkers, NY</span>
+        <span style="color:#1a0dab">
+          <a href="#">
+            - Based on your past activity
+            <a href="#"> - Use precise location</a>
+          </a>
+        </span>
+      </div>
     </div>
-
-    <!--  SIDEBAR COLUMN -->
-    <div class="sidebar-column" style="flex: 0 0 auto;">
-        <div id="knowledgePanelContainer" style="display:none; width: 320px;"></div>
+    <div class="bottom-footer">
+      <ul>
+        <li><a href="#">Help</a></li>
+        <li><a href="#">Send feedback</a></li>
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+      </ul>
     </div>
+  </footer>
 
-</div>
-
-  <footer>© Stenoip Company • Oodles Metasearch</footer>
-  <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation">
-
+  <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation" style="display:none;" />
 
   <div id="imageModalOverlay" class="image-modal-overlay" style="display: none;">
     <div class="frutiger-window">
-        <div class="window-title-bar">
-            <span id="modalTitle" class="window-title-text">Image Viewer</span>
-            <button class="window-close-btn" onclick="closeImageModal()">X</button>
-        </div>
+      <div class="window-title-bar">
+        <span id="modalTitle" class="window-title-text">Image Viewer</span>
+        <button class="window-close-btn" onclick="closeImageModal()">X</button>
+      </div>
 
-        <div class="window-content">
-            <div class="modal-image-container">
-                <img id="modalImage" src="" alt="Preview">
-            </div>
-            
-            <div class="modal-sidebar">
-                <div class="info-group">
-                    <strong>Dimensions:</strong>
-                    <span id="modalDims">-- x --</span>
-                </div>
-                <div class="info-group">
-                    <strong>Source:</strong>
-                    <span id="modalSource">--</span>
-                </div>
-
-                <div class="modal-actions">
-                    <button id="btnVisit" >
-                         Visit Site
-                    </button>
-                    <button id="btnDownload" >
-                         Download
-                    </button>
-                    <button id="btnShare">
-                         Share
-                    </button>
-                </div>
-            </div>
+      <div class="window-content">
+        <div class="modal-image-container">
+          <img id="modalImage" src="" alt="Preview">
         </div>
+        
+        <div class="modal-sidebar">
+          <div class="info-group">
+            <strong>Dimensions:</strong>
+            <span id="modalDims">-- x --</span>
+          </div>
+          <div class="info-group">
+            <strong>Source:</strong>
+            <span id="modalSource">--</span>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btnVisit">Visit Site</button>
+            <button id="btnDownload">Download</button>
+            <button id="btnShare">Share</button>
+          </div>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<script src="frontend_javascript/serp.js"></script>
+  <script src="frontend_javascript/serp.js"></script>
   <script src="frontend_javascript/search-logic.js"></script>
   <script src="frontend_javascript/search-ui.js"></script>
   <script src="frontend_javascript/adaptive-chat.js"></script>
-<script src="frontend_javascript/ad.js"></script>
-<script src="https://keepandroidopen.org/banner.js"></script>  
+  <script src="frontend_javascript/ad.js"></script>
+  <script src="https://keepandroidopen.org/banner.js"></script>  
   <script src="ant_walking.js"></script>
 </body>
 </html>
