@@ -1,5 +1,5 @@
 var ALLOWED_ORIGINS = [
-  'https://stenoip.github.io',
+  'https://stenoip.com',
   'http://127.0.0.1:8888'
 ];
 
