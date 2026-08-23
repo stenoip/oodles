@@ -1,0 +1,23 @@
+# Oodles Metasearch Engine
+
+> Oodles is a comprehensive, independent search engine and user-centric platform that aggregates the global web into a fast, private, and streamlined discovery experience. 
+
+Oodles functions similarly to industry giants like Google and DuckDuckGo, allowing users to type any query and instantly retrieve structured web results, rich knowledge, and relevant online resources. Designed as an intuitive and modern alternative to complex self-hosted search aggregators like SearXNG, Oodles brings powerful multi-source query capabilities directly to everyday consumers without requiring technical configuration or complex setup.
+
+## Core Products & Platforms
+
+- [Oodles on the Web](https://stenoip.github.io/oodles): The primary cloud-hosted web search engine interface, featuring lightning-fast query resolution, optional AI overviews, adaptive conversational chat, and a seamless discovery experience.
+- [Oodles Homeport](https://stenoip.github.io/oodles): A lightweight, privacy-focused desktop application that acts as a local proxy engine. It runs locally on your machine to strip tracking cookies, scrub identifying metadata, and randomize search requests before they reach the web, ensuring absolute search privacy and zero query logging.
+
+## Platform Features & Capabilities
+
+- **Unified Search Infrastructure:** Combines and harmonizes massive multi-source web indexes into a single, clean results page.
+- **Privacy First:** Oodles Homeport acts as an anonymous local proxy, safeguarding user identity and blocking behavioral tracking completely.
+- **Optional Generative Assistance:** Integrated features include adaptive chat and toggleable AI overviews, letting users choose their preferred search depth without forced bloatware.
+- **Accessible Alternatives:** Bridges the gap between advanced open-source search proxy tools (like SearXNG) and the average consumer through simple, out-of-the-box software packages.
+
+## About the Project
+
+- **Category:** Metasearch Engine / Privacy Search Tool
+- **Creator:** Stenoip Company (2024-2026)
+- **Philosophy:** Championing user choice, lightweight software design, and the nostalgic aesthetic of Frutiger Aero while rejecting forced, intrusive AI bloat.
