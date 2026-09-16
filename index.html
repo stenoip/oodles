@@ -1,254 +1,339 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oodles Metasearch Results</title>
+  <meta charset="UTF-8">
+  <title>Oodles Metasearch</title>  
   <link rel="icon" href="favicon.ico" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#ffffff"/>
+  <style>
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BASE STYLES */
+    /* ------------------------------------------- */
+   body {
+  margin: 0;
+  font-family: "Segoe UI", "Lucida Grande", "Lucida Sans Unicode", system-ui, sans-serif;
+  font-weight: 350;
+  color: rgb(255,255,255);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-image: url('https://stenoip.github.io/oodles/wallpapers/wallpaper.png');
+  background-attachment: fixed;
+  background-position: center;
+  /* Add these two lines to fix the repetition and sizing */
+  background-repeat: no-repeat;
+  background-size: cover; /* This scales the image to cover the whole body without distortion */
+}
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css">
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      max-width: 90%;
+      margin: 20px auto;
+    }
+    .search-box {
+      backdrop-filter: blur(5px);
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 24px;
+      padding: 5px 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid rgba(130, 130, 130, 0.4);
+      margin-bottom: 20px;
+      justify-content: space-between; /* Aligns the buttons on the right */
+    }
+    .search-box:focus-within {
+      box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5);
+      border-color: transparent;
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      padding: 10px;
+      background-color: transparent;
+    }
+    /* --- NEW CSS for Microphone Button & Red Circle --- */
+    .microphone-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #666;
+      margin-left: 10px;
+      transition: color 0.3s;
+      padding: 0; /* Important: Removes default button padding */
+      line-height: 0; /* Fixes vertical alignment issue */
+    }
+    /* Container for the microphone image/icon */
+    .microphone-btn i {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; /* Slightly larger than the image */
+      height: 32px;
+      border-radius: 50%;
+      transition: background-color 0.3s, box-shadow 0.3s;
+      position: relative;
+    }
+    /* Class to apply the red circle effect */
+    .mic-recording {
+      background-color: #f44336; /* Red background color */
+      box-shadow: 0 0 0 8px rgba(244, 67, 54, 0.4); /* Subtle glow effect */
+    }
+    /* Ensure the image inside the button is correctly sized */
+    .microphone-btn img {
+      width: 24px; 
+      height: 24px;
+      display: block;
+    }
+    /* --- END NEW CSS --- */
+
+    .microphone-btn:hover, .ai-btn:hover {
+      color: #0078D4; /* Change color on hover */
+    }
+    .microphone-btn:focus, .ai-btn:focus {
+      outline: none;
+    }
+    .ai-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #663;
+      font-size: 24px; /* ai icon size */
+      margin-left: 10px;
+      transition: color 0.3s;
+    }
+    /* ------------------------------------------- */
+    /* FRUTIGER AERO BUTTON STYLES */
+    /* ------------------------------------------- */
+    .frutiger-aero-button {
+      --hue: 200;
+      --sat: 0.35;
+      --glow-intensity: 0.8;
+      --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
+      --bg: oklch(75% var(--sat) var(--hue) / 0.8);
+      --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
+      --bottom-glow: radial-gradient(farthest-corner at bottom center, rgba(255, 255, 255, var(--glow-intensity)), transparent);
+      background-color: var(--bg);
+      background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+      border-radius: 9999px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      color: var(--fg);
+      font-family: inherit;
+      font-weight: 700;
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      position: relative;
+      transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      user-select: none;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+    .frutiger-aero-button::after {
+      content: "";
+      position: absolute;
+      top: 4%;
+      left: 0.75em;
+      width: calc(100% - 1.5em);
+      height: 40%;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.1));
+      border-radius: inherit;
+      transition: all 400ms ease;
+      pointer-events: none;
+    }
+    .frutiger-aero-button:hover,
+    .frutiger-aero-button:focus {
+      box-shadow: 0 8px 10px rgba(0, 0, 0, 0.35);
+      transform: translateY(-2px) scale(1.02);
+    }
+    .frutiger-aero-button:active {
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      transform: translateY(1px) scale(0.98);
+      background: linear-gradient(to bottom, var(--bg-dark), var(--bg));
+    }
+    .frutiger-aero-button:active::after {
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
+    }
+    /* ------------------------------------------- */
+    /* LAYOUT & SIZE APPLICATION */
+    /* ------------------------------------------- */
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+      width: 100%;
+    }
+    header img {
+      height: 200px;        /* keep height the same */
+      width: 500px;              /* make the image stretch across the header */
+      object-fit: contain;      /* maintain aspect ratio (no distortion) */
+    }
+    nav {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    nav a {
+      font-size: 1rem;
+      margin: 0 15px;
+      padding: 5px 10px;
+      color: grey;
+      text-decoration: underline;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    nav a:hover {
+      color: #990099;
+     }
+    .actions button {
+      padding: 0.75em 2em;
+      font-size: 1rem;
+    }
+    .actions select {
+      padding: 0.75em 2em;
+      font-size: 1rem;
+      border-radius: 9999px;
+      border: 1px solid oklch(50% calc(var(--sat) * 0.7) var(--hue));
+      background: var(--bottom-glow), linear-gradient(to bottom, var(--bg-dark), var(--bg));
+      color: var(--fg);
+      font-weight: 700;
+      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      appearance: menulist-button;
+      -webkit-appearance: menulist-button;
+      height: 48px;
+     }
+    .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+     }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #5f6368;
+    }
+    @media (max-width: 600px) {
+      .search-box {
+        max-width: 100%;
+      }
+    }
+    .bulletin-board-container {
+      text-align: center;
+      margin-top: 30px;
+    }
+    
+    .bulletin-text {
+      color: rgb(245,245,245);
+      font-family: "Courier New";
+      font-weight: bold;
+      font-size: 17px;
+      position: relative;
+      top: 155px;
+      
+      
+    }
+    .bulletin-text-title {
+      color: rgb(245,245,245);
+      font-family: "Courier New";
+      font-weight: bold;
+      font-size: 19px;
+      position: relative;
+      top: 145px;
+      
+      
+    }
+
+ .world-search-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    .world-search-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      margin-left: 10px;
+      transition: color 0.3s;
+      padding: 0;
+      line-height: 0;
+    }
+
+    
+  </style>
 </head>
 <body>
-
   <header>
-    <div class="top-header">
-      <div class="top-header__left-sec">
-        <span class="material-icons-outlined menu-bar-icon"> menu </span>
-        <a href="index.html" id="google-logo" title="Go to Oodles Home">
-          <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Logo" />
-        </a>
-        <div class="search-container">
-          <div class="search-container__left-sec">
-            <span class="material-icons search-container__left-sec--srch-icon"> search </span>
-            <input
-              type="text"
-              name="search"
-              id="currentQuery"
-              autocomplete="off"
-              placeholder="Search again..."
-            />
-          </div>
-
-          <div class="search-container__right-sec">
-            <span class="material-icons" onclick="document.getElementById('currentQuery').value=''"> close </span>
-            <div class="material-icons">mic</div>
-            <span class="material-icons"> search </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="top-header__right-sec">
-        <div class="top-header__right-sec--apps">
-          <svg class="gb_We" focusable="false" viewBox="0 0 24 24">
-            <path d="M6,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM6,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM12,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM16,6c0,1.1 0.9,2 2,2s2,-0.9 2,-2 -0.9,-2 -2,-2 -2,0.9 -2,2zM12,8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,14c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,20c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"></path>
-          </svg>
-        </div>
-
-        <div class="top-header__right-sec--user-acc">
-          <img src="https://lh3.googleusercontent.com/ogw/ADGmqu_wdWJPIUjYUsJmXS6LT_Nxgzb34iCho1mrNsbH=s83-c-mo" alt="User Profile" />
-        </div>
-      </div>
-    </div>
-
-    <div class="bottom-header">
-      <nav>
-        <div class="bottom-header__left-sec">
-          <ul>
-            <li class="active-page" id="tab-all">
-              <a href="#" onclick="switchTab('all', true)">
-                <span class="material-icons">search</span>All
-              </a>
-            </li>
-            <li id="tab-links">
-              <a href="#" onclick="switchTab('links', true)">
-                <span class="material-icons-outlined">article</span>Links
-              </a>
-            </li>
-            <li id="tab-images">
-              <a href="#" onclick="switchTab('images', true)">
-                <span class="material-icons-outlined">image</span>Images
-              </a>
-            </li>
-            <li id="tab-videos">
-              <a href="#" onclick="switchTab('videos', true)">
-                <span class="material-icons-outlined">smart_display</span>Videos
-              </a>
-            </li>
-            <li>
-              <a href="https://stenoip.github.io/" target="_blank">
-                <span class="material-icons-outlined">public</span>SWC Portal
-              </a>
-            </li>
-            <li>
-              <a href="https://stenoip.github.io/oodles/world-search" target="_blank">
-                <span class="material-icons-outlined">language</span>World Search
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div class="bottom-header__right-sec">
-          <ul>
-            <li><a href="#">Tools</a></li>
-          </ul>
-        </div>
-      </nav>
-    </div>
+   <img src="https://stenoip.github.io/oodles/logo.png" alt="Oodles Metasearch Logo">
   </header>
 
-  <main>
-    <div class="main-container">
-      <div class="search-delay">
-        About 17,000,000 results (0.35 seconds)
+  <nav>
+    <a href="#" onclick="switchTab('metasearch'); return false;">MetaSearch</a>
+    <a href="#" onclick="switchTab('about'); return false;">About</a>
+       <a href="generate.html">Generate</a>
+  </nav>
+
+  <div class="container">
+    <div id="panel-metasearch" style="display:block; text-align:center; max-width:600px; width:100%;">
+       <div class="search-box">
+        <input type="text" id="metaQuery" placeholder="Search Oodles...">
+        <button class="microphone-btn" onclick="startVoiceSearch()">
+          <i id="mic-icon-circle">
+            <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Microphone" style="width: 24px; height: 24px;"/>
+          </i>
+        </button>
+        <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
+       
+        <button class="world-search-btn" onclick="window.location.href='https://stenoip.github.io/oodles/world-search?q=' + encodeURIComponent(document.getElementById('metaQuery').value)">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/8-cell-simple.gif/250px-8-cell-simple.gif" alt="World Search" height="30px">
+</button>
+
       </div>
-
-      <div id="goodCitizenMessage" class="good-citizen-message" style="display:none; margin-bottom: 15px;">
-        Thank you for being a good internet citizen by choosing to turn off AI-Overviews. <a href="https://stenoip.github.io/blog/google_ai_overviews.html">Learn more</a>.
+      <div class="actions">
+        <select id="searchTypeSelector" class="frutiger-aero-button">
+          <option value="all">All</option>
+          <option value="web">Web</option>
+          <option value="image">Images</option>
+          <option value="videos">Videos</option>
+        </select>
+        <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
       </div>
+   
+     <div class="bulletin-board-container">
+        <p class="bulletin-text-title">Welcome to the 
+          <br>
+          bulletin board!</p>  
+       
+       <p class="bulletin-text">Nothing here yet</p> 
+       <img src="https://stenoip.github.io/oodles/bulletin_board.png" height="300px" width="100%">
+      
+  </div>
+  </div>
+   
 
-      <div class="ai-control-row" style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-        <span class="ai-toggle-label" style="font-size: 0.9em; color: #757575;">AI Overview</span>
-        <label class="switch" title="Toggle AI Overview On/Off">
-          <input type="checkbox" id="aiOverviewToggle"> 
-          <span class="slider"></span>
-        </label>
-      </div>
-
-      <div id="chatSection" class="results-section" style="display:none;"></div>
-      <div id="featuredSnippetContainer" style="display:none; margin-bottom: 20px;"></div>
-      <div id="aiOverview" class="results-section"></div>
-      <div id="toolContainer" style="margin-top: 15px; margin-bottom: 20px;"></div>
-      <div id="popularProductsContainer" style="display:none; margin-bottom: 20px;"></div>
-
-      <div id="allSection" class="results-section">
-        <div id="dictionaryContainer" style="display: none;"></div>
-        <div id="allResults">
-          <div class="result-item">
-            <p>Searching everything...</p>
-          </div>
-        </div>
-      </div>
-
-      <div id="linksSection" class="results-section" style="display:none;">
-        <div id="linkResults">
-          <div class="result-item">
-            <p>Enter a search query.</p>
-          </div>
-        </div>
-      </div>
-
-      <div id="imagesSection" class="results-section" style="display:none;">
-        <div id="imageResults">
-          <p>Select a query from links.</p>
-        </div>
-      </div>
-
-      <div id="videosSection" class="results-section" style="display:none;">
-        <div id="videoResults" class="video-grid">
-          <p>Enter a query to find videos.</p>
-        </div>
-      </div>
-
-      <div id="paginationContainer">
-        <section class="pages-nav">
-          <table>
-            <tr>
-              <td>G</td>
-              <td><a href="#" id="first-o">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td><a href="#">o</a></td>
-              <td>g</td>
-              <td>l</td>
-              <td>e</td>
-              <td><a href="#">></a></td>
-            </tr>
-            <tr>
-              <td></td>
-              <td><a href="#">1</a></td>
-              <td><a href="#">2</a></td>
-              <td><a href="#">3</a></td>
-              <td><a href="#">4</a></td>
-              <td><a href="#">5</a></td>
-              <td><a href="#">6</a></td>
-              <td><a href="#">7</a></td>
-              <td><a href="#">8</a></td>
-              <td><a href="#">9</a></td>
-              <td><a href="#">10</a></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td><a href="#">Next</a></td>
-            </tr>
-          </table>
-        </section>
-      </div>
-    </div>
-
-    <div class="right-sidebar" id="knowledgePanelContainer" style="display:none;"></div>
-  </main>
-
-  <footer>
-    <div class="bottom-footer">
-      <ul>
-        <li><a href="#">Help</a></li>
-        <li><a href="#">Send feedback</a></li>
-        <li><a href="#">Privacy</a></li>
-        <li><a href="#">Terms</a></li>
-      </ul>
-    </div>
-  </footer>
-
-  <img id="ant-walker" src="https://stenoip.github.io/oodles/ant_walking.gif" alt="A walking ant animation" style="display:none;" />
-
-  <div id="imageModalOverlay" class="image-modal-overlay" style="display: none;">
-    <div class="frutiger-window">
-      <div class="window-title-bar">
-        <span id="modalTitle" class="window-title-text">Image Viewer</span>
-        <button class="window-close-btn" onclick="closeImageModal()">X</button>
-      </div>
-
-      <div class="window-content">
-        <div class="modal-image-container">
-          <img id="modalImage" src="" alt="Preview">
-        </div>
-        
-        <div class="modal-sidebar">
-          <div class="info-group">
-            <strong>Dimensions:</strong>
-            <span id="modalDims">-- x --</span>
-          </div>
-          <div class="info-group">
-            <strong>Source:</strong>
-            <span id="modalSource">--</span>
-          </div>
-
-          <div class="modal-actions">
-            <button id="btnVisit">Visit Site</button>
-            <button id="btnDownload">Download</button>
-            <button id="btnShare">Share</button>
-          </div>
-        </div>
-      </div>
+    <div id="panel-about" style="display:none; max-width:600px;">
+      <h3>About Us</h3>
+      <p>Oodles MetaSearch Engine is where information from various other
+      search engines are gathered into one. Less bias and more information. Most importantly, it is private and homemade.</p>
+      <p>For more information, visit our GitHub page at
+      <a href="https://github.com/stenoip/oodles">https://github.com/stenoip/oodles</a>.</p>
+      <p>Visit the Wikipedia page about Metasearch Search Engines at
+      <a href="https://en.wikipedia.org/wiki/Metasearch_engine">https://en.wikipedia.org/wiki/Metasearch_engine</a>.</p>
     </div>
   </div>
 
-  <script src="frontend_javascript/serp.js"></script>
-  <script src="frontend_javascript/search-logic.js"></script>
-  <script src="frontend_javascript/search-ui.js"></script>
-  <script src="frontend_javascript/adaptive-chat.js"></script>
-  <script src="frontend_javascript/ad.js"></script>
-  <script src="https://keepandroidopen.org/banner.js"></script>  
-  <script src="ant_walking.js"></script>
+  <footer>© Stenoip Company • Launched 19th October, 2025</footer>
+
+<script src="frontend_javascript/main-page.js"></script>
 </body>
 </html>
