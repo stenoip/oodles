@@ -6,6 +6,9 @@
   <link rel="icon" href="favicon.ico" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <meta name="theme-color" content="#ffffff"/>
   <style>
     /* ------------------------------------------- */
@@ -13,7 +16,7 @@
     /* ------------------------------------------- */
    body {
   margin: 0;
-  font-family: "Segoe UI", "Lucida Grande", "Lucida Sans Unicode", system-ui, sans-serif;
+  font-family: "Segoe UI", sans-serif;
   font-weight: 350;
   color: rgb(255,255,255);
   display: flex;
@@ -38,23 +41,34 @@
       margin: 20px auto;
     }
     .search-box {
-      backdrop-filter: blur(5px);
-      background-color: rgba(255, 255, 255, 0.7);
-      border-radius: 24px;
-      padding: 5px 15px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-      display: flex;
-      align-items: center;
       width: 100%;
-      max-width: 600px;
-      border: 1px solid rgba(130, 130, 130, 0.4);
-      margin-bottom: 20px;
-      justify-content: space-between; /* Aligns the buttons on the right */
+            max-width: 560px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.25) 49%, rgba(230, 240, 255, 0.15) 50%, rgba(255, 255, 255, 0.4) 100%);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(0, 50, 100, 0.4);
+            border-top-color: rgba(255, 255, 255, 0.8);
+            border-left-color: rgba(255, 255, 255, 0.6);
+            padding: 0 6px 0 20px;
+            box-sizing: border-box;
+            box-shadow: 0 12px 24px rgba(0, 20, 50, 0.25), 
+                        inset 0 1px 3px rgba(255, 255, 255, 0.9),
+                        inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 50px;
+            transition: all 0.2s ease-in-out;/* Aligns the buttons on the right */
     }
     .search-box:focus-within {
       box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.5);
-      border-color: transparent;
     }
+    
+    .search-box:hover, .search-box:focus-within {
+            border-color: #00a2e8;
+            box-shadow: 0 0 15px rgba(0, 162, 232, 0.85), 
+                        inset 0 1px 4px rgba(255, 255, 255, 0.95);
+        }
     .search-box input {
       flex: 1;
       border: none;
@@ -62,6 +76,7 @@
       font-size: 16px;
       padding: 10px;
       background-color: transparent;
+      
     }
     /* --- NEW CSS for Microphone Button & Red Circle --- */
     .microphone-btn {
@@ -166,6 +181,38 @@
     .frutiger-aero-button:active::after {
       background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05));
     }
+    
+    .search-box .frutiger-aero-button {
+  		width: 40px;
+  		height: 40px;
+ 		border-radius: 50%;
+  		display: flex;
+  		align-items: center;
+  		justify-content: center;
+  		padding: 0;
+  		margin-left: 8px;
+	}
+
+
+	.search-box .frutiger-aero-button::after {
+  		left: 15%;
+  		width: 70%;
+  		height: 35%;
+  		border-radius: 50%;
+	}
+    
+    
+    .btn-search-icon-img {
+            width: 20px;
+            height: 20px;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23031730' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'></circle><line x1='21' y1='21' x2='16.65' y2='16.65'></line></svg>");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 2;
+        }
+    
+    
     /* ------------------------------------------- */
     /* LAYOUT & SIZE APPLICATION */
     /* ------------------------------------------- */
@@ -284,19 +331,19 @@
   </nav>
 
   <div class="container">
+    
     <div id="panel-metasearch" style="display:block; text-align:center; max-width:600px; width:100%;">
        <div class="search-box">
+         
         <input type="text" id="metaQuery" placeholder="Search Oodles...">
         <button class="microphone-btn" onclick="startVoiceSearch()">
           <i id="mic-icon-circle">
             <img src="https://stenoip.github.io/oodles/microphone-icon.png" alt="Microphone" style="width: 24px; height: 24px;"/>
           </i>
         </button>
-        <button class="ai-btn" onclick="runAIAnalysis()">AI</button>
-       
-        <button class="world-search-btn" onclick="window.location.href='https://stenoip.github.io/oodles/world-search?q=' + encodeURIComponent(document.getElementById('metaQuery').value)">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/8-cell-simple.gif/250px-8-cell-simple.gif" alt="World Search" height="30px">
-</button>
+      
+          <button class="frutiger-aero-button" onclick="runMetaSearch()"><div class="btn-search-icon-img"></div></button>
+
 
       </div>
       <div class="actions">
@@ -306,7 +353,7 @@
           <option value="image">Images</option>
           <option value="videos">Videos</option>
         </select>
-        <button class="frutiger-aero-button" onclick="runMetaSearch()">Search</button>
+        
       </div>
    
      <div class="bulletin-board-container">
