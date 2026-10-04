@@ -17,31 +17,12 @@ var setCors = require('./_cors').setCors;
 var TIMEOUT_MS = 15000; 
 var DEFAULT_PAGE_SIZE = 10;
 var MAX_PAGE_SIZE = 50; 
-var PING_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes (Render sleeps at 15m)
+
+
 
 var SEARXNG_API_URL = process.env.SEARXNG_API_URL || 'https://oodlesbot.onrender.com';
 
-// Auto Self-Ping Keep-Alive for Render Free Tier
-var selfPingTimer = null;
-function initSelfPing() {
-    if (selfPingTimer) return;
 
-    selfPingTimer = setInterval(function() {
-        var targetPingUrl = SEARXNG_API_URL.replace(/\/+$/, '') + '?type=ping';
-        fetch(targetPingUrl)
-            .then(function(res) {
-                console.log('[Keep-Alive] Self-ping successful (' + res.status + ')');
-            })
-            .catch(function(err) {
-                console.error('[Keep-Alive] Self-ping failed:', err.message);
-            });
-    }, PING_INTERVAL_MS);
-
-    console.log('[Keep-Alive] Self-ping initialized for ' + SEARXNG_API_URL);
-}
-
-// Start self-ping loop on module load
-initSelfPing();
 
 function withTimeout(promise, ms, label) {
     var t;
