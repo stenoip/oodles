@@ -1,6 +1,6 @@
 var ALLOWED_ORIGINS = [
   'https://stenoip.com',
-  'http://127.0.0.1:8888',
+  'http://127.0.0.1:8080',
   'http://localhost',
   'capacitor://localhost',
   'http://localhost:3000'
