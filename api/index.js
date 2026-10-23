@@ -3,26 +3,32 @@
 ##    ##  ##    ##  ##      ##  ##        ##        ##
 ##    ##  ##    ##  ##      ##  ##        ######    ########
 ##    ##  ##    ##  ##      ##  ##        ##              ##
-########  ########  ########    ########  ######    ########    Search
+########  ########  ########    ########  ######    ########
+
+##   ##  ######  ######   ####    #####  ######   ####   #####    #####  ##  ##
+### ###  ##        ##    ##  ##  ##      ##      ##  ##  ##  ##  ##      ##  ##
+## # ##  ####      ##    ######   ####   ####    ######  #####   ##      ######
+##   ##  ##        ##    ##  ##      ##  ##      ##  ##  ## ##   ##      ##  ##
+##   ##  ######    ##    ##  ##  #####   ######  ##  ##  ##  ##   #####  ##  ##
 
 Copyright Stenoip Company. All rights reserved.
-Oodles Search and the Oodleant-Crawlers are trademarks of Stenoip Company
+Oodles Metasearch and the Oodleant-Crawlers are trademarks of Stenoip Company
 */
 'use strict';
 
 var fetch = require('node-fetch');
 var setCors = require('./_cors').setCors;
 
-// Config - Raised timeout to 15s to accommodate slower image engine responses
-var TIMEOUT_MS = 15000; 
+// Config. Raised timeout: the OpenSERP server runs headless Chrome and can
+// be slow on a cold start (free Render instances spin down when idle).
+var TIMEOUT_MS = 40000;
 var DEFAULT_PAGE_SIZE = 10;
-var MAX_PAGE_SIZE = 50; 
+var MAX_PAGE_SIZE = 50;
 
-
-
-var SEARXNG_API_URL = process.env.SEARXNG_API_URL || 'https://oodlesbot.onrender.com';
-
-
+var OPENSERP_API_URL = process.env.OPENSERP_API_URL || 'https://new-oodles-backend.onrender.com';
+// Engines are tried one after another until one responds (mode=any).
+// This is gentler on the Chrome instance and survives a blocked engine.
+var OPENSERP_ENGINES = process.env.OPENSERP_ENGINES || 'bing,duckduckgo,google';
 
 function withTimeout(promise, ms, label) {
     var t;
@@ -34,7 +40,7 @@ function withTimeout(promise, ms, label) {
     return Promise.race([
         promise.finally(function() {
             clearTimeout(t);
-        }), 
+        }),
         timeout
     ]);
 }
@@ -54,13 +60,13 @@ function normalize(data) {
             u.searchParams.delete(paramsToRemove[i]);
         }
         cleanUrl = u.href;
-    } catch(e) {}
+    } catch (e) {}
 
     return {
         title: title.trim(),
         url: cleanUrl,
         snippet: (snippet || '').trim(),
-        source: source || 'searxng'
+        source: source || 'openserp'
     };
 }
 
@@ -72,12 +78,12 @@ function normalizeImage(data) {
     var source = data.source;
 
     if (!thumbnail && !originalUrl) return null;
-    return { 
+    return {
         title: (title || '').trim(),
-        thumbnail: thumbnail, 
-        originalUrl: originalUrl, 
-        pageUrl: pageUrl, 
-        source: source || 'searxng-images' 
+        thumbnail: thumbnail,
+        originalUrl: originalUrl,
+        pageUrl: pageUrl,
+        source: source || 'openserp-images'
     };
 }
 
@@ -101,31 +107,43 @@ function dedupe(items) {
     return out;
 }
 
-// SearXNG Fetchers
-function fetchSearxng(query, category, page) {
-    if (!category) category = 'general';
-    if (!page) page = 1;
-    var baseUrl = SEARXNG_API_URL.replace(/\/+$/, '');
-    
-    // SearXNG expects 'pageno' for page numbers
-    var url = baseUrl + '/search?q=' + encodeURIComponent(query) + 
-              '&format=json&categories=' + category + 
-              '&pageno=' + page;
-    
-    return fetch(url, { 
-        headers: { 
+// OpenSERP fetcher
+// kind: 'search' or 'image'. Uses the multi-engine (mega) endpoints.
+function fetchOpenserp(query, kind, page, pageSize) {
+    var baseUrl = OPENSERP_API_URL.replace(/\/+$/, '');
+    var start = (page - 1) * pageSize;
+
+    var url = baseUrl + '/mega/' + kind +
+              '?text=' + encodeURIComponent(query) +
+              '&limit=' + pageSize +
+              '&start=' + start +
+              '&mode=any' +
+              '&engines=' + encodeURIComponent(OPENSERP_ENGINES);
+
+    return fetch(url, {
+        headers: {
             'Accept': 'application/json',
             'User-Agent': 'OodlesSearch/1.0'
-        } 
+        }
     }).then(function(resp) {
         if (!resp.ok) {
-            throw new Error('SearXNG returned HTTP ' + resp.status + ' for category: ' + category);
+            throw new Error('OpenSERP returned HTTP ' + resp.status + ' for ' + kind);
         }
         return resp.json();
     });
 }
 
-// Main handler 
+// Responses are an envelope ({ results: [...] }), but handle a bare array too.
+function getResults(data) {
+    if (Array.isArray(data)) return data;
+    return (data && data.results) || [];
+}
+
+function hasMore(data) {
+    return !!(data && data.pagination && data.pagination.has_more);
+}
+
+// Main handler
 module.exports = async (req, res) => {
     setCors(res);
     if (req.method === 'OPTIONS') {
@@ -156,52 +174,58 @@ module.exports = async (req, res) => {
 
     try {
         if (type === 'web') {
-            var data = await withTimeout(fetchSearxng(q, 'general', page), TIMEOUT_MS, 'SearXNG Web Search');
-            
-            var rawResults = data.results || [];
+            var data = await withTimeout(fetchOpenserp(q, 'search', page, pageSize), TIMEOUT_MS, 'OpenSERP Web Search');
+
+            var rawResults = getResults(data);
             var allWebResults = [];
             for (var i = 0; i < rawResults.length; i++) {
+                var r = rawResults[i];
+                if (r.ad === true) continue;
+                if (r.type && r.type !== 'organic') continue;
+
                 var item = normalize({
-                    title: rawResults[i].title,
-                    url: rawResults[i].url,
-                    snippet: rawResults[i].content,
-                    source: rawResults[i].engine || 'searxng'
+                    title: r.title,
+                    url: r.url,
+                    snippet: r.snippet || r.description,
+                    source: r.engine || 'openserp'
                 });
                 if (item) allWebResults.push(item);
             }
 
             allWebResults = dedupe(allWebResults);
 
-            var totalWeb = data.number_of_results || (page * pageSize + allWebResults.length + 10);
+            var totalWeb = (page - 1) * pageSize + allWebResults.length + (hasMore(data) ? pageSize : 0);
 
-            res.status(200).json({ 
-                query: q, 
-                total: totalWeb, 
-                page: page, 
-                pageSize: pageSize, 
-                items: allWebResults 
+            res.status(200).json({
+                query: q,
+                total: totalWeb,
+                page: page,
+                pageSize: pageSize,
+                items: allWebResults
             });
             return;
 
         } else if (type === 'image') {
-            var imgData = await withTimeout(fetchSearxng(q, 'images', page), TIMEOUT_MS, 'SearXNG Image Search');
-            
-            var rawImages = imgData.results || [];
+            var imgData = await withTimeout(fetchOpenserp(q, 'image', page, pageSize), TIMEOUT_MS, 'OpenSERP Image Search');
+
+            var rawImages = getResults(imgData);
             var allImageResults = [];
             for (var j = 0; j < rawImages.length; j++) {
+                var im = rawImages[j];
+                var meta = im.image || {};
                 var imgItem = normalizeImage({
-                    title: rawImages[j].title,
-                    thumbnail: rawImages[j].thumbnail_src || rawImages[j].img_src || rawImages[j].thumbnail || rawImages[j].url,
-                    originalUrl: rawImages[j].img_src || rawImages[j].url,
-                    pageUrl: rawImages[j].url || rawImages[j].source_url || rawImages[j].img_src,
-                    source: rawImages[j].engine || 'searxng-images'
+                    title: im.title,
+                    thumbnail: meta.thumbnail || im.thumbnail,
+                    originalUrl: meta.url || meta.full || meta.original || meta.src || im.image_url || im.url,
+                    pageUrl: im.page_url || meta.page_url || im.url,
+                    source: im.engine || 'openserp-images'
                 });
                 if (imgItem) allImageResults.push(imgItem);
             }
 
             allImageResults = dedupe(allImageResults);
 
-            var totalImg = imgData.number_of_results || (page * pageSize + allImageResults.length + 10);
+            var totalImg = (page - 1) * pageSize + allImageResults.length + (hasMore(imgData) ? pageSize : 0);
 
             res.status(200).json({
                 query: q,
@@ -218,7 +242,7 @@ module.exports = async (req, res) => {
         }
 
     } catch (err) {
-        console.error('SearXNG Proxy error:', err);
-        res.status(500).json({ error: 'Oodlebot search failed via SearXNG', details: err.message });
+        console.error('OpenSERP Proxy error:', err);
+        res.status(500).json({ error: 'Oodlebot search failed via OpenSERP', details: err.message });
     }
 };
