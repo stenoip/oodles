@@ -19,16 +19,14 @@ Oodles Metasearch and the Oodleant-Crawlers are trademarks of Stenoip Company
 var fetch = require('node-fetch');
 var setCors = require('./_cors').setCors;
 
-// Config. Raised timeout: the OpenSERP server runs headless Chrome and can
-// be slow on a cold start (free Render instances spin down when idle).
-var TIMEOUT_MS = 40000;
+// Config
+var TIMEOUT_MS = 20000;
 var DEFAULT_PAGE_SIZE = 10;
 var MAX_PAGE_SIZE = 50;
 
 var OPENSERP_API_URL = process.env.OPENSERP_API_URL || 'https://new-oodles-backend.onrender.com';
-// Engines are tried one after another until one responds (mode=any).
-// This is gentler on the Chrome instance and survives a blocked engine.
-var OPENSERP_ENGINES = process.env.OPENSERP_ENGINES || 'bing,duckduckgo,google';
+
+var OPENSERP_ENGINES = process.env.OPENSERP_ENGINES || 'bing';
 
 function withTimeout(promise, ms, label) {
     var t;
